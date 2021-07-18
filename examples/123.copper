@@ -1,0 +1,15 @@
+; This is a comment
+
+%const C 12
+
+main:
+    push 1 ; This is another comment
+    push 2
+    push C
+    
+    add
+    add
+
+    halt
+
+%entry main
