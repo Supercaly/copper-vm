@@ -46,11 +46,11 @@ type Line struct {
 	AsLabel       LabelLine
 	AsInstruction InstructionLine
 	AsDirective   DirectiveLine
-	Location      int
+	Location      FileLocation
 }
 
 // Convert a source string to a list of Lines
-func Linize(source string) (out []Line) {
+func Linize(source string, fileName string) (out []Line) {
 	lines := strings.Split(source, "\n")
 	for location, line := range lines {
 		line = strings.TrimSpace(line)
@@ -60,14 +60,17 @@ func Linize(source string) (out []Line) {
 		}
 		line, _ = SplitByDelim(line, CasmCommentSymbol)
 
-		out = append(out, lineFromString(line, location))
+		out = append(out, lineFromString(line, FileLocation{
+			FileName: fileName,
+			Location: location + 1,
+		}))
 	}
 	return out
 }
 
 // Parse a line from string
 // Return a Line from a string
-func lineFromString(line string, location int) (out Line) {
+func lineFromString(line string, location FileLocation) (out Line) {
 	if line[0] == byte(CasmPPSymbol) {
 		// Parse a directive line
 		name, block := SplitByDelim(line, ' ')
@@ -77,7 +80,7 @@ func lineFromString(line string, location int) (out Line) {
 
 		// Fail if no block is declared
 		if block == "" {
-			log.Fatalf("%d: Trying to declare a directive without a block!", location)
+			log.Fatalf("%s: Trying to declare a directive without a block!", location)
 		}
 
 		out = Line{

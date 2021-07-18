@@ -20,7 +20,7 @@ func (casm *Casm) TranslateSource(filePath string) {
 	}
 	source := string(bytes)
 
-	lines := Linize(source)
+	lines := Linize(source, filePath)
 	for _, l := range lines {
 		fmt.Printf("%s\n", l.Kind)
 	}
