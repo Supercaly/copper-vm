@@ -51,7 +51,8 @@ func (casm *Casm) TranslateSource(filePath string) {
 
 			if instDef.HasOperand {
 				// TODO(#1): Parse instruction operand
-				instDef.Operand = -1
+				operand := ParseExprFromString(line.AsInstruction.Operand, line.Location)
+				instDef.Operand = operand.AsNumLit
 			}
 			casm.Program = append(casm.Program, instDef)
 		case LineKindDirective:
