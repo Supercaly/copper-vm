@@ -66,6 +66,7 @@ func (casm *Casm) TranslateSource(filePath string) {
 
 	// Second Pass
 	for _, b := range casm.Bindings {
+		// TODO(#2): Compute deferred operands in second pass
 		fmt.Printf("%s %d %s\n", b.Name, b.Value, b.Location)
 	}
 
