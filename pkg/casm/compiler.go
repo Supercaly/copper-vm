@@ -20,6 +20,7 @@ type Casm struct {
 }
 
 func (casm *Casm) SaveProgramToFile(filePath string) {
+	// TODO(#3): Save compiled program to vm's binary
 	println("Save to " + filePath)
 }
 
