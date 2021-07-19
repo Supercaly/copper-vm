@@ -49,7 +49,7 @@ func (casm *Casm) TranslateSource(filePath string) {
 			}
 
 			if instDef.HasOperand {
-				// TODO: Parse instruction operand
+				// TODO(#1): Parse instruction operand
 				instDef.Operand = -1
 			}
 			casm.Program = append(casm.Program, instDef)
