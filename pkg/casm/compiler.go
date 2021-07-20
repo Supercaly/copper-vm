@@ -1,9 +1,11 @@
 package casm
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 
 	"coppervm.com/coppervm/pkg/coppervm"
@@ -30,8 +32,16 @@ func (casm *Casm) SaveProgramToFile(filePath string) {
 	}
 	println("End Dump Program")
 
-	// TODO(#3): Save compiled program to vm's binary
-	println("Save to " + filePath)
+	test, err := json.Marshal(coppervm.FileMeta(casm.Entry, casm.Program))
+	if err != nil {
+		log.Fatalf("[ERROR]: Error writign program to file %s", err)
+	}
+
+	fileErr := ioutil.WriteFile(filePath, []byte(test), os.ModePerm)
+	if fileErr != nil {
+		log.Fatalf("[ERROR]: Error saving file '%s': %s", filePath, fileErr)
+	}
+	println("[INFO]: Program saved to '" + filePath + "'")
 }
 
 // Translate a copper assembly file to copper vm's binary.
