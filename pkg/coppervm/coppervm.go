@@ -7,65 +7,21 @@ import (
 	"log"
 )
 
-type InstKind int
-
-const (
-	InstNoop InstKind = iota
-	InstPush
-	InstAdd
-	InstHalt
-	InstCount
-)
-
-type InstDef struct {
-	Kind       InstKind
-	HasOperand bool
-	Name       string
-	// TODO(#5): Use Word as operand type
-	Operand int
-}
-
-var InstDefs = [InstCount]InstDef{
-	{
-		Kind:       InstNoop,
-		HasOperand: false,
-		Name:       "noop",
-	},
-	{
-		Kind:       InstPush,
-		HasOperand: true,
-		Name:       "push",
-	},
-	{
-		Kind:       InstAdd,
-		HasOperand: false,
-		Name:       "add",
-	},
-	{
-		Kind:       InstHalt,
-		HasOperand: false,
-		Name:       "halt",
-	},
-}
-
-func GetInstDefByName(name string) (bool, InstDef) {
-	for _, inst := range InstDefs {
-		if inst.Name == name {
-			return true, inst
-		}
-	}
-	return false, InstDef{}
-}
-
 type CoppervmError int
 
 const (
 	ErrorOk CoppervmError = iota
+	ErrorIllegalInstAccess
+	ErrorStackOverflow
+	ErrorStackUnderflow
 )
 
 func (err CoppervmError) String() string {
 	return [...]string{
 		"ErrorOk",
+		"ErrorIllegalInstAccess",
+		"ErrorStackOverflow",
+		"ErrorStackUnderflow",
 	}[err]
 }
 
@@ -74,10 +30,11 @@ const (
 )
 
 type Coppervm struct {
-	Stack   [CoppervmStackCapacity]int
-	Program []InstDef
-	Ip      uint
-	Halt    bool
+	Stack     [CoppervmStackCapacity]int
+	StackSize int
+	Program   []InstDef
+	Ip        uint
+	Halt      bool
 }
 
 // Load program's binary to vm from file.
@@ -101,6 +58,8 @@ func (vm *Coppervm) LoadProgramFromFile(filePath string) {
 	vm.Program = meta.Program
 }
 
+// Executes all the program of the vm.
+// Return a CoppervmError if something went wrong or ErrorOk.
 func (vm *Coppervm) ExecuteProgram(limit int) CoppervmError {
 	for limit != 0 && !vm.Halt {
 		if err := vm.ExecuteInstruction(); err != ErrorOk {
@@ -111,26 +70,52 @@ func (vm *Coppervm) ExecuteProgram(limit int) CoppervmError {
 	return ErrorOk
 }
 
+// Executes a single instruction of the program where the
+// current ip points and then increments the ip.
+// Return a CoppervmError if something went wrong or ErrorOk.
 func (vm *Coppervm) ExecuteInstruction() CoppervmError {
-	fmt.Printf("Exec inst at %d\n", vm.Ip)
-	vm.Ip++
+	if vm.Ip >= uint(len(vm.Program)) {
+		return ErrorIllegalInstAccess
+	}
+
+	currentInst := vm.Program[vm.Ip]
+	switch currentInst.Kind {
+	case InstNoop:
+		vm.Ip++
+	case InstPush:
+		if vm.StackSize >= CoppervmStackCapacity {
+			return ErrorStackOverflow
+		}
+		vm.Stack[vm.StackSize] = currentInst.Operand
+		vm.StackSize++
+		vm.Ip++
+	case InstAdd:
+		if vm.StackSize < 2 {
+			return ErrorStackUnderflow
+		}
+		vm.Stack[vm.StackSize-2] = vm.Stack[vm.StackSize-2] + vm.Stack[vm.StackSize-1]
+		vm.StackSize--
+		vm.Ip++
+	case InstHalt:
+		vm.Halt = true
+	case InstCount:
+		fallthrough
+	default:
+		log.Fatalf("Invalid instruction %s", currentInst.Name)
+	}
+
+	vm.dumpStack()
 	return ErrorOk
 }
 
-const (
-	CoppervmFileVersion int = 1
-)
-
-type CoppervmFileMeta struct {
-	Version int       `json:"version"`
-	Entry   int       `json:"entry_point"`
-	Program []InstDef `json:"program"`
-}
-
-func FileMeta(entryPoint int, program []InstDef) CoppervmFileMeta {
-	return CoppervmFileMeta{
-		Version: CoppervmFileVersion,
-		Entry:   entryPoint,
-		Program: program,
+// Prints the stack content to standard output.
+func (vm *Coppervm) dumpStack() {
+	fmt.Printf("Stack:\n")
+	if vm.StackSize > 0 {
+		for i := 0; i < vm.StackSize; i++ {
+			fmt.Printf("  int: %d\n", vm.Stack[i])
+		}
+	} else {
+		fmt.Printf("  [empty]\n")
 	}
 }
