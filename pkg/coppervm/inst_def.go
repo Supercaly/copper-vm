@@ -28,6 +28,7 @@ var InstDefs = [InstCount]InstDef{
 type InstKind int
 
 const (
+	// TODO(#9): Add more instructions
 	InstNoop InstKind = iota
 	InstPush
 	InstAdd
