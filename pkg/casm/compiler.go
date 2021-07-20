@@ -86,10 +86,38 @@ func (casm *Casm) TranslateSource(filePath string) {
 		}
 	}
 
-	// Second Pass
+	println("Binding before second pass")
 	for _, b := range casm.Bindings {
+		fmt.Printf("Binding: %s (%d %d %s) %s\n",
+			b.Name,
+			b.Value.Kind,
+			b.Value.AsNumLit,
+			b.Value.AsBinding,
+			b.Location)
+	}
+
+	// Second Pass
+	for _, deferredOp := range casm.DeferredOperands {
 		// TODO(#2): Compute deferred operands in second pass
-		fmt.Printf("%s %d %s\n", b.Name, b.Value, b.Location)
+		fmt.Printf("Resolve def_op: %s at %d\n", deferredOp.Name, deferredOp.Address)
+
+		exist, binding := casm.getBindingByName(deferredOp.Name)
+		if !exist {
+			log.Fatalf("%s: [ERROR]: Unknown binding '%s'",
+				deferredOp.Location,
+				deferredOp.Name)
+		}
+		casm.Program[deferredOp.Address].Operand = casm.evaluateBinding(&binding, deferredOp.Location)
+	}
+
+	println("Binding after second pass")
+	for _, b := range casm.Bindings {
+		fmt.Printf("Binding: %s (%d %d %s) %s\n",
+			b.Name,
+			b.Value.Kind,
+			b.Value.AsNumLit,
+			b.Value.AsBinding,
+			b.Location)
 	}
 
 	// Resolve entry point
@@ -101,15 +129,34 @@ func (casm *Casm) TranslateSource(filePath string) {
 				casm.DeferredEntryName)
 		}
 
-		casm.Entry = binding.Value
+		if binding.Value.Kind != ExpressionKindNumLit {
+			log.Fatalf("%s: [ERROR]: Only label names can be set as entry point",
+				casm.EntryLocation)
+		}
+		casm.Entry = casm.evaluateBinding(&binding, casm.EntryLocation)
 	}
+}
 
-	fmt.Printf("Entry point: %d\n", casm.Entry)
-	println("Dump Program")
-	for _, i := range casm.Program {
-		fmt.Printf("%s %d\n", i.Name, i.Operand)
+func (casm *Casm) evaluateBinding(binding *Binding, location FileLocation) (value int) {
+	// TODO(#6): Cyclic bindings cause a stack overflow
+	value = casm.evaluateExpression(binding.Value, location)
+	return value
+}
+
+func (casm *Casm) evaluateExpression(expr Expression, location FileLocation) (ret int) {
+	switch expr.Kind {
+	case ExpressionKindBinding:
+		exist, binding := casm.getBindingByName(expr.AsBinding)
+		if !exist {
+			log.Fatalf("%s: [ERROR]: Cannot find binding '%s'",
+				location,
+				expr.AsBinding)
+		}
+		ret = casm.evaluateBinding(&binding, location)
+	case ExpressionKindNumLit:
+		ret = expr.AsNumLit
 	}
-	println("End Dump Program")
+	return ret
 }
 
 // Returns a binding by its name.
