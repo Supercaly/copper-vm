@@ -21,6 +21,7 @@ type Casm struct {
 	DeferredEntryName string
 }
 
+// Save a copper vm program to binary file.
 func (casm *Casm) SaveProgramToFile(filePath string) {
 	fmt.Printf("Entry point: %d\n", casm.Entry)
 	println("Dump Program")
@@ -33,6 +34,11 @@ func (casm *Casm) SaveProgramToFile(filePath string) {
 	println("Save to " + filePath)
 }
 
+// Translate a copper assembly file to copper vm's binary.
+// Given a file path this function will read it and parse it
+// as assembly code for the vm generating the correct program
+// in-memory.
+// Use SaveProgramToFile to save the program to binary file.
 func (casm *Casm) TranslateSource(filePath string) {
 	bytes, err := ioutil.ReadFile(filePath)
 	if err != nil {
@@ -137,28 +143,6 @@ func (casm *Casm) TranslateSource(filePath string) {
 	}
 }
 
-func (casm *Casm) evaluateBinding(binding *Binding, location FileLocation) (value int) {
-	// TODO(#6): Cyclic bindings cause a stack overflow
-	value = casm.evaluateExpression(binding.Value, location)
-	return value
-}
-
-func (casm *Casm) evaluateExpression(expr Expression, location FileLocation) (ret int) {
-	switch expr.Kind {
-	case ExpressionKindBinding:
-		exist, binding := casm.getBindingByName(expr.AsBinding)
-		if !exist {
-			log.Fatalf("%s: [ERROR]: Cannot find binding '%s'",
-				location,
-				expr.AsBinding)
-		}
-		ret = casm.evaluateBinding(&binding, location)
-	case ExpressionKindNumLit:
-		ret = expr.AsNumLit
-	}
-	return ret
-}
-
 // Returns a binding by its name.
 // If the binding exist the first return parameter will be true,
 // otherwise it'll be null.
@@ -220,4 +204,28 @@ func (casm *Casm) bindEntry(name string, location FileLocation) {
 	casm.DeferredEntryName = name
 	casm.HasEntry = true
 	casm.EntryLocation = location
+}
+
+// Evaluate a binding to extract a word.
+func (casm *Casm) evaluateBinding(binding *Binding, location FileLocation) (value int) {
+	// TODO(#6): Cyclic bindings cause a stack overflow
+	value = casm.evaluateExpression(binding.Value, location)
+	return value
+}
+
+// Evaluate an expression to extract a word.
+func (casm *Casm) evaluateExpression(expr Expression, location FileLocation) (ret int) {
+	switch expr.Kind {
+	case ExpressionKindBinding:
+		exist, binding := casm.getBindingByName(expr.AsBinding)
+		if !exist {
+			log.Fatalf("%s: [ERROR]: Cannot find binding '%s'",
+				location,
+				expr.AsBinding)
+		}
+		ret = casm.evaluateBinding(&binding, location)
+	case ExpressionKindNumLit:
+		ret = expr.AsNumLit
+	}
+	return ret
 }
