@@ -7,24 +7,6 @@ import (
 	"log"
 )
 
-type CoppervmError int
-
-const (
-	ErrorOk CoppervmError = iota
-	ErrorIllegalInstAccess
-	ErrorStackOverflow
-	ErrorStackUnderflow
-)
-
-func (err CoppervmError) String() string {
-	return [...]string{
-		"ErrorOk",
-		"ErrorIllegalInstAccess",
-		"ErrorStackOverflow",
-		"ErrorStackUnderflow",
-	}[err]
-}
-
 const (
 	CoppervmStackCapacity int = 1024
 )

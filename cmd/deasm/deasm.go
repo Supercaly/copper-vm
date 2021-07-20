@@ -5,7 +5,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"strconv"
 
 	au "coppervm.com/coppervm/internal"
 	"coppervm.com/coppervm/pkg/coppervm"
@@ -13,10 +12,8 @@ import (
 
 func usage(stream io.Writer, program string) {
 	fmt.Fprintf(stream, "Usage: %s [OPTIONS] <input.vm>\n", program)
-	fmt.Fprintf(stream, "OPTIONS:\n")
-	fmt.Fprintf(stream, "    -l <limit>      Limit the steps of the emulation.\n")
-	fmt.Fprintf(stream, "                    If negative no limit will be set.\n")
-	fmt.Fprintf(stream, "    -h              Print this help message.\n")
+	fmt.Fprintf(stream, "[OPTIONS]: \n")
+	fmt.Fprintf(stream, "    -h     Print this help message.\n")
 }
 
 func main() {
@@ -24,7 +21,6 @@ func main() {
 	var program string
 	program, args = au.Shift(args)
 	var inputFilePath string
-	var limit int = -1
 
 	for len(args) > 0 {
 		var flag string
@@ -33,19 +29,6 @@ func main() {
 		if flag == "-h" {
 			usage(os.Stdout, program)
 			os.Exit(0)
-		} else if flag == "-l" {
-			if len(args) == 0 {
-				usage(os.Stderr, program)
-				log.Fatalf("[ERROR]: No argument provided for flag `%s`\n", flag)
-			}
-
-			var limitStr string
-			var err error
-			limitStr, args = au.Shift(args)
-			limit, err = strconv.Atoi(limitStr)
-			if err != nil {
-				log.Fatalf("[ERROR]: limit argument must be a number!")
-			}
 		} else {
 			if inputFilePath != "" {
 				usage(os.Stderr, program)
@@ -63,7 +46,15 @@ func main() {
 
 	vm := coppervm.Coppervm{}
 	vm.LoadProgramFromFile(inputFilePath)
-	if err := vm.ExecuteProgram(limit); err != coppervm.ErrorOk {
-		log.Fatalf("[ERROR]: %s", err)
+
+	// Dump program to stdout
+	fmt.Fprintf(os.Stdout, "Entry point: %d\n", vm.Ip)
+	for i := 0; i < len(vm.Program); i++ {
+		inst := vm.Program[i]
+		fmt.Fprintf(os.Stdout, "%s ", inst.Name)
+		if inst.HasOperand {
+			fmt.Fprintf(os.Stdout, "%d", inst.Operand)
+		}
+		fmt.Fprintf(os.Stdout, "\n")
 	}
 }
