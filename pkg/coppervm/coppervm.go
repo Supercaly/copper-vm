@@ -1,5 +1,12 @@
 package coppervm
 
+import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"log"
+)
+
 type InstKind int
 
 const (
@@ -48,6 +55,66 @@ func GetInstDefByName(name string) (bool, InstDef) {
 		}
 	}
 	return false, InstDef{}
+}
+
+type CoppervmError int
+
+const (
+	ErrorOk CoppervmError = iota
+)
+
+func (err CoppervmError) String() string {
+	return [...]string{
+		"ErrorOk",
+	}[err]
+}
+
+const (
+	CoppervmStackCapacity int = 1024
+)
+
+type Coppervm struct {
+	Stack   [CoppervmStackCapacity]int
+	Program []InstDef
+	Ip      uint
+	Halt    bool
+}
+
+// Load program's binary to vm from file.
+func (vm *Coppervm) LoadProgramFromFile(filePath string) {
+	content, fileErr := ioutil.ReadFile(filePath)
+	if fileErr != nil {
+		log.Fatalf("[ERROR]: Error reading file '%s': %s",
+			filePath,
+			fileErr)
+	}
+
+	var meta CoppervmFileMeta
+	if err := json.Unmarshal(content, &meta); err != nil {
+		log.Fatalf("[ERROR]: Error reading content of file '%s': %s",
+			filePath,
+			err)
+	}
+
+	vm.Halt = false
+	vm.Ip = uint(meta.Entry)
+	vm.Program = meta.Program
+}
+
+func (vm *Coppervm) ExecuteProgram(limit int) CoppervmError {
+	for limit != 0 && !vm.Halt {
+		if err := vm.ExecuteInstruction(); err != ErrorOk {
+			return err
+		}
+		limit--
+	}
+	return ErrorOk
+}
+
+func (vm *Coppervm) ExecuteInstruction() CoppervmError {
+	fmt.Printf("Exec inst at %d\n", vm.Ip)
+	vm.Ip++
+	return ErrorOk
 }
 
 const (
