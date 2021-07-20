@@ -14,7 +14,8 @@ type InstDef struct {
 	Kind       InstKind
 	HasOperand bool
 	Name       string
-	Operand    int
+	// TODO(#5): Use Word as operand type
+	Operand int
 }
 
 var InstDefs = [InstCount]InstDef{

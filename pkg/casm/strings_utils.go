@@ -20,3 +20,17 @@ func SplitByDelim(input string, delim rune) (f string, s string) {
 	s = input[idx:]
 	return f, s
 }
+
+// Splits a line by all characters matching predicate.
+// Given a line and a predicate function it returns two strings:
+// the first is the the part mathing the predicate, the second if
+// the rest.
+func SplitWhile(input string, predicate func(rune) bool) (f string, s string) {
+	idx := 0
+	for len(input) > idx && predicate(rune(input[idx])) {
+		idx++
+	}
+	f = input[:idx]
+	s = input[idx:]
+	return f, s
+}
