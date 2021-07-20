@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"strings"
 
 	"coppervm.com/coppervm/pkg/coppervm"
 )
 
 type Casm struct {
-	Bindings []Binding
+	Bindings         []Binding
+	DeferredOperands []DeferredOperand
 
 	Program []coppervm.InstDef
 
@@ -20,6 +22,13 @@ type Casm struct {
 }
 
 func (casm *Casm) SaveProgramToFile(filePath string) {
+	fmt.Printf("Entry point: %d\n", casm.Entry)
+	println("Dump Program")
+	for _, i := range casm.Program {
+		fmt.Printf("%s %d\n", i.Name, i.Operand)
+	}
+	println("End Dump Program")
+
 	// TODO(#3): Save compiled program to vm's binary
 	println("Save to " + filePath)
 }
@@ -46,13 +55,24 @@ func (casm *Casm) TranslateSource(filePath string) {
 		case LineKindInstruction:
 			exist, instDef := coppervm.GetInstDefByName(line.AsInstruction.Name)
 			if !exist {
-				log.Fatalf("%s: [ERROR]: Unknown instruction '%s'", line.Location, line.AsInstruction.Name)
+				log.Fatalf("%s: [ERROR]: Unknown instruction '%s'",
+					line.Location,
+					line.AsInstruction.Name)
 			}
 
 			if instDef.HasOperand {
-				// TODO(#1): Parse instruction operand
 				operand := ParseExprFromString(line.AsInstruction.Operand, line.Location)
-				instDef.Operand = operand.AsNumLit
+				if operand.Kind == ExpressionKindBinding {
+					println("Push deferred operand " + operand.AsBinding)
+					casm.DeferredOperands = append(casm.DeferredOperands,
+						DeferredOperand{
+							Name:     operand.AsBinding,
+							Address:  len(casm.Program),
+							Location: line.Location,
+						})
+				} else {
+					instDef.Operand = operand.AsNumLit
+				}
 			}
 			casm.Program = append(casm.Program, instDef)
 		case LineKindDirective:
@@ -105,29 +125,39 @@ func (casm *Casm) getBindingByName(name string) (bool, Binding) {
 }
 
 // Binds a label.
-func (casm *Casm) bindLabel(name string, position int, location FileLocation) {
+func (casm *Casm) bindLabel(name string, address int, location FileLocation) {
 	exist, binding := casm.getBindingByName(name)
 	if exist {
 		log.Fatalf("%s: [ERROR]: Name is already bound at location '%s'", location, binding.Location)
 	}
 
 	casm.Bindings = append(casm.Bindings, Binding{
-		Name:     name,
-		Value:    position,
+		Name: name,
+		Value: Expression{
+			Kind:     ExpressionKindNumLit,
+			AsNumLit: address,
+		},
 		Location: location,
 	})
 }
 
 // Binds a constant.
 func (casm *Casm) bindConst(directive DirectiveLine, location FileLocation) {
-	exist, binding := casm.getBindingByName(directive.Block)
+	name, block := SplitByDelim(directive.Block, ' ')
+	name = strings.TrimSpace(name)
+	block = strings.TrimSpace(block)
+
+	exist, binding := casm.getBindingByName(name)
 	if exist {
-		log.Fatalf("%s: [ERROR]: Name is already bound at location '%s'", location, binding.Location)
+		log.Fatalf("%s: [ERROR]: Name '%s' is already bound at location '%s'",
+			location,
+			name,
+			binding.Location)
 	}
 
 	casm.Bindings = append(casm.Bindings, Binding{
-		Name:     directive.Block,
-		Value:    -1,
+		Name:     name,
+		Value:    ParseExprFromString(block, location),
 		Location: location,
 	})
 }
