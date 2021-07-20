@@ -14,7 +14,7 @@ type InstDef struct {
 	Kind       InstKind
 	HasOperand bool
 	Name       string
-	// TODO: Use Word as operand type
+	// TODO(#5): Use Word as operand type
 	Operand int
 }
 
