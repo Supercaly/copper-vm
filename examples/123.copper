@@ -1,15 +1,11 @@
-; This is a comment
-
-%const C 12
-
-main:
-    push 1 ; This is another comment
-    push 2
-    push C
-    
-    add
-    add
-
-    halt
-
 %entry main
+
+; This program pushes 1,2,3 on the stack
+; and sums them
+main:
+    push 1
+    push 2
+    push 3
+    add
+    add
+    halt
