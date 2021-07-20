@@ -104,7 +104,6 @@ func (casm *Casm) TranslateSource(filePath string) {
 
 	// Second Pass
 	for _, deferredOp := range casm.DeferredOperands {
-		// TODO(#2): Compute deferred operands in second pass
 		fmt.Printf("Resolve def_op: %s at %d\n", deferredOp.Name, deferredOp.Address)
 
 		exist, binding := casm.getBindingByName(deferredOp.Name)
