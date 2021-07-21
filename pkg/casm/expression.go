@@ -51,6 +51,13 @@ func parseExprPrimary(tokens []Token, location FileLocation) (result Expression)
 	case TokenKindSymbol:
 		result.Kind = ExpressionKindBinding
 		result.AsBinding = tokens[0].Text
+	case TokenKindMinus:
+		result = parseExprPrimary(tokens[1:], location)
+		if result.Kind == ExpressionKindNumLitInt {
+			result.AsNumLitInt = -result.AsNumLitInt
+		} else if result.Kind == ExpressionKindNumLitFloat {
+			result.AsNumLitFloat = -result.AsNumLitFloat
+		}
 	}
 	return result
 }

@@ -101,17 +101,24 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 		if vm.StackSize < 2 {
 			return ErrorStackUnderflow
 		}
-		vm.Stack[vm.StackSize-2] = addWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], typeRepI64)
+		vm.Stack[vm.StackSize-2] = addWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], typeRepU64)
 		vm.StackSize--
 		vm.Ip++
 	case InstSubInt:
 		if vm.StackSize < 2 {
 			return ErrorStackUnderflow
 		}
-		vm.Stack[vm.StackSize-2] = subWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], typeRepI64)
+		vm.Stack[vm.StackSize-2] = subWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], typeRepU64)
 		vm.StackSize--
 		vm.Ip++
 	case InstMulInt:
+		if vm.StackSize < 2 {
+			return ErrorStackUnderflow
+		}
+		vm.Stack[vm.StackSize-2] = mulWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], typeRepU64)
+		vm.StackSize--
+		vm.Ip++
+	case InstMulIntSigned:
 		if vm.StackSize < 2 {
 			return ErrorStackUnderflow
 		}

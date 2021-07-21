@@ -16,7 +16,8 @@
 | --- | :---: | --- |
 | add | - | integer addition of first two elements on the stack, the result is pushed on stack top and the elements are consumed | 
 | sub | - | integer subtract of first two elements on the stack, the result is pushed on stack top and the elements are consumed | 
-| mul | - | integer multiply of first two elements on the stack, the result is pushed on stack top and the elements are consumed |
+| mul | - | integer multiply (unsigned) of first two elements on the stack, the result is pushed on stack top and the elements are consumed |
+| imul | - | integer multiply (signed) of first two elements on the stack, the result is pushed on stack top and the elements are consumed |
 
 ## Floating point arithmetics
 

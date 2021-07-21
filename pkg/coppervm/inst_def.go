@@ -39,6 +39,11 @@ var InstDefs = [InstCount]InstDef{
 		Name:       "mul",
 	},
 	{
+		Kind:       InstMulIntSigned,
+		HasOperand: false,
+		Name:       "imul",
+	},
+	{
 		Kind:       InstAddFloat,
 		HasOperand: false,
 		Name:       "fadd",
@@ -88,6 +93,7 @@ const (
 	InstAddInt
 	InstSubInt
 	InstMulInt
+	InstMulIntSigned
 
 	InstAddFloat
 	InstSubFloat
