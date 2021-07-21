@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	CoppervmDebug         bool = false
+	CoppervmDebug         bool = true
 	CoppervmStackCapacity int  = 1024
 )
 
@@ -93,21 +93,51 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 		vm.Stack[vm.StackSize] = newVal
 		vm.StackSize++
 		vm.Ip++
-	case InstAdd:
+	case InstAddInt:
 		if vm.StackSize < 2 {
 			return ErrorStackUnderflow
 		}
 		vm.Stack[vm.StackSize-2] = vm.Stack[vm.StackSize-2] + vm.Stack[vm.StackSize-1]
 		vm.StackSize--
 		vm.Ip++
-	case InstSub:
+	case InstSubInt:
 		if vm.StackSize < 2 {
 			return ErrorStackUnderflow
 		}
 		vm.Stack[vm.StackSize-2] = vm.Stack[vm.StackSize-2] - vm.Stack[vm.StackSize-1]
 		vm.StackSize--
 		vm.Ip++
-	case InstJnz:
+	case InstMulInt:
+		if vm.StackSize < 2 {
+			return ErrorStackUnderflow
+		}
+		vm.Stack[vm.StackSize-2] = vm.Stack[vm.StackSize-2] * vm.Stack[vm.StackSize-1]
+		vm.StackSize--
+		vm.Ip++
+	case InstAddFloat:
+		if vm.StackSize < 2 {
+			return ErrorStackUnderflow
+		}
+		vm.Stack[vm.StackSize-2] = vm.Stack[vm.StackSize-2] + vm.Stack[vm.StackSize-1]
+		vm.StackSize--
+		vm.Ip++
+	case InstSubFloat:
+		if vm.StackSize < 2 {
+			return ErrorStackUnderflow
+		}
+		vm.Stack[vm.StackSize-2] = vm.Stack[vm.StackSize-2] - vm.Stack[vm.StackSize-1]
+		vm.StackSize--
+		vm.Ip++
+	case InstMulFloat:
+		if vm.StackSize < 2 {
+			return ErrorStackUnderflow
+		}
+		vm.Stack[vm.StackSize-2] = vm.Stack[vm.StackSize-2] * vm.Stack[vm.StackSize-1]
+		vm.StackSize--
+		vm.Ip++
+	case InstJmp:
+		vm.Ip = uint(currentInst.Operand)
+	case InstJmpNotZero:
 		if vm.StackSize < 1 {
 			return ErrorStackUnderflow
 		}
