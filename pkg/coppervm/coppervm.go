@@ -63,6 +63,7 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 
 	currentInst := vm.Program[vm.Ip]
 	switch currentInst.Kind {
+	// Basic instructions
 	case InstNoop:
 		vm.Ip++
 	case InstPush:
@@ -93,48 +94,53 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 		vm.Stack[vm.StackSize] = newVal
 		vm.StackSize++
 		vm.Ip++
+	case InstHalt:
+		vm.Halt = true
+	// Integer arithmetics
 	case InstAddInt:
 		if vm.StackSize < 2 {
 			return ErrorStackUnderflow
 		}
-		vm.Stack[vm.StackSize-2].AsI64 = vm.Stack[vm.StackSize-2].AsI64 + vm.Stack[vm.StackSize-1].AsI64
+		vm.Stack[vm.StackSize-2] = addWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], typeRepI64)
 		vm.StackSize--
 		vm.Ip++
 	case InstSubInt:
 		if vm.StackSize < 2 {
 			return ErrorStackUnderflow
 		}
-		vm.Stack[vm.StackSize-2].AsI64 = vm.Stack[vm.StackSize-2].AsI64 - vm.Stack[vm.StackSize-1].AsI64
+		vm.Stack[vm.StackSize-2] = subWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], typeRepI64)
 		vm.StackSize--
 		vm.Ip++
 	case InstMulInt:
 		if vm.StackSize < 2 {
 			return ErrorStackUnderflow
 		}
-		vm.Stack[vm.StackSize-2].AsI64 = vm.Stack[vm.StackSize-2].AsI64 * vm.Stack[vm.StackSize-1].AsI64
+		vm.Stack[vm.StackSize-2] = mulWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], typeRepI64)
 		vm.StackSize--
 		vm.Ip++
+	// Floating point arithmetics
 	case InstAddFloat:
 		if vm.StackSize < 2 {
 			return ErrorStackUnderflow
 		}
-		vm.Stack[vm.StackSize-2].AsF64 = vm.Stack[vm.StackSize-2].AsF64 + vm.Stack[vm.StackSize-1].AsF64
+		vm.Stack[vm.StackSize-2] = addWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], typeRepF64)
 		vm.StackSize--
 		vm.Ip++
 	case InstSubFloat:
 		if vm.StackSize < 2 {
 			return ErrorStackUnderflow
 		}
-		vm.Stack[vm.StackSize-2].AsF64 = vm.Stack[vm.StackSize-2].AsF64 - vm.Stack[vm.StackSize-1].AsF64
+		vm.Stack[vm.StackSize-2] = subWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], typeRepF64)
 		vm.StackSize--
 		vm.Ip++
 	case InstMulFloat:
 		if vm.StackSize < 2 {
 			return ErrorStackUnderflow
 		}
-		vm.Stack[vm.StackSize-2].AsF64 = vm.Stack[vm.StackSize-2].AsF64 * vm.Stack[vm.StackSize-1].AsF64
+		vm.Stack[vm.StackSize-2] = mulWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], typeRepF64)
 		vm.StackSize--
 		vm.Ip++
+	// Flow control
 	case InstJmp:
 		vm.Ip = uint(currentInst.Operand.AsI64)
 	case InstJmpNotZero:
@@ -153,8 +159,6 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 		}
 		fmt.Printf("[write]: %s\n", vm.Stack[vm.StackSize-1])
 		vm.Ip++
-	case InstHalt:
-		vm.Halt = true
 	case InstCount:
 		fallthrough
 	default:

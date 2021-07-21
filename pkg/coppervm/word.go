@@ -24,3 +24,40 @@ func (word Word) String() string {
 		word.AsI64,
 		word.AsF64)
 }
+
+type typeRep int
+
+const (
+	typeRepI64 typeRep = iota
+	typeRepF64
+)
+
+func addWord(a Word, b Word, rep typeRep) (out Word) {
+	switch rep {
+	case typeRepI64:
+		out = WordI64(a.AsI64 + b.AsI64)
+	case typeRepF64:
+		out = WordF64(a.AsF64 + b.AsF64)
+	}
+	return out
+}
+
+func subWord(a Word, b Word, rep typeRep) (out Word) {
+	switch rep {
+	case typeRepI64:
+		out = WordI64(a.AsI64 - b.AsI64)
+	case typeRepF64:
+		out = WordF64(a.AsF64 - b.AsF64)
+	}
+	return out
+}
+
+func mulWord(a Word, b Word, rep typeRep) (out Word) {
+	switch rep {
+	case typeRepI64:
+		out = WordI64(a.AsI64 * b.AsI64)
+	case typeRepF64:
+		out = WordF64(a.AsF64 * b.AsF64)
+	}
+	return out
+}
