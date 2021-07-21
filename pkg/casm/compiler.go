@@ -11,6 +11,10 @@ import (
 	"coppervm.com/coppervm/pkg/coppervm"
 )
 
+const (
+	CasmDebug bool = false
+)
+
 type Casm struct {
 	Bindings         []Binding
 	DeferredOperands []DeferredOperand
@@ -25,13 +29,6 @@ type Casm struct {
 
 // Save a copper vm program to binary file.
 func (casm *Casm) SaveProgramToFile(filePath string) {
-	fmt.Printf("Entry point: %d\n", casm.Entry)
-	println("Dump Program")
-	for _, i := range casm.Program {
-		fmt.Printf("%s %d\n", i.Name, i.Operand)
-	}
-	println("End Dump Program")
-
 	test, err := json.Marshal(coppervm.FileMeta(casm.Entry, casm.Program))
 	if err != nil {
 		log.Fatalf("[ERROR]: Error writign program to file %s", err)
@@ -52,7 +49,7 @@ func (casm *Casm) SaveProgramToFile(filePath string) {
 func (casm *Casm) TranslateSource(filePath string) {
 	bytes, err := ioutil.ReadFile(filePath)
 	if err != nil {
-		log.Fatalf("Error reading file '%s': %s", filePath, err)
+		log.Fatalf("[ERROR]: Error reading file '%s': %s", filePath, err)
 	}
 	source := string(bytes)
 
@@ -79,7 +76,9 @@ func (casm *Casm) TranslateSource(filePath string) {
 			if instDef.HasOperand {
 				operand := ParseExprFromString(line.AsInstruction.Operand, line.Location)
 				if operand.Kind == ExpressionKindBinding {
-					println("Push deferred operand " + operand.AsBinding)
+					if CasmDebug {
+						println("[INFO]: Push deferred operand " + operand.AsBinding)
+					}
 					casm.DeferredOperands = append(casm.DeferredOperands,
 						DeferredOperand{
 							Name:     operand.AsBinding,
@@ -102,19 +101,11 @@ func (casm *Casm) TranslateSource(filePath string) {
 		}
 	}
 
-	println("Binding before second pass")
-	for _, b := range casm.Bindings {
-		fmt.Printf("Binding: %s (%d %d %s) %s\n",
-			b.Name,
-			b.Value.Kind,
-			b.Value.AsNumLit,
-			b.Value.AsBinding,
-			b.Location)
-	}
-
 	// Second Pass
 	for _, deferredOp := range casm.DeferredOperands {
-		fmt.Printf("Resolve def_op: %s at %d\n", deferredOp.Name, deferredOp.Address)
+		if CasmDebug {
+			fmt.Printf("[INFO]: Resolve deferref operand '%s' at '%d'\n", deferredOp.Name, deferredOp.Address)
+		}
 
 		exist, binding := casm.getBindingByName(deferredOp.Name)
 		if !exist {
@@ -125,14 +116,16 @@ func (casm *Casm) TranslateSource(filePath string) {
 		casm.Program[deferredOp.Address].Operand = casm.evaluateBinding(&binding, deferredOp.Location)
 	}
 
-	println("Binding after second pass")
-	for _, b := range casm.Bindings {
-		fmt.Printf("Binding: %s (%d %d %s) %s\n",
-			b.Name,
-			b.Value.Kind,
-			b.Value.AsNumLit,
-			b.Value.AsBinding,
-			b.Location)
+	// Print all the bindings
+	if CasmDebug {
+		for _, b := range casm.Bindings {
+			fmt.Printf("[INFO]: Binding: %s (%d %d %s) %s\n",
+				b.Name,
+				b.Value.Kind,
+				b.Value.AsNumLit,
+				b.Value.AsBinding,
+				b.Location)
+		}
 	}
 
 	// Resolve entry point
