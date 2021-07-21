@@ -24,17 +24,42 @@ var InstDefs = [InstCount]InstDef{
 		Name:       "dup",
 	},
 	{
-		Kind:       InstAdd,
+		Kind:       InstAddInt,
 		HasOperand: false,
 		Name:       "add",
 	},
 	{
-		Kind:       InstSub,
+		Kind:       InstSubInt,
 		HasOperand: false,
 		Name:       "sub",
 	},
 	{
-		Kind:       InstJnz,
+		Kind:       InstMulInt,
+		HasOperand: false,
+		Name:       "mul",
+	},
+	{
+		Kind:       InstAddFloat,
+		HasOperand: false,
+		Name:       "fadd",
+	},
+	{
+		Kind:       InstSubFloat,
+		HasOperand: false,
+		Name:       "fsub",
+	},
+	{
+		Kind:       InstMulFloat,
+		HasOperand: false,
+		Name:       "fmul",
+	},
+	{
+		Kind:       InstJmp,
+		HasOperand: true,
+		Name:       "jmp",
+	},
+	{
+		Kind:       InstJmpNotZero,
 		HasOperand: true,
 		Name:       "jnz",
 	},
@@ -60,10 +85,16 @@ const (
 	InstSwap
 	InstDup
 
-	InstAdd
-	InstSub
+	InstAddInt
+	InstSubInt
+	InstMulInt
 
-	InstJnz
+	InstAddFloat
+	InstSubFloat
+	InstMulFloat
+
+	InstJmp
+	InstJmpNotZero
 
 	InstPrint
 
@@ -76,7 +107,7 @@ type InstDef struct {
 	HasOperand bool
 	Name       string
 	// TODO(#5): Use Word as operand type
-	Operand int
+	Operand Word
 }
 
 // Return an instruction definition by it's string

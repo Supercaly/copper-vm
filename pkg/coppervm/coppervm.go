@@ -8,13 +8,13 @@ import (
 )
 
 const (
-	CoppervmDebug         bool = false
-	CoppervmStackCapacity int  = 1024
+	CoppervmDebug         bool  = true
+	CoppervmStackCapacity int64 = 1024
 )
 
 type Coppervm struct {
-	Stack     [CoppervmStackCapacity]int
-	StackSize int
+	Stack     [CoppervmStackCapacity]Word
+	StackSize int64
 	Program   []InstDef
 	Ip        uint
 	Halt      bool
@@ -63,6 +63,7 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 
 	currentInst := vm.Program[vm.Ip]
 	switch currentInst.Kind {
+	// Basic instructions
 	case InstNoop:
 		vm.Ip++
 	case InstPush:
@@ -73,11 +74,11 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 		vm.StackSize++
 		vm.Ip++
 	case InstSwap:
-		if currentInst.Operand >= vm.StackSize {
+		if currentInst.Operand.AsI64 >= vm.StackSize {
 			return ErrorStackUnderflow
 		}
 		a := vm.StackSize - 1
-		b := vm.StackSize - 1 - currentInst.Operand
+		b := vm.StackSize - 1 - currentInst.Operand.AsI64
 		tmp := vm.Stack[a]
 		vm.Stack[a] = vm.Stack[b]
 		vm.Stack[b] = tmp
@@ -93,26 +94,61 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 		vm.Stack[vm.StackSize] = newVal
 		vm.StackSize++
 		vm.Ip++
-	case InstAdd:
+	case InstHalt:
+		vm.Halt = true
+	// Integer arithmetics
+	case InstAddInt:
 		if vm.StackSize < 2 {
 			return ErrorStackUnderflow
 		}
-		vm.Stack[vm.StackSize-2] = vm.Stack[vm.StackSize-2] + vm.Stack[vm.StackSize-1]
+		vm.Stack[vm.StackSize-2] = addWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], typeRepI64)
 		vm.StackSize--
 		vm.Ip++
-	case InstSub:
+	case InstSubInt:
 		if vm.StackSize < 2 {
 			return ErrorStackUnderflow
 		}
-		vm.Stack[vm.StackSize-2] = vm.Stack[vm.StackSize-2] - vm.Stack[vm.StackSize-1]
+		vm.Stack[vm.StackSize-2] = subWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], typeRepI64)
 		vm.StackSize--
 		vm.Ip++
-	case InstJnz:
+	case InstMulInt:
+		if vm.StackSize < 2 {
+			return ErrorStackUnderflow
+		}
+		vm.Stack[vm.StackSize-2] = mulWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], typeRepI64)
+		vm.StackSize--
+		vm.Ip++
+	// Floating point arithmetics
+	case InstAddFloat:
+		if vm.StackSize < 2 {
+			return ErrorStackUnderflow
+		}
+		vm.Stack[vm.StackSize-2] = addWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], typeRepF64)
+		vm.StackSize--
+		vm.Ip++
+	case InstSubFloat:
+		if vm.StackSize < 2 {
+			return ErrorStackUnderflow
+		}
+		vm.Stack[vm.StackSize-2] = subWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], typeRepF64)
+		vm.StackSize--
+		vm.Ip++
+	case InstMulFloat:
+		if vm.StackSize < 2 {
+			return ErrorStackUnderflow
+		}
+		vm.Stack[vm.StackSize-2] = mulWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], typeRepF64)
+		vm.StackSize--
+		vm.Ip++
+	// Flow control
+	case InstJmp:
+		vm.Ip = uint(currentInst.Operand.AsI64)
+	case InstJmpNotZero:
 		if vm.StackSize < 1 {
 			return ErrorStackUnderflow
 		}
-		if vm.Stack[vm.StackSize-1] != 0 {
-			vm.Ip = uint(currentInst.Operand)
+		if vm.Stack[vm.StackSize-1].AsI64 != 0 {
+			vm.Ip = uint(currentInst.Operand.AsI64)
 		} else {
 			vm.Ip++
 		}
@@ -121,10 +157,8 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 		if vm.StackSize < 1 {
 			return ErrorStackUnderflow
 		}
-		fmt.Printf("[write]: %d\n", vm.Stack[vm.StackSize-1])
+		fmt.Printf("[write]: %s\n", vm.Stack[vm.StackSize-1])
 		vm.Ip++
-	case InstHalt:
-		vm.Halt = true
 	case InstCount:
 		fallthrough
 	default:
@@ -142,8 +176,8 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 func (vm *Coppervm) dumpStack() {
 	fmt.Printf("Stack:\n")
 	if vm.StackSize > 0 {
-		for i := 0; i < vm.StackSize; i++ {
-			fmt.Printf("  int: %d\n", vm.Stack[i])
+		for i := int64(0); i < vm.StackSize; i++ {
+			fmt.Printf("  %s\n", vm.Stack[i])
 		}
 	} else {
 		fmt.Printf("  [empty]\n")

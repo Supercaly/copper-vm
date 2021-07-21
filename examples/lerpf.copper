@@ -1,0 +1,31 @@
+%entry main
+
+; lerp float
+; input:
+; a
+; b
+; t
+; output:
+; a + (b - a) * t
+lerpf:
+    swap 2
+    dup
+    swap 2
+    swap 1
+    fsub
+
+    swap 1
+    swap 2
+    fmul
+    fadd
+
+    jmp return
+
+main:
+    push 1.0
+    push 10.0
+    push 0.7
+    jmp lerpf
+return:
+    write
+    halt
