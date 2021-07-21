@@ -5,6 +5,8 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
+	"strings"
 
 	au "coppervm.com/coppervm/internal"
 	c "coppervm.com/coppervm/pkg/casm"
@@ -53,10 +55,11 @@ func main() {
 		log.Fatalf("[ERROR]: input was not provided\n")
 	}
 
-	// TODO(#17): Use input path to determine output if not specified by the user
 	if outputFilePath == "" {
-		usage(os.Stderr, program)
-		log.Fatalf("[ERROR]: output was not provided\n")
+		fileName := filepath.Base(inputFilePath)
+		fileDir := filepath.Dir(inputFilePath)
+		fileName = strings.TrimSuffix(fileName, filepath.Ext(fileName)) + ".vm"
+		outputFilePath = filepath.Join(fileDir, fileName)
 	}
 
 	casm := c.Casm{}
