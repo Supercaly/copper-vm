@@ -24,6 +24,11 @@ var InstDefs = [InstCount]InstDef{
 		Name:       "dup",
 	},
 	{
+		Kind:       InstDrop,
+		HasOperand: false,
+		Name:       "drop",
+	},
+	{
 		Kind:       InstAddInt,
 		HasOperand: false,
 		Name:       "add",
@@ -39,6 +44,31 @@ var InstDefs = [InstCount]InstDef{
 		Name:       "mul",
 	},
 	{
+		Kind:       InstMulIntSigned,
+		HasOperand: false,
+		Name:       "imul",
+	},
+	{
+		Kind:       InstDivInt,
+		HasOperand: false,
+		Name:       "div",
+	},
+	{
+		Kind:       InstDivIntSigned,
+		HasOperand: false,
+		Name:       "idiv",
+	},
+	{
+		Kind:       InstModInt,
+		HasOperand: false,
+		Name:       "mod",
+	},
+	{
+		Kind:       InstModIntSigned,
+		HasOperand: false,
+		Name:       "imod",
+	},
+	{
 		Kind:       InstAddFloat,
 		HasOperand: false,
 		Name:       "fadd",
@@ -52,6 +82,11 @@ var InstDefs = [InstCount]InstDef{
 		Kind:       InstMulFloat,
 		HasOperand: false,
 		Name:       "fmul",
+	},
+	{
+		Kind:       InstDivFloat,
+		HasOperand: false,
+		Name:       "fdiv",
 	},
 	{
 		Kind:       InstJmp,
@@ -84,14 +119,21 @@ const (
 	InstPush
 	InstSwap
 	InstDup
+	InstDrop
 
 	InstAddInt
 	InstSubInt
 	InstMulInt
+	InstMulIntSigned
+	InstDivInt
+	InstDivIntSigned
+	InstModInt
+	InstModIntSigned
 
 	InstAddFloat
 	InstSubFloat
 	InstMulFloat
+	InstDivFloat
 
 	InstJmp
 	InstJmpNotZero

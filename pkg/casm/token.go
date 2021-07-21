@@ -10,7 +10,8 @@ type TokenKind int
 
 const (
 	TokenKindNumLit TokenKind = iota
-	TokenKindSymbol TokenKind = iota
+	TokenKindSymbol
+	TokenKindMinus
 )
 
 type Token struct {
@@ -24,7 +25,12 @@ func Tokenize(source string, location FileLocation) (out []Token) {
 	for source != "" {
 		source = strings.TrimSpace(source)
 		switch source[0] {
-		// TODO: Tokenize other tokens
+		case '-':
+			source = source[1:]
+			out = append(out, Token{
+				Kind: TokenKindMinus,
+				Text: "-",
+			})
 		default:
 			if isAlpha(rune(source[0])) {
 				// Tokenize a symbol

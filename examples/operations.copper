@@ -1,0 +1,129 @@
+integer: 
+    ; add integers
+    push 1
+    push 2
+    add
+    write
+    drop
+
+    ; add signed integers
+    push -1
+    push 2
+    add
+    write
+    drop
+
+    ; subtract integers
+    push 2
+    push 1
+    sub
+    write
+    drop
+
+    ; subtract signed integers
+    push -2
+    push 1
+    sub
+    write
+    drop
+
+    ; multiply integers
+    push 2
+    push 1
+    mul
+    write
+    drop
+
+    ; multiply signed integers
+    push -2
+    push 1
+    imul
+    write
+    drop
+
+    ; divide integers
+    push 3
+    push 2
+    div
+    write
+    drop
+
+    ; divide signed integers
+    push -2
+    push 5
+    idiv
+    write
+    drop
+
+    ; modulo integers
+    push 6
+    push 2
+    mod
+    write
+    drop
+
+    ; modulo signed integers
+    push -8
+    push 5
+    imod
+    write
+    drop
+
+floating_point:
+    ; add float
+    push 1.0
+    push 2.0
+    fadd
+    write
+    drop
+
+    ; add signed float
+    push -1.0
+    push 2.0
+    fadd
+    write
+    drop
+
+    ; subtract float
+    push 2.0
+    push 1.0
+    fsub
+    write
+    drop
+
+    ; subtract signed float
+    push -2.0
+    push 1.0
+    fsub
+    write
+    drop
+
+    ; multiply float
+    push 2.0
+    push 1.0
+    fmul
+    write
+    drop
+
+    ; multiply signed float
+    push -2.0
+    push 1.0
+    fmul
+    write
+    drop
+
+    ; divide float
+    push 3.0
+    push 2.0
+    fdiv
+    write
+    drop
+
+    ; divide signed float
+    push -2.0
+    push 5.0
+    fdiv
+    write
+    drop
+   
+halt
