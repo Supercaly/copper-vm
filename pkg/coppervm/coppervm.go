@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	CoppervmDebug         bool  = true
+	CoppervmDebug         bool  = false
 	CoppervmStackCapacity int64 = 1024
 )
 
@@ -94,6 +94,12 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 		vm.Stack[vm.StackSize] = newVal
 		vm.StackSize++
 		vm.Ip++
+	case InstDrop:
+		if vm.StackSize < 1 {
+			return ErrorStackUnderflow
+		}
+		vm.StackSize--
+		vm.Ip++
 	case InstHalt:
 		vm.Halt = true
 	// Integer arithmetics
@@ -125,6 +131,34 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 		vm.Stack[vm.StackSize-2] = mulWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], typeRepI64)
 		vm.StackSize--
 		vm.Ip++
+	case InstDivInt:
+		if vm.StackSize < 2 {
+			return ErrorStackUnderflow
+		}
+		vm.Stack[vm.StackSize-2] = divWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], typeRepU64)
+		vm.StackSize--
+		vm.Ip++
+	case InstDivIntSigned:
+		if vm.StackSize < 2 {
+			return ErrorStackUnderflow
+		}
+		vm.Stack[vm.StackSize-2] = divWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], typeRepI64)
+		vm.StackSize--
+		vm.Ip++
+	case InstModInt:
+		if vm.StackSize < 2 {
+			return ErrorStackUnderflow
+		}
+		vm.Stack[vm.StackSize-2] = modWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], typeRepU64)
+		vm.StackSize--
+		vm.Ip++
+	case InstModIntSigned:
+		if vm.StackSize < 2 {
+			return ErrorStackUnderflow
+		}
+		vm.Stack[vm.StackSize-2] = modWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], typeRepI64)
+		vm.StackSize--
+		vm.Ip++
 	// Floating point arithmetics
 	case InstAddFloat:
 		if vm.StackSize < 2 {
@@ -145,6 +179,13 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 			return ErrorStackUnderflow
 		}
 		vm.Stack[vm.StackSize-2] = mulWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], typeRepF64)
+		vm.StackSize--
+		vm.Ip++
+	case InstDivFloat:
+		if vm.StackSize < 2 {
+			return ErrorStackUnderflow
+		}
+		vm.Stack[vm.StackSize-2] = divWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], typeRepF64)
 		vm.StackSize--
 		vm.Ip++
 	// Flow control

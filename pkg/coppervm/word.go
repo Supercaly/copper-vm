@@ -82,3 +82,25 @@ func mulWord(a Word, b Word, rep typeRep) (out Word) {
 	}
 	return out
 }
+
+func divWord(a Word, b Word, rep typeRep) (out Word) {
+	switch rep {
+	case typeRepU64:
+		out = WordU64(a.AsU64 / b.AsU64)
+	case typeRepI64:
+		out = WordI64(a.AsI64 / b.AsI64)
+	case typeRepF64:
+		out = WordF64(a.AsF64 / b.AsF64)
+	}
+	return out
+}
+
+func modWord(a Word, b Word, rep typeRep) (out Word) {
+	switch rep {
+	case typeRepU64:
+		out = WordU64(a.AsU64 % b.AsU64)
+	case typeRepI64:
+		out = WordI64(a.AsI64 % b.AsI64)
+	}
+	return out
+}

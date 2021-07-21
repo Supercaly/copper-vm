@@ -8,6 +8,7 @@
 | push | value | push a value to the stack |
 | swap | n | swap the stack top with the n-th element |
 | dup | - | duplicate the stack top |
+| drop | - | pop the stack top |
 | halt | - | stops the virtual machine execution |
 
 ## Integer arithmetics
@@ -16,8 +17,12 @@
 | --- | :---: | --- |
 | add | - | integer addition of first two elements on the stack, the result is pushed on stack top and the elements are consumed | 
 | sub | - | integer subtract of first two elements on the stack, the result is pushed on stack top and the elements are consumed | 
-| mul | - | integer multiply (unsigned) of first two elements on the stack, the result is pushed on stack top and the elements are consumed |
-| imul | - | integer multiply (signed) of first two elements on the stack, the result is pushed on stack top and the elements are consumed |
+| mul | - | integer multiplication (unsigned) of first two elements on the stack, the result is pushed on stack top and the elements are consumed |
+| imul | - | integer multiplication (signed) of first two elements on the stack, the result is pushed on stack top and the elements are consumed |
+| div | - | integer division (unsigned) of first two elements on the stack, the result is pushed on stack top and the elements are consumed |
+| idiv | - | integer division (signed) of first two elements on the stack, the result is pushed on stack top and the elements are consumed |
+| mod | - | integer modulo (unsigned) of first two elements on the stack, the result is pushed on stack top and the elements are consumed |
+| imod | - | integer modulo (signed) of first two elements on the stack, the result is pushed on stack top and the elements are consumed |
 
 ## Floating point arithmetics
 
@@ -25,7 +30,8 @@
 | --- | :---: | --- |
 | fadd | - | floating point addition of first two elements on the stack, the result is pushed on stack top and the elements are consumed | 
 | fsub | - | floating point subtract of first two elements on the stack, the result is pushed on stack top and the elements are consumed | 
-| fmul | - | floating point multiply of first two elements on the stack, the result is pushed on stack top and the elements are consumed | 
+| fmul | - | floating point multiplication of first two elements on the stack, the result is pushed on stack top and the elements are consumed | 
+| fdiv | - | floating point division of first two elements on the stack, the result is pushed on stack top and the elements are consumed |
 
 ## Flow control
 | Mnemonic | Operand | Description |

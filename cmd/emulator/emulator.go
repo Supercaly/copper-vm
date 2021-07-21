@@ -64,6 +64,9 @@ func main() {
 	vm := coppervm.Coppervm{}
 	vm.LoadProgramFromFile(inputFilePath)
 	if err := vm.ExecuteProgram(limit); err != coppervm.ErrorOk {
-		log.Fatalf("[ERROR]: %s", err)
+		log.Fatalf("%s: [ERROR]: '%s' at ip '%d'",
+			inputFilePath,
+			err,
+			vm.Ip)
 	}
 }
