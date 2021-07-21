@@ -53,7 +53,7 @@ func main() {
 		log.Fatalf("[ERROR]: input was not provided\n")
 	}
 
-	// TODO(#3): Use input path to determine output if not specified by the user
+	// TODO(#17): Use input path to determine output if not specified by the user
 	if outputFilePath == "" {
 		usage(os.Stderr, program)
 		log.Fatalf("[ERROR]: output was not provided\n")
