@@ -1,0 +1,32 @@
+%entry main
+%const N 5 ; Number of iterations
+
+main:
+    push 0 ; first fib number
+    write
+    push 1 ; second fib number
+    write
+    push N ; number of fib numbers to compute
+
+loop:
+    swap 2
+    swap 1
+    dup
+    swap 2
+
+    add
+    write ; output Fn = Fn-1 + Fn-2
+    
+    ; N = N - 1
+    swap 2
+    push 1
+    sub
+
+    ; prepare the stack for the next iteration
+    swap 2
+    swap 1
+    swap 2
+    dup
+    jnz loop ; if N > 0 jump to loop
+
+    halt

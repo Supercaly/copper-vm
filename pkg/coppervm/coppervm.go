@@ -8,7 +8,8 @@ import (
 )
 
 const (
-	CoppervmStackCapacity int = 1024
+	CoppervmDebug         bool = false
+	CoppervmStackCapacity int  = 1024
 )
 
 type Coppervm struct {
@@ -71,12 +72,56 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 		vm.Stack[vm.StackSize] = currentInst.Operand
 		vm.StackSize++
 		vm.Ip++
+	case InstSwap:
+		if currentInst.Operand >= vm.StackSize {
+			return ErrorStackUnderflow
+		}
+		a := vm.StackSize - 1
+		b := vm.StackSize - 1 - currentInst.Operand
+		tmp := vm.Stack[a]
+		vm.Stack[a] = vm.Stack[b]
+		vm.Stack[b] = tmp
+		vm.Ip++
+	case InstDup:
+		if vm.StackSize < 1 {
+			return ErrorStackUnderflow
+		}
+		if vm.StackSize >= CoppervmStackCapacity {
+			return ErrorStackOverflow
+		}
+		newVal := vm.Stack[vm.StackSize-1]
+		vm.Stack[vm.StackSize] = newVal
+		vm.StackSize++
+		vm.Ip++
 	case InstAdd:
 		if vm.StackSize < 2 {
 			return ErrorStackUnderflow
 		}
 		vm.Stack[vm.StackSize-2] = vm.Stack[vm.StackSize-2] + vm.Stack[vm.StackSize-1]
 		vm.StackSize--
+		vm.Ip++
+	case InstSub:
+		if vm.StackSize < 2 {
+			return ErrorStackUnderflow
+		}
+		vm.Stack[vm.StackSize-2] = vm.Stack[vm.StackSize-2] - vm.Stack[vm.StackSize-1]
+		vm.StackSize--
+		vm.Ip++
+	case InstJnz:
+		if vm.StackSize < 1 {
+			return ErrorStackUnderflow
+		}
+		if vm.Stack[vm.StackSize-1] != 0 {
+			vm.Ip = uint(currentInst.Operand)
+		} else {
+			vm.Ip++
+		}
+		vm.StackSize--
+	case InstPrint:
+		if vm.StackSize < 1 {
+			return ErrorStackUnderflow
+		}
+		fmt.Printf("[write]: %d\n", vm.Stack[vm.StackSize-1])
 		vm.Ip++
 	case InstHalt:
 		vm.Halt = true
@@ -86,7 +131,10 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 		log.Fatalf("Invalid instruction %s", currentInst.Name)
 	}
 
-	vm.dumpStack()
+	if CoppervmDebug {
+		vm.dumpStack()
+	}
+
 	return ErrorOk
 }
 

@@ -14,9 +14,34 @@ var InstDefs = [InstCount]InstDef{
 		Name:       "push",
 	},
 	{
+		Kind:       InstSwap,
+		HasOperand: true,
+		Name:       "swap",
+	},
+	{
+		Kind:       InstDup,
+		HasOperand: false,
+		Name:       "dup",
+	},
+	{
 		Kind:       InstAdd,
 		HasOperand: false,
 		Name:       "add",
+	},
+	{
+		Kind:       InstSub,
+		HasOperand: false,
+		Name:       "sub",
+	},
+	{
+		Kind:       InstJnz,
+		HasOperand: true,
+		Name:       "jnz",
+	},
+	{
+		Kind:       InstPrint,
+		HasOperand: false,
+		Name:       "write",
 	},
 	{
 		Kind:       InstHalt,
@@ -30,8 +55,18 @@ type InstKind int
 const (
 	// TODO(#9): Add more instructions
 	InstNoop InstKind = iota
+
 	InstPush
+	InstSwap
+	InstDup
+
 	InstAdd
+	InstSub
+
+	InstJnz
+
+	InstPrint
+
 	InstHalt
 	InstCount
 )
