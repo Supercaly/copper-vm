@@ -86,7 +86,7 @@ func (casm *Casm) TranslateSource(filePath string) {
 							Location: line.Location,
 						})
 				} else {
-					instDef.Operand = operand.AsNumLit
+					instDef.Operand = casm.evaluateExpression(operand, line.Location)
 				}
 			}
 			casm.Program = append(casm.Program, instDef)
@@ -122,7 +122,7 @@ func (casm *Casm) TranslateSource(filePath string) {
 			fmt.Printf("[INFO]: Binding: %s (%d %d %s) %s\n",
 				b.Name,
 				b.Value.Kind,
-				b.Value.AsNumLit,
+				b.Value.AsNumLitInt,
 				b.Value.AsBinding,
 				b.Location)
 		}
@@ -137,11 +137,11 @@ func (casm *Casm) TranslateSource(filePath string) {
 				casm.DeferredEntryName)
 		}
 
-		if binding.Value.Kind != ExpressionKindNumLit {
+		if binding.Value.Kind != ExpressionKindNumLitInt {
 			log.Fatalf("%s: [ERROR]: Only label names can be set as entry point",
 				casm.EntryLocation)
 		}
-		casm.Entry = casm.evaluateBinding(&binding, casm.EntryLocation)
+		casm.Entry = int(casm.evaluateBinding(&binding, casm.EntryLocation).AsI64)
 	}
 }
 
@@ -167,8 +167,8 @@ func (casm *Casm) bindLabel(name string, address int, location FileLocation) {
 	casm.Bindings = append(casm.Bindings, Binding{
 		Name: name,
 		Value: Expression{
-			Kind:     ExpressionKindNumLit,
-			AsNumLit: address,
+			Kind:        ExpressionKindNumLitInt,
+			AsNumLitInt: int64(address),
 		},
 		Location: location,
 	})
@@ -209,14 +209,14 @@ func (casm *Casm) bindEntry(name string, location FileLocation) {
 }
 
 // Evaluate a binding to extract a word.
-func (casm *Casm) evaluateBinding(binding *Binding, location FileLocation) (value int) {
+func (casm *Casm) evaluateBinding(binding *Binding, location FileLocation) (value coppervm.Word) {
 	// TODO(#6): Cyclic bindings cause a stack overflow
 	value = casm.evaluateExpression(binding.Value, location)
 	return value
 }
 
 // Evaluate an expression to extract a word.
-func (casm *Casm) evaluateExpression(expr Expression, location FileLocation) (ret int) {
+func (casm *Casm) evaluateExpression(expr Expression, location FileLocation) (ret coppervm.Word) {
 	switch expr.Kind {
 	case ExpressionKindBinding:
 		exist, binding := casm.getBindingByName(expr.AsBinding)
@@ -226,8 +226,10 @@ func (casm *Casm) evaluateExpression(expr Expression, location FileLocation) (re
 				expr.AsBinding)
 		}
 		ret = casm.evaluateBinding(&binding, location)
-	case ExpressionKindNumLit:
-		ret = expr.AsNumLit
+	case ExpressionKindNumLitInt:
+		ret = coppervm.WordI64(expr.AsNumLitInt)
+	case ExpressionKindNumLitFloat:
+		ret = coppervm.WordF64(expr.AsNumLitFloat)
 	}
 	return ret
 }

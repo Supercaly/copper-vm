@@ -51,9 +51,9 @@ func main() {
 	fmt.Fprintf(os.Stdout, "Entry point: %d\n", vm.Ip)
 	for i := 0; i < len(vm.Program); i++ {
 		inst := vm.Program[i]
-		fmt.Fprintf(os.Stdout, "%s ", inst.Name)
+		fmt.Fprintf(os.Stdout, "%s", inst.Name)
 		if inst.HasOperand {
-			fmt.Fprintf(os.Stdout, "%d", inst.Operand)
+			fmt.Fprintf(os.Stdout, " (%s)", inst.Operand)
 		}
 		fmt.Fprintf(os.Stdout, "\n")
 	}

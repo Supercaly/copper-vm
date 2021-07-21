@@ -8,14 +8,16 @@ import (
 type ExpressionKind int
 
 const (
-	ExpressionKindNumLit ExpressionKind = iota
+	ExpressionKindNumLitInt ExpressionKind = iota
+	ExpressionKindNumLitFloat
 	ExpressionKindBinding
 )
 
 type Expression struct {
-	Kind      ExpressionKind
-	AsNumLit  int
-	AsBinding string
+	Kind          ExpressionKind
+	AsNumLitInt   int64
+	AsNumLitFloat float64
+	AsBinding     string
 }
 
 func ParseExprFromString(source string, location FileLocation) Expression {
@@ -30,13 +32,21 @@ func parseExprPrimary(tokens []Token, location FileLocation) (result Expression)
 	}
 	switch tokens[0].Kind {
 	case TokenKindNumLit:
-		result.Kind = ExpressionKindNumLit
-		var err error = nil
-		result.AsNumLit, err = strconv.Atoi(tokens[0].Text)
+		// Try integer
+		intNumber, err := strconv.ParseInt(tokens[0].Text, 10, 64)
 		if err != nil {
-			log.Fatalf("%s: [ERROR]: Error parsing number literal '%s'",
-				location,
-				tokens[0].Text)
+			// Try floating point
+			floatNumber, err := strconv.ParseFloat(tokens[0].Text, 64)
+			if err != nil {
+				log.Fatalf("%s: [ERROR]: Error parsing number literal '%s'",
+					location,
+					tokens[0].Text)
+			}
+			result.Kind = ExpressionKindNumLitFloat
+			result.AsNumLitFloat = floatNumber
+		} else {
+			result.Kind = ExpressionKindNumLitInt
+			result.AsNumLitInt = intNumber
 		}
 	case TokenKindSymbol:
 		result.Kind = ExpressionKindBinding

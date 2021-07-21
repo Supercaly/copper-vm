@@ -107,7 +107,7 @@ type InstDef struct {
 	HasOperand bool
 	Name       string
 	// TODO(#5): Use Word as operand type
-	Operand int
+	Operand Word
 }
 
 // Return an instruction definition by it's string
