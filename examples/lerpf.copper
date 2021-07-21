@@ -13,15 +13,11 @@ lerpf:
     swap 2
     swap 1
     fsub
-    write 
 
     swap 1
     swap 2
-
     fmul
-    write
     fadd
-    write
 
     jmp return
 
@@ -31,4 +27,5 @@ main:
     push 0.7
     jmp lerpf
 return:
+    write
     halt
