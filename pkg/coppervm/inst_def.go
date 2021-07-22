@@ -99,6 +99,16 @@ var InstDefs = [InstCount]InstDef{
 		Name:       "jnz",
 	},
 	{
+		Kind:       InstFunCall,
+		HasOperand: true,
+		Name:       "call",
+	},
+	{
+		Kind:       InstFunReturn,
+		HasOperand: false,
+		Name:       "ret",
+	},
+	{
 		Kind:       InstPrint,
 		HasOperand: false,
 		Name:       "write",
@@ -116,11 +126,14 @@ const (
 	// TODO(#9): Add more instructions
 	InstNoop InstKind = iota
 
+	// Basic instructions
 	InstPush
 	InstSwap
 	InstDup
 	InstDrop
+	InstHalt
 
+	// Integer arithmetics
 	InstAddInt
 	InstSubInt
 	InstMulInt
@@ -130,17 +143,22 @@ const (
 	InstModInt
 	InstModIntSigned
 
+	// Floating point arithmetics
 	InstAddFloat
 	InstSubFloat
 	InstMulFloat
 	InstDivFloat
 
+	// Flow control
 	InstJmp
 	InstJmpNotZero
 
+	// Functions
+	InstFunCall
+	InstFunReturn
+
 	InstPrint
 
-	InstHalt
 	InstCount
 )
 
@@ -148,7 +166,7 @@ type InstDef struct {
 	Kind       InstKind
 	HasOperand bool
 	Name       string
-	Operand Word
+	Operand    Word
 }
 
 // Return an instruction definition by it's string

@@ -38,3 +38,9 @@
 | --- | :---: | --- |
 | jmp | location | jump unconditionally to location | 
 | jnz | location | jump to location if stack top is not zero, the top is consumed | 
+
+## Functions
+| Mnemonic | Operand | Description |
+| --- | :---| ---|
+| call | location | moves the ip to given location; it's like jmp, but before moving push the current ip to the stack so ret can go back |
+| ret | - | set the ip to the stack top |

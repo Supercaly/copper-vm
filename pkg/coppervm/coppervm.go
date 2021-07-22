@@ -201,6 +201,21 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 			vm.Ip++
 		}
 		vm.StackSize--
+	// Functions
+	case InstFunCall:
+		if vm.StackSize >= CoppervmStackCapacity {
+			return ErrorStackOverflow
+		}
+		vm.Stack[vm.StackSize] = WordU64(uint64(vm.Ip + 1))
+		vm.StackSize++
+		vm.Ip = uint(currentInst.Operand.AsU64)
+	case InstFunReturn:
+		if vm.StackSize < 1 {
+			return ErrorStackUnderflow
+		}
+		retAdds := vm.Stack[vm.StackSize-1]
+		vm.StackSize--
+		vm.Ip = uint(retAdds.AsU64)
 	case InstPrint:
 		if vm.StackSize < 1 {
 			return ErrorStackUnderflow
