@@ -12,11 +12,13 @@ const (
 	CoppervmStackCapacity int64 = 1024
 )
 
+type InstAddr uint64
+
 type Coppervm struct {
 	Stack     [CoppervmStackCapacity]Word
 	StackSize int64
 	Program   []InstDef
-	Ip        uint
+	Ip        InstAddr
 	Halt      bool
 }
 
@@ -37,7 +39,7 @@ func (vm *Coppervm) LoadProgramFromFile(filePath string) {
 	}
 
 	vm.Halt = false
-	vm.Ip = uint(meta.Entry)
+	vm.Ip = InstAddr(meta.Entry)
 	vm.Program = meta.Program
 }
 
@@ -57,7 +59,7 @@ func (vm *Coppervm) ExecuteProgram(limit int) CoppervmError {
 // current ip points and then increments the ip.
 // Return a CoppervmError if something went wrong or ErrorOk.
 func (vm *Coppervm) ExecuteInstruction() CoppervmError {
-	if vm.Ip >= uint(len(vm.Program)) {
+	if vm.Ip >= InstAddr(len(vm.Program)) {
 		return ErrorIllegalInstAccess
 	}
 
@@ -190,13 +192,13 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 		vm.Ip++
 	// Flow control
 	case InstJmp:
-		vm.Ip = uint(currentInst.Operand.AsI64)
+		vm.Ip = InstAddr(currentInst.Operand.AsI64)
 	case InstJmpNotZero:
 		if vm.StackSize < 1 {
 			return ErrorStackUnderflow
 		}
 		if vm.Stack[vm.StackSize-1].AsI64 != 0 {
-			vm.Ip = uint(currentInst.Operand.AsI64)
+			vm.Ip = InstAddr(currentInst.Operand.AsI64)
 		} else {
 			vm.Ip++
 		}
@@ -208,14 +210,14 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 		}
 		vm.Stack[vm.StackSize] = WordU64(uint64(vm.Ip + 1))
 		vm.StackSize++
-		vm.Ip = uint(currentInst.Operand.AsU64)
+		vm.Ip = InstAddr(currentInst.Operand.AsU64)
 	case InstFunReturn:
 		if vm.StackSize < 1 {
 			return ErrorStackUnderflow
 		}
 		retAdds := vm.Stack[vm.StackSize-1]
 		vm.StackSize--
-		vm.Ip = uint(retAdds.AsU64)
+		vm.Ip = InstAddr(retAdds.AsU64)
 	case InstPrint:
 		if vm.StackSize < 1 {
 			return ErrorStackUnderflow
