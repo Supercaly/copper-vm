@@ -69,11 +69,9 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 	case InstNoop:
 		vm.Ip++
 	case InstPush:
-		if vm.StackSize >= CoppervmStackCapacity {
-			return ErrorStackOverflow
+		if err := vm.pushStack(currentInst.Operand); err != ErrorOk {
+			return err
 		}
-		vm.Stack[vm.StackSize] = currentInst.Operand
-		vm.StackSize++
 		vm.Ip++
 	case InstSwap:
 		if currentInst.Operand.AsI64 >= vm.StackSize {
@@ -89,12 +87,10 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 		if vm.StackSize < 1 {
 			return ErrorStackUnderflow
 		}
-		if vm.StackSize >= CoppervmStackCapacity {
-			return ErrorStackOverflow
-		}
 		newVal := vm.Stack[vm.StackSize-1]
-		vm.Stack[vm.StackSize] = newVal
-		vm.StackSize++
+		if err := vm.pushStack(newVal); err != ErrorOk {
+			return err
+		}
 		vm.Ip++
 	case InstDrop:
 		if vm.StackSize < 1 {
@@ -205,11 +201,9 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 		vm.StackSize--
 	// Functions
 	case InstFunCall:
-		if vm.StackSize >= CoppervmStackCapacity {
-			return ErrorStackOverflow
+		if err := vm.pushStack(WordU64(uint64(vm.Ip + 1))); err != ErrorOk {
+			return err
 		}
-		vm.Stack[vm.StackSize] = WordU64(uint64(vm.Ip + 1))
-		vm.StackSize++
 		vm.Ip = InstAddr(currentInst.Operand.AsU64)
 	case InstFunReturn:
 		if vm.StackSize < 1 {
@@ -230,10 +224,23 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 		log.Fatalf("Invalid instruction %s", currentInst.Name)
 	}
 
+	// Print stack on debug
 	if CoppervmDebug {
 		vm.dumpStack()
 	}
 
+	return ErrorOk
+}
+
+// Push a Word to the stack.
+// Return a ErrorStackOverflow if the stack overflows, or
+// ErrorOk otherwise.
+func (vm *Coppervm) pushStack(w Word) CoppervmError {
+	if vm.StackSize >= CoppervmStackCapacity {
+		return ErrorStackOverflow
+	}
+	vm.Stack[vm.StackSize] = w
+	vm.StackSize++
 	return ErrorOk
 }
 
