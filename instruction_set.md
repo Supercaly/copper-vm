@@ -36,8 +36,14 @@
 ## Flow control
 | Mnemonic | Operand | Description |
 | --- | :---: | --- |
+| cmp | - | compares first to elements on the stack, consumes them and push on stack top: 0 if a = b, 1 if a > b, -1 if b > a | 
 | jmp | location | jump unconditionally to location | 
+| jz | location | jump to location if stack top is zero, the top is consumed | 
 | jnz | location | jump to location if stack top is not zero, the top is consumed | 
+| jg | location | jump to location if stack top is greater then zero, the top is consumed | 
+| jl | location | jump to location if stack top is less then zero, the top is consumed | 
+| jge | location | jump to location if stack top is greater or equal then zero, the top is consumed | 
+| jle | location | jump to location if stack top is less or equal then zero, the top is consumed | 
 
 ## Functions
 | Mnemonic | Operand | Description |

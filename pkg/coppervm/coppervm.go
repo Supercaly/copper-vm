@@ -187,13 +187,80 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 		vm.StackSize--
 		vm.Ip++
 	// Flow control
+	case InstCmp:
+		if vm.StackSize < 2 {
+			return ErrorStackUnderflow
+		}
+		a := vm.Stack[vm.StackSize-2]
+		b := vm.Stack[vm.StackSize-1]
+		var res Word
+		if a.AsI64 == b.AsI64 {
+			res = WordI64(0)
+		} else if a.AsI64 > b.AsI64 {
+			res = WordI64(1)
+		} else {
+			res = WordI64(-1)
+		}
+		vm.Stack[vm.StackSize-2] = res
+		vm.StackSize--
+		vm.Ip++
 	case InstJmp:
 		vm.Ip = InstAddr(currentInst.Operand.AsI64)
+	case InstJmpZero:
+		if vm.StackSize < 1 {
+			return ErrorStackUnderflow
+		}
+		if vm.Stack[vm.StackSize-1].AsI64 == 0 {
+			vm.Ip = InstAddr(currentInst.Operand.AsI64)
+		} else {
+			vm.Ip++
+		}
+		vm.StackSize--
 	case InstJmpNotZero:
 		if vm.StackSize < 1 {
 			return ErrorStackUnderflow
 		}
 		if vm.Stack[vm.StackSize-1].AsI64 != 0 {
+			vm.Ip = InstAddr(currentInst.Operand.AsI64)
+		} else {
+			vm.Ip++
+		}
+		vm.StackSize--
+	case InstJmpGreater:
+		if vm.StackSize < 1 {
+			return ErrorStackUnderflow
+		}
+		if vm.Stack[vm.StackSize-1].AsI64 > 0 {
+			vm.Ip = InstAddr(currentInst.Operand.AsI64)
+		} else {
+			vm.Ip++
+		}
+		vm.StackSize--
+	case InstJmpLess:
+		if vm.StackSize < 1 {
+			return ErrorStackUnderflow
+		}
+		if vm.Stack[vm.StackSize-1].AsI64 < 0 {
+			vm.Ip = InstAddr(currentInst.Operand.AsI64)
+		} else {
+			vm.Ip++
+		}
+		vm.StackSize--
+	case InstJmpGreaterEqual:
+		if vm.StackSize < 1 {
+			return ErrorStackUnderflow
+		}
+		if vm.Stack[vm.StackSize-1].AsI64 >= 0 {
+			vm.Ip = InstAddr(currentInst.Operand.AsI64)
+		} else {
+			vm.Ip++
+		}
+		vm.StackSize--
+	case InstJmpLessEqual:
+		if vm.StackSize < 1 {
+			return ErrorStackUnderflow
+		}
+		if vm.Stack[vm.StackSize-1].AsI64 <= 0 {
 			vm.Ip = InstAddr(currentInst.Operand.AsI64)
 		} else {
 			vm.Ip++

@@ -89,15 +89,46 @@ var InstDefs = [InstCount]InstDef{
 		Name:       "fdiv",
 	},
 	{
+		Kind:       InstCmp,
+		HasOperand: false,
+		Name:       "cmp",
+	},
+	{
 		Kind:       InstJmp,
 		HasOperand: true,
 		Name:       "jmp",
+	},
+	{
+		Kind:       InstJmpZero,
+		HasOperand: true,
+		Name:       "jz",
 	},
 	{
 		Kind:       InstJmpNotZero,
 		HasOperand: true,
 		Name:       "jnz",
 	},
+	{
+		Kind:       InstJmpGreater,
+		HasOperand: true,
+		Name:       "jg",
+	},
+	{
+		Kind:       InstJmpLess,
+		HasOperand: true,
+		Name:       "jl",
+	},
+	{
+		Kind:       InstJmpGreaterEqual,
+		HasOperand: true,
+		Name:       "jge",
+	},
+	{
+		Kind:       InstJmpLessEqual,
+		HasOperand: true,
+		Name:       "jle",
+	},
+
 	{
 		Kind:       InstFunCall,
 		HasOperand: true,
@@ -150,8 +181,14 @@ const (
 	InstDivFloat
 
 	// Flow control
+	InstCmp
 	InstJmp
+	InstJmpZero
 	InstJmpNotZero
+	InstJmpGreater
+	InstJmpGreaterEqual
+	InstJmpLess
+	InstJmpLessEqual
 
 	// Functions
 	InstFunCall
