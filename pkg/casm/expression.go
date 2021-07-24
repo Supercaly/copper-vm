@@ -1,7 +1,8 @@
 package casm
 
 import (
-	"log"
+	"errors"
+	"fmt"
 	"strconv"
 )
 
@@ -20,15 +21,23 @@ type Expression struct {
 	AsBinding     string
 }
 
-func ParseExprFromString(source string, location FileLocation) Expression {
-	tokens := Tokenize(source, location)
-	return parseExprPrimary(tokens, location)
+// Parse an expression from a source string.
+// The string is first tokenized and then is parsed to extract
+// an expression.
+// Returns an error if something went wrong.
+func ParseExprFromString(source string) (Expression, error) {
+	tokens, err := Tokenize(source)
+	if err != nil {
+		return Expression{}, err
+	}
+	return parseExprPrimary(tokens)
 }
 
-func parseExprPrimary(tokens []Token, location FileLocation) (result Expression) {
+// Parse a primary expression form a list of tokens.
+// Returns an error if something went wrong.
+func parseExprPrimary(tokens []Token) (result Expression, err error) {
 	if len(tokens) == 0 {
-		log.Fatalf("%s: [ERROR]: Trying to parse empty expression!",
-			location)
+		return Expression{}, errors.New("trying to parse empty expression")
 	}
 	switch tokens[0].Kind {
 	case TokenKindNumLit:
@@ -38,9 +47,9 @@ func parseExprPrimary(tokens []Token, location FileLocation) (result Expression)
 			// Try floating point
 			floatNumber, err := strconv.ParseFloat(tokens[0].Text, 64)
 			if err != nil {
-				log.Fatalf("%s: [ERROR]: Error parsing number literal '%s'",
-					location,
-					tokens[0].Text)
+				return Expression{},
+					fmt.Errorf("error parsing number literal '%s'",
+						tokens[0].Text)
 			}
 			result.Kind = ExpressionKindNumLitFloat
 			result.AsNumLitFloat = floatNumber
@@ -52,12 +61,12 @@ func parseExprPrimary(tokens []Token, location FileLocation) (result Expression)
 		result.Kind = ExpressionKindBinding
 		result.AsBinding = tokens[0].Text
 	case TokenKindMinus:
-		result = parseExprPrimary(tokens[1:], location)
+		result, err = parseExprPrimary(tokens[1:])
 		if result.Kind == ExpressionKindNumLitInt {
 			result.AsNumLitInt = -result.AsNumLitInt
 		} else if result.Kind == ExpressionKindNumLitFloat {
 			result.AsNumLitFloat = -result.AsNumLitFloat
 		}
 	}
-	return result
+	return result, err
 }

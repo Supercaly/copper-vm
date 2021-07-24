@@ -1,7 +1,7 @@
 package casm
 
 import (
-	"log"
+	"fmt"
 	"strings"
 )
 
@@ -50,27 +50,31 @@ type Line struct {
 }
 
 // Convert a source string to a list of Lines
-func Linize(source string, fileName string) (out []Line) {
+func Linize(source string, fileName string) (out []Line, err error) {
 	lines := strings.Split(source, "\n")
-	for location, line := range lines {
-		line = strings.TrimSpace(line)
+	for location, lineStr := range lines {
+		lineStr = strings.TrimSpace(lineStr)
 
-		if line == "" || line[0] == byte(CasmCommentSymbol) {
+		if lineStr == "" || lineStr[0] == byte(CasmCommentSymbol) {
 			continue
 		}
-		line, _ = SplitByDelim(line, CasmCommentSymbol)
+		lineStr, _ = SplitByDelim(lineStr, CasmCommentSymbol)
 
-		out = append(out, lineFromString(line, FileLocation{
+		line, err := lineFromString(lineStr, FileLocation{
 			FileName: fileName,
 			Location: location + 1,
-		}))
+		})
+		if err != nil {
+			return []Line{}, err
+		}
+		out = append(out, line)
 	}
-	return out
+	return out, err
 }
 
 // Parse a line from string
 // Return a Line from a string
-func lineFromString(line string, location FileLocation) (out Line) {
+func lineFromString(line string, location FileLocation) (out Line, err error) {
 	if line[0] == byte(CasmPPSymbol) {
 		// Parse a directive line
 		name, block := SplitByDelim(line, ' ')
@@ -80,7 +84,9 @@ func lineFromString(line string, location FileLocation) (out Line) {
 
 		// Fail if no block is declared
 		if block == "" {
-			log.Fatalf("%s: [ERROR]: Trying to declare a directive without a block!", location)
+			return Line{},
+				fmt.Errorf("%s: [ERROR]: trying to declare a directive without a block",
+					location)
 		}
 
 		out = Line{
@@ -117,5 +123,5 @@ func lineFromString(line string, location FileLocation) (out Line) {
 		}
 	}
 
-	return out
+	return out, err
 }

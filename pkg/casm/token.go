@@ -1,7 +1,7 @@
 package casm
 
 import (
-	"log"
+	"fmt"
 	"strings"
 	"unicode"
 )
@@ -20,8 +20,9 @@ type Token struct {
 }
 
 // Tokenize a source string.
-// Returns a list of tokens from a string
-func Tokenize(source string, location FileLocation) (out []Token) {
+// Returns a list of tokens from a string or an error
+// if something went wrong.
+func Tokenize(source string) (out []Token, err error) {
 	for source != "" {
 		source = strings.TrimSpace(source)
 		switch source[0] {
@@ -32,15 +33,7 @@ func Tokenize(source string, location FileLocation) (out []Token) {
 				Text: "-",
 			})
 		default:
-			if isAlpha(rune(source[0])) {
-				// Tokenize a symbol
-				symbol, rest := SplitWhile(source, isAlpha)
-				source = rest
-				out = append(out, Token{
-					Kind: TokenKindSymbol,
-					Text: symbol,
-				})
-			} else if isDigit(rune(source[0])) {
+			if isDigit(rune(source[0])) {
 				// Tokenize a number
 				number, rest := SplitWhile(source, isDigit)
 				source = rest
@@ -48,18 +41,25 @@ func Tokenize(source string, location FileLocation) (out []Token) {
 					Kind: TokenKindNumLit,
 					Text: number,
 				})
+			} else if isAlpha(rune(source[0])) {
+				// Tokenize a symbol
+				symbol, rest := SplitWhile(source, isAlpha)
+				source = rest
+				out = append(out, Token{
+					Kind: TokenKindSymbol,
+					Text: symbol,
+				})
 			} else {
-				log.Fatalf("%s: [ERROR]: Unknown token starting with '%s'",
-					location,
-					string(source[0]))
+				return []Token{},
+					fmt.Errorf("unknown token starting with '%s'", string(source[0]))
 			}
 		}
 	}
-	return out
+	return out, err
 }
 
 func isAlpha(r rune) bool {
-	return unicode.IsLetter(r) || r == '_'
+	return unicode.IsLetter(r) || unicode.IsNumber(r) || r == '_'
 }
 
 func isDigit(r rune) bool {

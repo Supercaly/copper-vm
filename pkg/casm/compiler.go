@@ -54,7 +54,10 @@ func (casm *Casm) TranslateSource(filePath string) {
 	source := string(bytes)
 
 	// Linize the source
-	lines := Linize(source, filePath)
+	lines, err := Linize(source, filePath)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// First Pass
 	for _, line := range lines {
@@ -74,7 +77,10 @@ func (casm *Casm) TranslateSource(filePath string) {
 			}
 
 			if instDef.HasOperand {
-				operand := ParseExprFromString(line.AsInstruction.Operand, line.Location)
+				operand, err := ParseExprFromString(line.AsInstruction.Operand)
+				if err != nil {
+					log.Fatalf("%s: [ERROR]: %s", line.Location, err)
+				}
 				if operand.Kind == ExpressionKindBinding {
 					if CasmDebug {
 						println("[INFO]: Push deferred operand " + operand.AsBinding)
@@ -188,9 +194,13 @@ func (casm *Casm) bindConst(directive DirectiveLine, location FileLocation) {
 			binding.Location)
 	}
 
+	value, err := ParseExprFromString(block)
+	if err != nil {
+		log.Fatalf("%s: [ERROR]: %s", location, err)
+	}
 	casm.Bindings = append(casm.Bindings, Binding{
 		Name:     name,
-		Value:    ParseExprFromString(block, location),
+		Value:    value,
 		Location: location,
 	})
 }
