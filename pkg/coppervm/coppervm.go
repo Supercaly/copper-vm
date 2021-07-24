@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	CoppervmDebug         bool  = false
+	CoppervmDebug         bool  = true
 	CoppervmStackCapacity int64 = 1024
 )
 
@@ -133,12 +133,18 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 		if vm.StackSize < 2 {
 			return ErrorStackUnderflow
 		}
+		if vm.Stack[vm.StackSize-1].AsU64 == 0 {
+			return ErrorDivideByZero
+		}
 		vm.Stack[vm.StackSize-2] = divWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], typeRepU64)
 		vm.StackSize--
 		vm.Ip++
 	case InstDivIntSigned:
 		if vm.StackSize < 2 {
 			return ErrorStackUnderflow
+		}
+		if vm.Stack[vm.StackSize-1].AsI64 == 0 {
+			return ErrorDivideByZero
 		}
 		vm.Stack[vm.StackSize-2] = divWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], typeRepI64)
 		vm.StackSize--
@@ -147,12 +153,18 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 		if vm.StackSize < 2 {
 			return ErrorStackUnderflow
 		}
+		if vm.Stack[vm.StackSize-1].AsU64 == 0 {
+			return ErrorDivideByZero
+		}
 		vm.Stack[vm.StackSize-2] = modWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], typeRepU64)
 		vm.StackSize--
 		vm.Ip++
 	case InstModIntSigned:
 		if vm.StackSize < 2 {
 			return ErrorStackUnderflow
+		}
+		if vm.Stack[vm.StackSize-1].AsI64 == 0 {
+			return ErrorDivideByZero
 		}
 		vm.Stack[vm.StackSize-2] = modWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], typeRepI64)
 		vm.StackSize--
@@ -182,6 +194,9 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 	case InstDivFloat:
 		if vm.StackSize < 2 {
 			return ErrorStackUnderflow
+		}
+		if vm.Stack[vm.StackSize-1].AsF64 == 0 {
+			return ErrorDivideByZero
 		}
 		vm.Stack[vm.StackSize-2] = divWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], typeRepF64)
 		vm.StackSize--

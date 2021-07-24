@@ -7,6 +7,7 @@ const (
 	ErrorIllegalInstAccess
 	ErrorStackOverflow
 	ErrorStackUnderflow
+	ErrorDivideByZero
 )
 
 func (err CoppervmError) String() string {
@@ -15,5 +16,6 @@ func (err CoppervmError) String() string {
 		"ErrorIllegalInstAccess",
 		"ErrorStackOverflow",
 		"ErrorStackUnderflow",
+		"ErrorDivideByZero",
 	}[err]
 }
