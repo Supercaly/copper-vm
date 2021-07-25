@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 
 	"coppervm.com/coppervm/pkg/coppervm"
@@ -25,16 +26,19 @@ type Casm struct {
 	Entry             int
 	EntryLocation     FileLocation
 	DeferredEntryName string
+
+	Memory []byte
 }
 
 // Save a copper vm program to binary file.
 func (casm *Casm) SaveProgramToFile(filePath string) {
-	test, err := json.Marshal(coppervm.FileMeta(casm.Entry, casm.Program))
+	meta := coppervm.FileMeta(casm.Entry, casm.Program, casm.Memory)
+	metaJson, err := json.Marshal(meta)
 	if err != nil {
 		log.Fatalf("[ERROR]: Error writign program to file %s", err)
 	}
 
-	fileErr := ioutil.WriteFile(filePath, []byte(test), os.ModePerm)
+	fileErr := ioutil.WriteFile(filePath, []byte(metaJson), os.ModePerm)
 	if fileErr != nil {
 		log.Fatalf("[ERROR]: Error saving file '%s': %s", filePath, fileErr)
 	}
@@ -97,11 +101,14 @@ func (casm *Casm) TranslateSource(filePath string) {
 			}
 			casm.Program = append(casm.Program, instDef)
 		case LineKindDirective:
-			if line.AsDirective.Name == "entry" {
+			switch line.AsDirective.Name {
+			case "entry":
 				casm.bindEntry(line.AsDirective.Block, line.Location)
-			} else if line.AsDirective.Name == "const" {
+			case "const":
 				casm.bindConst(line.AsDirective, line.Location)
-			} else {
+			case "memory":
+				casm.bindMemory(line.AsDirective, line.Location)
+			default:
 				log.Fatalf("%s: [ERROR]: Unknown directive '%s'", line.Location, line.AsDirective.Name)
 			}
 		}
@@ -216,6 +223,17 @@ func (casm *Casm) bindEntry(name string, location FileLocation) {
 	casm.DeferredEntryName = name
 	casm.HasEntry = true
 	casm.EntryLocation = location
+}
+
+// Binds a memory definition
+func (casm *Casm) bindMemory(directive DirectiveLine, location FileLocation) {
+	chunkSlice := strings.Split(directive.Block, ",")
+	var chunk []byte
+	for _, v := range chunkSlice {
+		val, _ := strconv.Atoi(v)
+		chunk = append(chunk, byte(val))
+	}
+	casm.Memory = append(casm.Memory, chunk...)
 }
 
 // Evaluate a binding to extract a word.

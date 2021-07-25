@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	CoppervmDebug          bool  = true
+	CoppervmDebug          bool  = false
 	CoppervmStackCapacity  int64 = 1024
 	CoppervmMemoryCapacity int64 = 1024
 )
@@ -64,14 +64,6 @@ func (vm *Coppervm) LoadProgramFromFile(filePath string) {
 // Executes all the program of the vm.
 // Return a CoppervmError if something went wrong or ErrorOk.
 func (vm *Coppervm) ExecuteProgram(limit int) CoppervmError {
-	if vm.MemorySize != 0 {
-		for i := 0; i < int(vm.MemorySize); i++ {
-			fmt.Printf("%d: %d\n", i, vm.Memory[i])
-		}
-	} else {
-		println("Memory:")
-		println("  [empty]")
-	}
 	for limit != 0 && !vm.Halt {
 		if err := vm.ExecuteInstruction(); err != ErrorOk {
 			return err
@@ -335,7 +327,8 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 		if vm.StackSize < 1 {
 			return ErrorStackUnderflow
 		}
-		fmt.Printf("[write]: %s\n", vm.Stack[vm.StackSize-1])
+		fmt.Printf("%s", string(rune(vm.Stack[vm.StackSize-1].AsU64)))
+		vm.StackSize--
 		vm.Ip++
 	case InstCount:
 		fallthrough

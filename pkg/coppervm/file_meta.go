@@ -11,10 +11,11 @@ type CoppervmFileMeta struct {
 	Memory  []byte    `json:"memory"`
 }
 
-func FileMeta(entryPoint int, program []InstDef) CoppervmFileMeta {
+func FileMeta(entryPoint int, program []InstDef, memory []byte) CoppervmFileMeta {
 	return CoppervmFileMeta{
 		Version: CoppervmFileVersion,
 		Entry:   entryPoint,
 		Program: program,
+		Memory:  memory,
 	}
 }
