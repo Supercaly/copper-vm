@@ -27,5 +27,6 @@ main:
     push 0.7
     jmp lerpf
 return:
+    dup
     print
     halt

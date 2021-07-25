@@ -30,6 +30,7 @@ sum:
 print:
     swap 1
 
+    dup
     print
     drop
 
