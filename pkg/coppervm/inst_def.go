@@ -140,9 +140,19 @@ var InstDefs = [InstCount]InstDef{
 		Name:       "ret",
 	},
 	{
-		Kind:       InstPrint,
+		Kind:       InstMemRead,
+		HasOperand: false,
+		Name:       "read",
+	},
+	{
+		Kind:       InstMemWrite,
 		HasOperand: false,
 		Name:       "write",
+	},
+	{
+		Kind:       InstPrint,
+		HasOperand: false,
+		Name:       "print",
 	},
 	{
 		Kind:       InstHalt,
@@ -193,6 +203,10 @@ const (
 	// Functions
 	InstFunCall
 	InstFunReturn
+
+	// Memory access
+	InstMemRead
+	InstMemWrite
 
 	InstPrint
 

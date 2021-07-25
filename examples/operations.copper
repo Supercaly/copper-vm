@@ -3,70 +3,70 @@ integer:
     push 1
     push 2
     add
-    write
+    print
     drop
 
     ; add signed integers
     push -1
     push 2
     add
-    write
+    print
     drop
 
     ; subtract integers
     push 2
     push 1
     sub
-    write
+    print
     drop
 
     ; subtract signed integers
     push -2
     push 1
     sub
-    write
+    print
     drop
 
     ; multiply integers
     push 2
     push 1
     mul
-    write
+    print
     drop
 
     ; multiply signed integers
     push -2
     push 1
     imul
-    write
+    print
     drop
 
     ; divide integers
     push 3
     push 2
     div
-    write
+    print
     drop
 
     ; divide signed integers
     push -2
     push 5
     idiv
-    write
+    print
     drop
 
     ; modulo integers
     push 6
     push 2
     mod
-    write
+    print
     drop
 
     ; modulo signed integers
     push -8
     push 5
     imod
-    write
+    print
     drop
 
 floating_point:
@@ -74,56 +74,56 @@ floating_point:
     push 1.0
     push 2.0
     fadd
-    write
+    print
     drop
 
     ; add signed float
     push -1.0
     push 2.0
     fadd
-    write
+    print
     drop
 
     ; subtract float
     push 2.0
     push 1.0
     fsub
-    write
+    print
     drop
 
     ; subtract signed float
     push -2.0
     push 1.0
     fsub
-    write
+    print
     drop
 
     ; multiply float
     push 2.0
     push 1.0
     fmul
-    write
+    print
     drop
 
     ; multiply signed float
     push -2.0
     push 1.0
     fmul
-    write
+    print
     drop
 
     ; divide float
     push 3.0
     push 2.0
     fdiv
-    write
+    print
     drop
 
     ; divide signed float
     push -2.0
     push 5.0
     fdiv
-    write
+    print
     drop
    
 halt
