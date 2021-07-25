@@ -8,18 +8,28 @@ import (
 )
 
 const (
-	CoppervmDebug         bool  = true
-	CoppervmStackCapacity int64 = 1024
+	CoppervmDebug          bool  = true
+	CoppervmStackCapacity  int64 = 1024
+	CoppervmMemoryCapacity int64 = 1024
 )
 
 type InstAddr uint64
 
 type Coppervm struct {
+	// VM Stack
 	Stack     [CoppervmStackCapacity]Word
 	StackSize int64
-	Program   []InstDef
-	Ip        InstAddr
-	Halt      bool
+
+	// VM Program
+	Program []InstDef
+	Ip      InstAddr
+
+	// VM Memory
+	Memory     [CoppervmMemoryCapacity]byte
+	MemorySize int64
+
+	// Is the VM halted?
+	Halt bool
 }
 
 // Load program's binary to vm from file.
@@ -41,11 +51,27 @@ func (vm *Coppervm) LoadProgramFromFile(filePath string) {
 	vm.Halt = false
 	vm.Ip = InstAddr(meta.Entry)
 	vm.Program = meta.Program
+
+	if len(meta.Memory) > int(CoppervmMemoryCapacity) {
+		log.Fatalf("[ERROR]: Memory exceed the maximum memory capacity!")
+	}
+	for i := 0; i < len(meta.Memory); i++ {
+		vm.Memory[i] = meta.Memory[i]
+	}
+	vm.MemorySize = int64(len(meta.Memory))
 }
 
 // Executes all the program of the vm.
 // Return a CoppervmError if something went wrong or ErrorOk.
 func (vm *Coppervm) ExecuteProgram(limit int) CoppervmError {
+	if vm.MemorySize != 0 {
+		for i := 0; i < int(vm.MemorySize); i++ {
+			fmt.Printf("%d: %d\n", i, vm.Memory[i])
+		}
+	} else {
+		println("Memory:")
+		println("  [empty]")
+	}
 	for limit != 0 && !vm.Halt {
 		if err := vm.ExecuteInstruction(); err != ErrorOk {
 			return err
@@ -294,6 +320,17 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 		retAdds := vm.Stack[vm.StackSize-1]
 		vm.StackSize--
 		vm.Ip = InstAddr(retAdds.AsU64)
+	// Memory Access
+	case InstMemRead:
+		if vm.StackSize < 1 {
+			return ErrorStackUnderflow
+		}
+		addr := vm.Stack[vm.StackSize-1].AsU64
+		if addr >= uint64(CoppervmMemoryCapacity) {
+			return ErrorIllegalMemoryAccess
+		}
+		vm.Stack[vm.StackSize-1] = WordU64(uint64(vm.Memory[addr]))
+		vm.Ip++
 	case InstPrint:
 		if vm.StackSize < 1 {
 			return ErrorStackUnderflow

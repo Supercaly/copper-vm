@@ -8,6 +8,7 @@ const (
 	ErrorStackOverflow
 	ErrorStackUnderflow
 	ErrorDivideByZero
+	ErrorIllegalMemoryAccess
 )
 
 func (err CoppervmError) String() string {
@@ -17,5 +18,6 @@ func (err CoppervmError) String() string {
 		"ErrorStackOverflow",
 		"ErrorStackUnderflow",
 		"ErrorDivideByZero",
+		"ErrorIllegalMemoryAccess",
 	}[err]
 }
