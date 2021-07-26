@@ -15,13 +15,13 @@ The Copper VM ecosystem is composed by this executables:
 To execute one of the programs you can use the scripts on linux or windows:
 
 ```console
-$ ./scripts/linux/casm.go -o output.vm input.copper
-$ ./scripts/linux/deasm.go input.vm 
-$ ./scripts/linux/emulator.go input.vm
+$ ./scripts/linux/casm.sh -o output.vm input.copper
+$ ./scripts/linux/deasm.sh input.vm 
+$ ./scripts/linux/emulator.sh input.vm
 ```
 
 ```console
-$> .\scripts\windows\casm.go -o output.vm input.copper
-$> .\scripts\windows\deasm.go input.vm 
-$> .\scripts\windows\emulator.go input.vm
+$> .\scripts\windows\casm.bat -o output.vm input.copper
+$> .\scripts\windows\deasm.bat input.vm 
+$> .\scripts\windows\emulator.bat input.vm
 ```
