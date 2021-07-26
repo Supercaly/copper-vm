@@ -6,22 +6,22 @@ A simple **Virtual Machine** with his own byte-code.
 
 The Copper VM ecosystem is composed by this executables:
 
-* **casm** Assembler for the Copper VM custom byte-code 
-* **deasm** Disassembler for te VM byte-code
+* **casm** Assembler for the VM custom byte-code 
+* **deasm** Disassembler for the VM byte-code
 * **emulator** VM emulator that runs any binary program
 
 ## Quick Start
 
-To execute one of the main programs simply use go and run:
+To execute one of the programs you can use the scripts on linux or windows:
 
 ```console
-$ go run cmd/casm/casm.go -o output.vm input.copper
+$ ./scripts/linux/casm.go -o output.vm input.copper
+$ ./scripts/linux/deasm.go input.vm 
+$ ./scripts/linux/emulator.go input.vm
 ```
 
 ```console
-$ go run cmd/deasm/deasm.go input.vm 
-```
-
-```console
-$ go run cmd/emulator/emulator.go input.vm
+$> .\scripts\windows\casm.go -o output.vm input.copper
+$> .\scripts\windows\deasm.go input.vm 
+$> .\scripts\windows\emulator.go input.vm
 ```
