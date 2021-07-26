@@ -3,9 +3,11 @@
 
 main:
     push 0 ; first fib number
-    write
+    dup
+    print
     push 1 ; second fib number
-    write
+    dup
+    print
     push N ; number of fib numbers to compute
 
 loop:
@@ -15,7 +17,8 @@ loop:
     swap 2
 
     add
-    write ; output Fn = Fn-1 + Fn-2
+    dup
+    print ; output Fn = Fn-1 + Fn-2
     
     ; N = N - 1
     swap 2

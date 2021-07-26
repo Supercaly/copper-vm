@@ -14,6 +14,14 @@ const (
 	ExpressionKindBinding
 )
 
+func (kind ExpressionKind) String() string {
+	return [...]string{
+		"ExpressionKindNumLitInt",
+		"ExpressionKindNumLitFloat",
+		"ExpressionKindBinding",
+	}[kind]
+}
+
 type Expression struct {
 	Kind          ExpressionKind
 	AsNumLitInt   int64
@@ -69,4 +77,52 @@ func parseExprPrimary(tokens []Token) (result Expression, err error) {
 		}
 	}
 	return result, err
+}
+
+// Parse a byte list from a source string.
+// The string is first tokenized and then is parsed to extract
+// the data.
+// Returns an error if something went wrong.
+func ParseByteListFromString(source string) (out []byte, err error) {
+	tokens, err := Tokenize(source)
+	if err != nil {
+		return []byte{}, err
+	}
+	return parseByteArrayFromTokens(tokens)
+}
+
+// Parse a byte list from some tokens.
+// Returns a byte array or an error.
+func parseByteArrayFromTokens(tokens []Token) (out []byte, err error) {
+	if len(tokens) == 0 {
+		return []byte{}, nil
+	}
+
+	if tokens[0].Kind == TokenKindComma {
+		return []byte{}, fmt.Errorf("misplaced comma inside list")
+	}
+
+	expr, err := parseExprPrimary([]Token{tokens[0]})
+	if err != nil {
+		return []byte{}, err
+	}
+	if expr.Kind != ExpressionKindNumLitInt {
+		return []byte{}, fmt.Errorf("unsupported value inside byte array")
+	}
+	out = append(out, byte(expr.AsNumLitInt))
+
+	if len(tokens) > 1 && tokens[1].Kind != TokenKindComma {
+		return []byte{},
+			fmt.Errorf("array values must be comma separated")
+	}
+
+	if len(tokens) > 2 {
+		next, err := parseByteArrayFromTokens(tokens[2:])
+		if err != nil {
+			return []byte{}, err
+		}
+		out = append(out, next...)
+	}
+
+	return out, nil
 }

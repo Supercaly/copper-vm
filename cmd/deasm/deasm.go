@@ -47,6 +47,17 @@ func main() {
 	vm := coppervm.Coppervm{}
 	vm.LoadProgramFromFile(inputFilePath)
 
+	// Dump memory to stdout
+	println("Memory:")
+	if vm.MemorySize != 0 {
+		for i := 0; i < int(vm.MemorySize); i++ {
+			fmt.Printf("%x ", vm.Memory[i])
+		}
+		println()
+	} else {
+		println("  [empty]")
+	}
+
 	// Dump program to stdout
 	fmt.Fprintf(os.Stdout, "Entry point: %d\n", vm.Ip)
 	for i := 0; i < len(vm.Program); i++ {

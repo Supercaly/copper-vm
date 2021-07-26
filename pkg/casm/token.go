@@ -12,6 +12,7 @@ const (
 	TokenKindNumLit TokenKind = iota
 	TokenKindSymbol
 	TokenKindMinus
+	TokenKindComma
 )
 
 type Token struct {
@@ -31,6 +32,12 @@ func Tokenize(source string) (out []Token, err error) {
 			out = append(out, Token{
 				Kind: TokenKindMinus,
 				Text: "-",
+			})
+		case ',':
+			source = source[1:]
+			out = append(out, Token{
+				Kind: TokenKindComma,
+				Text: ",",
 			})
 		default:
 			if isDigit(rune(source[0])) {

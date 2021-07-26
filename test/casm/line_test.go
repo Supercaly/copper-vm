@@ -69,6 +69,9 @@ func TestLinize(t *testing.T) {
 }
 
 func lineArrayEquals(a []casm.Line, b []casm.Line) bool {
+	if len(a) != len(b) {
+		return false
+	}
 	for i, v := range a {
 		if b[i] != v {
 			return false
