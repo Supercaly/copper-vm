@@ -1,0 +1,12 @@
+name: Copper VM CI
+on: [push, pull_request]
+
+jobs:
+  linux-build:
+    name: Build Linux
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Tests
+        run: go test ./test/casm 
