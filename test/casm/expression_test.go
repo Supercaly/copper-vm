@@ -52,3 +52,45 @@ func TestParseExprFromString(t *testing.T) {
 		}
 	}
 }
+
+func TestParseByteListFromString(t *testing.T) {
+	tests := []struct {
+		in       string
+		out      []byte
+		hasError bool
+	}{
+		{"1, 2, 3, 4", []byte{1, 2, 3, 4}, false},
+		{"1, 2, 3, 4,", []byte{1, 2, 3, 4}, false},
+		{"1", []byte{1}, false},
+		{"1,", []byte{1}, false},
+		{"", []byte{}, false},
+		{"1 2 3", []byte{}, true},
+		{"1,,2", []byte{}, true},
+		{",1", []byte{}, true},
+		{",", []byte{}, true},
+	}
+
+	for _, test := range tests {
+		expr, err := casm.ParseByteListFromString(test.in)
+
+		if err != nil && !test.hasError {
+			t.Error(err)
+		} else if err == nil && test.hasError {
+			t.Errorf("Expecting an error")
+		} else if !byteArrayEquals(expr, test.out) {
+			t.Errorf("Expected '%#v' but got '%#v'", test.out, expr)
+		}
+	}
+}
+
+func byteArrayEquals(a []byte, b []byte) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i, v := range a {
+		if b[i] != v {
+			return false
+		}
+	}
+	return true
+}

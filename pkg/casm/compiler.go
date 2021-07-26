@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"strconv"
 	"strings"
 
 	"coppervm.com/coppervm/pkg/coppervm"
@@ -227,11 +226,9 @@ func (casm *Casm) bindEntry(name string, location FileLocation) {
 
 // Binds a memory definition
 func (casm *Casm) bindMemory(directive DirectiveLine, location FileLocation) {
-	chunkSlice := strings.Split(directive.Block, ",")
-	var chunk []byte
-	for _, v := range chunkSlice {
-		val, _ := strconv.Atoi(v)
-		chunk = append(chunk, byte(val))
+	chunk, err := ParseByteListFromString(directive.Block)
+	if err != nil {
+		log.Fatalf("%s: [ERROR]: %s", location, err)
 	}
 	casm.Memory = append(casm.Memory, chunk...)
 }

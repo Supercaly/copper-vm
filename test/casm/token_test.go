@@ -41,6 +41,13 @@ func TestTokenize(t *testing.T) {
 		{"_test", []casm.Token{
 			{Kind: casm.TokenKindSymbol, Text: "_test"},
 		}, false},
+		{"1,2,3", []casm.Token{
+			{Kind: casm.TokenKindNumLit, Text: "1"},
+			{Kind: casm.TokenKindComma, Text: ","},
+			{Kind: casm.TokenKindNumLit, Text: "2"},
+			{Kind: casm.TokenKindComma, Text: ","},
+			{Kind: casm.TokenKindNumLit, Text: "3"},
+		}, false},
 		{"+", []casm.Token{}, true},
 	}
 
@@ -58,6 +65,9 @@ func TestTokenize(t *testing.T) {
 }
 
 func tokenArrayEquals(a []casm.Token, b []casm.Token) bool {
+	if len(a) != len(b) {
+		return false
+	}
 	for i, v := range a {
 		if b[i] != v {
 			return false
