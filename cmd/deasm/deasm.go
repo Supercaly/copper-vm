@@ -13,6 +13,7 @@ import (
 func usage(stream io.Writer, program string) {
 	fmt.Fprintf(stream, "Usage: %s [OPTIONS] <input.vm>\n", program)
 	fmt.Fprintf(stream, "[OPTIONS]: \n")
+	fmt.Fprintf(stream, "    -m     Print the program memory to stdout.\n")
 	fmt.Fprintf(stream, "    -h     Print this help message.\n")
 }
 
@@ -20,6 +21,7 @@ func main() {
 	args := os.Args
 	var program string
 	program, args = au.Shift(args)
+	printMemory := false
 	var inputFilePath string
 
 	for len(args) > 0 {
@@ -29,6 +31,8 @@ func main() {
 		if flag == "-h" {
 			usage(os.Stdout, program)
 			os.Exit(0)
+		} else if flag == "-m" {
+			printMemory = true
 		} else {
 			if inputFilePath != "" {
 				usage(os.Stderr, program)
@@ -48,14 +52,12 @@ func main() {
 	vm.LoadProgramFromFile(inputFilePath)
 
 	// Dump memory to stdout
-	println("Memory:")
-	if vm.MemorySize != 0 {
-		for i := 0; i < int(vm.MemorySize); i++ {
-			fmt.Printf("%x ", vm.Memory[i])
+	if printMemory {
+		println("Memory:")
+		for _, v := range vm.Memory {
+			fmt.Printf("%x ", v)
 		}
 		println()
-	} else {
-		println("  [empty]")
 	}
 
 	// Dump program to stdout
