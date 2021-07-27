@@ -25,8 +25,7 @@ type Coppervm struct {
 	Ip      InstAddr
 
 	// VM Memory
-	Memory     [CoppervmMemoryCapacity]byte
-	MemorySize int64
+	Memory [CoppervmMemoryCapacity]byte
 
 	// Is the VM halted?
 	Halt bool
@@ -58,7 +57,6 @@ func (vm *Coppervm) LoadProgramFromFile(filePath string) {
 	for i := 0; i < len(meta.Memory); i++ {
 		vm.Memory[i] = meta.Memory[i]
 	}
-	vm.MemorySize = int64(len(meta.Memory))
 }
 
 // Executes all the program of the vm.
@@ -323,11 +321,23 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 		}
 		vm.Stack[vm.StackSize-1] = WordU64(uint64(vm.Memory[addr]))
 		vm.Ip++
+	case InstMemWrite:
+		if vm.StackSize < 2 {
+			return ErrorStackUnderflow
+		}
+		addr := vm.Stack[vm.StackSize-1].AsU64
+		if addr >= uint64(CoppervmMemoryCapacity) {
+			return ErrorIllegalMemoryAccess
+		}
+		vm.Memory[addr] = byte(vm.Stack[vm.StackSize-2].AsU64)
+		vm.StackSize -= 2
+		vm.Ip++
+	// Debug print
 	case InstPrint:
 		if vm.StackSize < 1 {
 			return ErrorStackUnderflow
 		}
-		fmt.Printf("%s", string(rune(vm.Stack[vm.StackSize-1].AsU64)))
+		fmt.Printf("%s\n", vm.Stack[vm.StackSize-1])
 		vm.StackSize--
 		vm.Ip++
 	case InstCount:
