@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 )
 
 const (
@@ -332,6 +333,79 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 		vm.Memory[addr] = byte(vm.Stack[vm.StackSize-2].AsU64)
 		vm.StackSize -= 2
 		vm.Ip++
+	// Syscall
+	case InstSyscall:
+		sysCall := SysCall(currentInst.Operand.AsU64)
+		switch sysCall {
+		case SysCallRead:
+			if vm.StackSize < 3 {
+				return ErrorStackUnderflow
+			}
+			// Get count and start
+			count := vm.Stack[vm.StackSize-1].AsU64
+			bufStart := vm.Stack[vm.StackSize-2].AsU64
+			if bufStart > uint64(CoppervmMemoryCapacity) {
+				return ErrorIllegalMemoryAccess
+			}
+
+			// Get file descriptor
+			fd := FileDescriptor(vm.Stack[vm.StackSize-3].AsU64)
+			var file *os.File
+			switch fd {
+			case FdStdIn:
+				file = os.Stdin
+			case FdStdOut:
+				fallthrough
+			case FdStdErr:
+				fallthrough
+			default:
+				log.Fatalf("Unsupported file descriptor '%d'", fd)
+			}
+
+			// Read form file
+			buf := make([]byte, count)
+			readBytesCount, _ := file.Read(buf)
+			for i := bufStart; i < bufStart+uint64(readBytesCount); i++ {
+				vm.Memory[i] = buf[i-bufStart]
+			}
+
+			vm.Stack[vm.StackSize-3] = WordU64(uint64(readBytesCount))
+			vm.StackSize -= 2
+			vm.Ip++
+		case SysCallWrite:
+			if vm.StackSize < 3 {
+				return ErrorStackUnderflow
+			}
+			// Get count and start
+			count := vm.Stack[vm.StackSize-1].AsU64
+			bufStart := vm.Stack[vm.StackSize-2].AsU64
+			if bufStart > uint64(CoppervmMemoryCapacity) {
+				return ErrorIllegalMemoryAccess
+			}
+			buf := vm.Memory[bufStart : bufStart+count]
+
+			// Get file descriptor
+			fd := FileDescriptor(vm.Stack[vm.StackSize-3].AsU64)
+			var file *os.File
+			switch fd {
+			case FdStdOut:
+				file = os.Stdout
+			case FdStdErr:
+				file = os.Stderr
+			case FdStdIn:
+				fallthrough
+			default:
+				log.Fatalf("Unsupported file descriptor '%d'", fd)
+			}
+
+			// Write to file
+			writtenBytesCount, _ := file.Write(buf)
+			vm.Stack[vm.StackSize-3] = WordU64(uint64(writtenBytesCount))
+			vm.StackSize -= 2
+			vm.Ip++
+		default:
+			log.Fatalf("Unknown system call %d", sysCall)
+		}
 	// Debug print
 	case InstPrint:
 		if vm.StackSize < 1 {
