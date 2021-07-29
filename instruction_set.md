@@ -47,6 +47,20 @@
 
 ## Functions
 | Mnemonic | Operand | Description |
-| --- | :---| ---|
+| --- | :---: | --- |
 | call | location | moves the ip to given location; it's like jmp, but before moving push the current ip to the stack so ret can go back |
 | ret | - | set the ip to the stack top |
+
+## Memory access
+| Mnemonic | Operand | Description |
+| --- | :---: | --- |
+| read | - | reads a byte from the memory.<br/> The memory address to read is the stack top, that is replaced with the byte read after the instruction is executed |
+| write | - | writes a byte to the memory.<br/> The value to write and his destination are the first two elements on the stack; the values are consumed after the instruction is executed. |
+
+## System Calls
+To interact with the underlying system you can use the `syscall` instruction which has one of the following as operands:
+
+| Operand | Name | Arg0 | Arg1 | Arg2 | Description |
+| --- | :---: | :---: | :---: | :---: | --- |
+| 0 | read | fd | buffer | count | Reads count bytes form fd and put them to buffer.<br/>At the end pushes on stack top the number of bytes read |
+| 1 | write | fd | buffer | count | Writes count bytes from buffer to fd.<br/>At the end pushes on stack top the number of bytes written |

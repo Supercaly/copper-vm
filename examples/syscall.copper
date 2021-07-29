@@ -1,0 +1,30 @@
+%memory 110, 97, 109, 101, 63, 32, 0 ; first string
+%memory 72, 105, 32, 0 ; second string
+%const stdin 0
+%const stdout 1
+
+; write first string to stdout
+push stdout
+push 0
+push 6
+syscall 1
+drop
+
+; get 20 bytes from stdin and write it 
+; at the end of second string
+push stdin
+push 10
+push 20
+syscall 0
+
+; write second string and input to stdout
+push 3
+add
+push stdout
+swap 1
+push 7
+swap 1
+syscall 1
+
+halt
+

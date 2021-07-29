@@ -150,6 +150,11 @@ var InstDefs = [InstCount]InstDef{
 		Name:       "write",
 	},
 	{
+		Kind:       InstSyscall,
+		HasOperand: true,
+		Name:       "syscall",
+	},
+	{
 		Kind:       InstPrint,
 		HasOperand: false,
 		Name:       "print",
@@ -207,6 +212,9 @@ const (
 	// Memory access
 	InstMemRead
 	InstMemWrite
+
+	// Syscall
+	InstSyscall
 
 	InstPrint
 

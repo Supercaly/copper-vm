@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 )
 
 const (
@@ -25,8 +26,7 @@ type Coppervm struct {
 	Ip      InstAddr
 
 	// VM Memory
-	Memory     [CoppervmMemoryCapacity]byte
-	MemorySize int64
+	Memory [CoppervmMemoryCapacity]byte
 
 	// Is the VM halted?
 	Halt bool
@@ -58,7 +58,6 @@ func (vm *Coppervm) LoadProgramFromFile(filePath string) {
 	for i := 0; i < len(meta.Memory); i++ {
 		vm.Memory[i] = meta.Memory[i]
 	}
-	vm.MemorySize = int64(len(meta.Memory))
 }
 
 // Executes all the program of the vm.
@@ -323,11 +322,96 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 		}
 		vm.Stack[vm.StackSize-1] = WordU64(uint64(vm.Memory[addr]))
 		vm.Ip++
+	case InstMemWrite:
+		if vm.StackSize < 2 {
+			return ErrorStackUnderflow
+		}
+		addr := vm.Stack[vm.StackSize-1].AsU64
+		if addr >= uint64(CoppervmMemoryCapacity) {
+			return ErrorIllegalMemoryAccess
+		}
+		vm.Memory[addr] = byte(vm.Stack[vm.StackSize-2].AsU64)
+		vm.StackSize -= 2
+		vm.Ip++
+	// Syscall
+	case InstSyscall:
+		sysCall := SysCall(currentInst.Operand.AsU64)
+		switch sysCall {
+		case SysCallRead:
+			if vm.StackSize < 3 {
+				return ErrorStackUnderflow
+			}
+			// Get count and start
+			count := vm.Stack[vm.StackSize-1].AsU64
+			bufStart := vm.Stack[vm.StackSize-2].AsU64
+			if bufStart > uint64(CoppervmMemoryCapacity) {
+				return ErrorIllegalMemoryAccess
+			}
+
+			// Get file descriptor
+			fd := FileDescriptor(vm.Stack[vm.StackSize-3].AsU64)
+			var file *os.File
+			switch fd {
+			case FdStdIn:
+				file = os.Stdin
+			case FdStdOut:
+				fallthrough
+			case FdStdErr:
+				fallthrough
+			default:
+				log.Fatalf("Unsupported file descriptor '%d'", fd)
+			}
+
+			// Read form file
+			buf := make([]byte, count)
+			readBytesCount, _ := file.Read(buf)
+			for i := bufStart; i < bufStart+uint64(readBytesCount); i++ {
+				vm.Memory[i] = buf[i-bufStart]
+			}
+
+			vm.Stack[vm.StackSize-3] = WordU64(uint64(readBytesCount))
+			vm.StackSize -= 2
+			vm.Ip++
+		case SysCallWrite:
+			if vm.StackSize < 3 {
+				return ErrorStackUnderflow
+			}
+			// Get count and start
+			count := vm.Stack[vm.StackSize-1].AsU64
+			bufStart := vm.Stack[vm.StackSize-2].AsU64
+			if bufStart > uint64(CoppervmMemoryCapacity) {
+				return ErrorIllegalMemoryAccess
+			}
+			buf := vm.Memory[bufStart : bufStart+count]
+
+			// Get file descriptor
+			fd := FileDescriptor(vm.Stack[vm.StackSize-3].AsU64)
+			var file *os.File
+			switch fd {
+			case FdStdOut:
+				file = os.Stdout
+			case FdStdErr:
+				file = os.Stderr
+			case FdStdIn:
+				fallthrough
+			default:
+				log.Fatalf("Unsupported file descriptor '%d'", fd)
+			}
+
+			// Write to file
+			writtenBytesCount, _ := file.Write(buf)
+			vm.Stack[vm.StackSize-3] = WordU64(uint64(writtenBytesCount))
+			vm.StackSize -= 2
+			vm.Ip++
+		default:
+			log.Fatalf("Unknown system call %d", sysCall)
+		}
+	// Debug print
 	case InstPrint:
 		if vm.StackSize < 1 {
 			return ErrorStackUnderflow
 		}
-		fmt.Printf("%s", string(rune(vm.Stack[vm.StackSize-1].AsU64)))
+		fmt.Printf("%s\n", vm.Stack[vm.StackSize-1])
 		vm.StackSize--
 		vm.Ip++
 	case InstCount:
