@@ -1,3 +1,4 @@
+%include lib/std.copper
 %entry main
 
 ; This program pushes 1,2,3 on the stack
@@ -8,4 +9,5 @@ main:
     push 3
     add
     add
+    call dump_u64
     halt
