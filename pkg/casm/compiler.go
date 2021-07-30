@@ -6,13 +6,15 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"coppervm.com/coppervm/pkg/coppervm"
 )
 
 const (
-	CasmDebug bool = false
+	CasmDebug           bool = false
+	CasmMaxIncludeLevel int  = 10
 )
 
 type Casm struct {
@@ -27,6 +29,9 @@ type Casm struct {
 	DeferredEntryName string
 
 	Memory []byte
+
+	IncludeLevel int
+	IncludePaths []string
 }
 
 // Save a copper vm program to binary file.
@@ -107,6 +112,8 @@ func (casm *Casm) TranslateSource(filePath string) {
 				casm.bindConst(line.AsDirective, line.Location)
 			case "memory":
 				casm.bindMemory(line.AsDirective, line.Location)
+			case "include":
+				casm.translateInclude(line.AsDirective, line.Location)
 			default:
 				log.Fatalf("%s: [ERROR]: Unknown directive '%s'", line.Location, line.AsDirective.Name)
 			}
@@ -231,6 +238,41 @@ func (casm *Casm) bindMemory(directive DirectiveLine, location FileLocation) {
 		log.Fatalf("%s: [ERROR]: %s", location, err)
 	}
 	casm.Memory = append(casm.Memory, chunk...)
+}
+
+// Translate include directive
+func (casm *Casm) translateInclude(directive DirectiveLine, location FileLocation) {
+	exist, resolvedPath := casm.resolveIncludePath(directive.Block)
+	if !exist {
+		log.Fatalf("%s: [ERROR]: cannot resolve include file '%s'", location, directive.Block)
+	}
+
+	if casm.IncludeLevel >= CasmMaxIncludeLevel {
+		log.Fatalf("%s: [ERROR]: maximum include level reached", location)
+	}
+
+	casm.IncludeLevel++
+	casm.TranslateSource(resolvedPath)
+	casm.IncludeLevel--
+}
+
+// Resolve an include path from the list of includes.
+func (casm *Casm) resolveIncludePath(path string) (exist bool, resolved string) {
+	// Check the path itself
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, path
+	}
+
+	// Check the include paths
+	for _, includePath := range casm.IncludePaths {
+		resolved = filepath.Join(includePath, path)
+		_, err := os.Stat(resolved)
+		if err == nil {
+			return true, resolved
+		}
+	}
+	return false, ""
 }
 
 // Evaluate a binding to extract a word.

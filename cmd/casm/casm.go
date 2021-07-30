@@ -15,11 +15,13 @@ import (
 func usage(stream io.Writer, program string) {
 	fmt.Fprintf(stream, "Usage: %s [OPTIONS] <input.copper>\n", program)
 	fmt.Fprintf(stream, "[OPTIONS]: \n")
-	fmt.Fprintf(stream, "    -o <out.vm>    Specify the output path.\n")
-	fmt.Fprintf(stream, "    -h             Print this help message.\n")
+	fmt.Fprintf(stream, "    -I <include/path>    Add include path.\n")
+	fmt.Fprintf(stream, "    -o <out.vm>          Specify the output path.\n")
+	fmt.Fprintf(stream, "    -h                   Print this help message.\n")
 }
 
 func main() {
+	casm := c.Casm{}
 	args := os.Args
 	var program string
 	program, args = au.Shift(args)
@@ -40,6 +42,15 @@ func main() {
 			}
 
 			outputFilePath, args = au.Shift(args)
+		} else if flag == "-I" {
+			if len(args) == 0 {
+				usage(os.Stderr, program)
+				log.Fatalf("[ERROR]: No argument provided for flag `%s`\n", flag)
+			}
+
+			var includePath string
+			includePath, args = au.Shift(args)
+			casm.IncludePaths = append(casm.IncludePaths, includePath)
 		} else {
 			if inputFilePath != "" {
 				usage(os.Stderr, program)
@@ -62,7 +73,6 @@ func main() {
 		outputFilePath = filepath.Join(fileDir, fileName)
 	}
 
-	casm := c.Casm{}
 	casm.TranslateSource(inputFilePath)
 	casm.SaveProgramToFile(outputFilePath)
 }
