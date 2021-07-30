@@ -43,6 +43,11 @@ func main() {
 
 			outputFilePath, args = au.Shift(args)
 		} else if flag == "-I" {
+			if len(args) == 0 {
+				usage(os.Stderr, program)
+				log.Fatalf("[ERROR]: No argument provided for flag `%s`\n", flag)
+			}
+
 			var includePath string
 			includePath, args = au.Shift(args)
 			casm.IncludePaths = append(casm.IncludePaths, includePath)
