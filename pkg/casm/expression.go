@@ -1,7 +1,6 @@
 package casm
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 )
@@ -48,7 +47,7 @@ func ParseExprFromString(source string) (Expression, error) {
 // Returns an error if something went wrong.
 func parseExprPrimary(tokens []Token) (result Expression, err error) {
 	if len(tokens) == 0 {
-		return Expression{}, errors.New("trying to parse empty expression")
+		return Expression{}, fmt.Errorf("trying to parse empty expression")
 	}
 	switch tokens[0].Kind {
 	case TokenKindNumLit:

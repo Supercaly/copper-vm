@@ -212,7 +212,8 @@ func (casm *Casm) bindConst(directive DirectiveLine, location FileLocation) {
 		log.Fatalf("%s: [ERROR]: %s", location, err)
 	}
 
-	//
+	// If the expression is a string push it in memory
+	// and use the his start location as binding value
 	if value.Kind == ExpressionKindStringLit {
 		strBase := len(casm.Memory)
 		casm.Memory = append(casm.Memory, []byte(value.AsStringLit)...)
