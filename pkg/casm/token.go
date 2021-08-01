@@ -2,6 +2,7 @@ package casm
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"unicode"
 )
@@ -10,6 +11,7 @@ type TokenKind int
 
 const (
 	TokenKindNumLit TokenKind = iota
+	TokenKindStringLit
 	TokenKindSymbol
 	TokenKindMinus
 	TokenKindComma
@@ -39,6 +41,23 @@ func Tokenize(source string) (out []Token, err error) {
 				Kind: TokenKindComma,
 				Text: ",",
 			})
+		case '"':
+			source = source[1:]
+			if strings.Contains(source, "\"") {
+				str, rest := SplitByDelim(source, '"')
+				source = rest[1:]
+				unquotedStr, err := strconv.Unquote(`"` + str + `"`)
+				if err != nil {
+					return []Token{},
+						fmt.Errorf("error tokenizing literal string '%s'", str)
+				}
+				out = append(out, Token{
+					Kind: TokenKindStringLit,
+					Text: unquotedStr,
+				})
+			} else {
+				return []Token{}, fmt.Errorf("could not find closing \"")
+			}
 		default:
 			if isDigit(rune(source[0])) {
 				// Tokenize a number

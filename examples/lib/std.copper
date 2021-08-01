@@ -115,3 +115,24 @@ dump_i64:
     call std_print_positive
     call std_clean_print_memory
     ret 
+
+; returns the length of a given null-terminated string.
+strlen:
+    swap 1
+    dup
+    dup
+    read
+    jz std_strlen_exit
+
+    std_strlen_loop:
+        push 1
+        add
+        dup
+        read
+        jnz std_strlen_loop
+
+    std_strlen_exit:
+        swap 1
+        sub
+        swap 1
+        ret   

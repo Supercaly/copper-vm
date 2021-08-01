@@ -4,7 +4,7 @@ set -e
 
 mkdir -p examples/bin
 
-examples=$(find examples/ -name "*.copper" -type f)
+examples=$(find examples/ -maxdepth 1 -name "*.copper" -type f)
 for e in $examples; do
     name=$(basename $e)
     name=${name%.copper}

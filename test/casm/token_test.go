@@ -48,6 +48,10 @@ func TestTokenize(t *testing.T) {
 			{Kind: casm.TokenKindComma, Text: ","},
 			{Kind: casm.TokenKindNumLit, Text: "3"},
 		}, false},
+		{"\"string\"", []casm.Token{
+			{Kind: casm.TokenKindStringLit, Text: "string"},
+		}, false},
+		{"\"string", []casm.Token{}, true},
 		{"+", []casm.Token{}, true},
 	}
 

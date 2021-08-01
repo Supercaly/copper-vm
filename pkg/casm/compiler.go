@@ -211,6 +211,16 @@ func (casm *Casm) bindConst(directive DirectiveLine, location FileLocation) {
 	if err != nil {
 		log.Fatalf("%s: [ERROR]: %s", location, err)
 	}
+
+	//
+	if value.Kind == ExpressionKindStringLit {
+		strBase := len(casm.Memory)
+		casm.Memory = append(casm.Memory, []byte(value.AsStringLit)...)
+		value = Expression{
+			Kind:        ExpressionKindNumLitInt,
+			AsNumLitInt: int64(strBase),
+		}
+	}
 	casm.Bindings = append(casm.Bindings, Binding{
 		Name:     name,
 		Value:    value,

@@ -11,6 +11,7 @@ type ExpressionKind int
 const (
 	ExpressionKindNumLitInt ExpressionKind = iota
 	ExpressionKindNumLitFloat
+	ExpressionKindStringLit
 	ExpressionKindBinding
 )
 
@@ -18,6 +19,7 @@ func (kind ExpressionKind) String() string {
 	return [...]string{
 		"ExpressionKindNumLitInt",
 		"ExpressionKindNumLitFloat",
+		"ExpressionKindStringLit",
 		"ExpressionKindBinding",
 	}[kind]
 }
@@ -26,6 +28,7 @@ type Expression struct {
 	Kind          ExpressionKind
 	AsNumLitInt   int64
 	AsNumLitFloat float64
+	AsStringLit   string
 	AsBinding     string
 }
 
@@ -65,6 +68,9 @@ func parseExprPrimary(tokens []Token) (result Expression, err error) {
 			result.Kind = ExpressionKindNumLitInt
 			result.AsNumLitInt = intNumber
 		}
+	case TokenKindStringLit:
+		result.Kind = ExpressionKindStringLit
+		result.AsStringLit = tokens[0].Text
 	case TokenKindSymbol:
 		result.Kind = ExpressionKindBinding
 		result.AsBinding = tokens[0].Text

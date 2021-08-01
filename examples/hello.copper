@@ -1,0 +1,16 @@
+%include lib/std.copper
+%memory 0,0,0
+%const hello "Hello World\n"
+%entry main
+
+main:
+    push hello
+    dup
+    call strlen
+
+    push 1
+    swap 1
+    push hello
+    swap 1
+    syscall 1
+    halt
