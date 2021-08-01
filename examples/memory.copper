@@ -1,4 +1,4 @@
-%memory 72, 101, 108, 108, 111
+%memory 0x48, 0x65, 0x6A, 0x6A, 0x6F
 %entry main
 
 main:

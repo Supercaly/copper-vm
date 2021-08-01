@@ -1,3 +1,6 @@
+; allocate 10 bytes in memory used for printing
+%memory 0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,
+
 ; standard input, output, error
 %const STDIN 0
 %const STDOUT 1
@@ -5,8 +8,8 @@
 
 ; constants used inside the library
 %const std_print_base 10
-%const std_ascii_0 48
-%const std_minus_sign 45
+%const std_ascii_0 0x30
+%const std_minus_sign 0x2D
 
 ; cleans the memory after a print operation
 ; so it's all zeroed.
@@ -85,13 +88,14 @@ std_print_positive:
 ; print an unsigned integer.
 dump_u64:
     swap 1
-    call std_print_positive
     call std_clean_print_memory
+    call std_print_positive
     ret
 
 ; print a signed integer.
 dump_i64:
     swap 1
+    call std_clean_print_memory
     dup
     jge dump_i64_skip_negative
     push std_minus_sign
@@ -112,9 +116,8 @@ dump_i64:
     imul
 
     dump_i64_skip_negative:
-    call std_print_positive
-    call std_clean_print_memory
-    ret 
+        call std_print_positive
+        ret 
 
 ; returns the length of a given null-terminated string.
 strlen:

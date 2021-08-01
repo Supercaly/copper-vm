@@ -61,7 +61,7 @@ func Tokenize(source string) (out []Token, err error) {
 		default:
 			if isDigit(rune(source[0])) {
 				// Tokenize a number
-				number, rest := SplitWhile(source, isDigit)
+				number, rest := SplitWhile(source, isNumber)
 				source = rest
 				out = append(out, Token{
 					Kind: TokenKindNumLit,
@@ -82,6 +82,14 @@ func Tokenize(source string) (out []Token, err error) {
 		}
 	}
 	return out, err
+}
+
+func isNumber(r rune) bool {
+	return isDigit(r) || isHex(r)
+}
+
+func isHex(r rune) bool {
+	return unicode.In(r, unicode.Hex_Digit) || r == 'x'
 }
 
 func isAlpha(r rune) bool {

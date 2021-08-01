@@ -44,6 +44,11 @@ func TestParseExprFromString(t *testing.T) {
 			Kind:        casm.ExpressionKindStringLit,
 			AsStringLit: "an escaped\nstring",
 		}, false},
+		{"0xFF", casm.Expression{
+			Kind:        casm.ExpressionKindNumLitInt,
+			AsNumLitInt: 255,
+		}, false},
+		{"0xG", casm.Expression{}, true},
 		{"1.2.3", casm.Expression{}, true},
 		{"1+", casm.Expression{}, true},
 	}
