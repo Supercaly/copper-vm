@@ -36,6 +36,14 @@ func TestParseExprFromString(t *testing.T) {
 			Kind:      casm.ExpressionKindBinding,
 			AsBinding: "test",
 		}, false},
+		{"\"a string\"", casm.Expression{
+			Kind:        casm.ExpressionKindStringLit,
+			AsStringLit: "a string",
+		}, false},
+		{"\"an escaped\\nstring\"", casm.Expression{
+			Kind:        casm.ExpressionKindStringLit,
+			AsStringLit: "an escaped\nstring",
+		}, false},
 		{"1.2.3", casm.Expression{}, true},
 		{"1+", casm.Expression{}, true},
 	}
