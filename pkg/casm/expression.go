@@ -3,6 +3,7 @@ package casm
 import (
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 type ExpressionKind int
@@ -51,21 +52,34 @@ func parseExprPrimary(tokens []Token) (result Expression, err error) {
 	}
 	switch tokens[0].Kind {
 	case TokenKindNumLit:
-		// Try integer
-		intNumber, err := strconv.ParseInt(tokens[0].Text, 10, 64)
-		if err != nil {
-			// Try floating point
-			floatNumber, err := strconv.ParseFloat(tokens[0].Text, 64)
+		// Try hexadecimal
+		if strings.HasPrefix(tokens[0].Text, "0x") {
+			number := tokens[0].Text[2:]
+			hexNumber, err := strconv.ParseUint(number, 16, 64)
 			if err != nil {
 				return Expression{},
-					fmt.Errorf("error parsing number literal '%s'",
+					fmt.Errorf("error parsing hex number literal '%s'",
 						tokens[0].Text)
 			}
-			result.Kind = ExpressionKindNumLitFloat
-			result.AsNumLitFloat = floatNumber
-		} else {
 			result.Kind = ExpressionKindNumLitInt
-			result.AsNumLitInt = intNumber
+			result.AsNumLitInt = int64(hexNumber)
+		} else {
+			// Try integer
+			intNumber, err := strconv.ParseInt(tokens[0].Text, 10, 64)
+			if err != nil {
+				// Try floating point
+				floatNumber, err := strconv.ParseFloat(tokens[0].Text, 64)
+				if err != nil {
+					return Expression{},
+						fmt.Errorf("error parsing number literal '%s'",
+							tokens[0].Text)
+				}
+				result.Kind = ExpressionKindNumLitFloat
+				result.AsNumLitFloat = floatNumber
+			} else {
+				result.Kind = ExpressionKindNumLitInt
+				result.AsNumLitInt = intNumber
+			}
 		}
 	case TokenKindStringLit:
 		result.Kind = ExpressionKindStringLit

@@ -1,0 +1,11 @@
+%include lib/std.copper
+%entry main
+
+main:
+    push 0x01
+    push 0xFF
+    push 0x3C
+    add
+    add
+    call dump_u64
+    halt
