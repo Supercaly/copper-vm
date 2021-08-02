@@ -1,5 +1,7 @@
 ; allocate 10 bytes in memory used for printing
-%memory 0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,
+%memory std_print_memory 0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,
+%const std_print_memory_size 20
+%const std_print_memory_end 19
 
 ; standard input, output, error
 %const STDIN 0
@@ -11,11 +13,14 @@
 %const std_ascii_0 0x30
 %const std_minus_sign 0x2D
 
-; cleans the memory after a print operation
-; so it's all zeroed.
+; cleans the memory reserved for print operations
 std_clean_print_memory:
-    push 0
-    
+    push std_print_memory
+    dup
+    push std_print_memory_size
+    add
+    swap 1
+
     std_clean_print_memory_loop:
         dup
         push 0
@@ -24,12 +29,16 @@ std_clean_print_memory:
 
         push 1
         add
-        dup
 
-        push 10
+        swap 1
+        dup
+        swap 2
+        dup
+        swap 2
         cmp
         jl std_clean_print_memory_loop
 
+    drop
     drop
     ret
 
@@ -39,7 +48,9 @@ std_print_positive:
     swap 1 ; swap return address
 
     dup
-    push 9 ; counter start at 9
+    push std_print_memory
+    push std_print_memory_end ; counter start at end of std_print_memory
+    add
     swap 1
 
     std_print_positive_loop:
@@ -78,8 +89,8 @@ std_print_positive:
 
     ; print the memory
     push STDOUT
-    push 0
-    push 10
+    push std_print_memory
+    push std_print_memory_size
     syscall 1
     drop
 
@@ -98,24 +109,25 @@ dump_i64:
     call std_clean_print_memory
     dup
     jge dump_i64_skip_negative
-    push std_minus_sign
-    push 0
-    write
 
+    ; print minus sign
+    push std_minus_sign
+    push std_print_memory
+    write
     push STDOUT
-    push 0
+    push std_print_memory
     push 1
     syscall 1
     drop
-
     push 0
-    dup
+    push std_print_memory
     write
 
     push -1
     imul
 
     dump_i64_skip_negative:
+        ; print the positive part
         call std_print_positive
         ret 
 

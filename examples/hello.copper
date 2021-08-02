@@ -1,5 +1,4 @@
 %include lib/std.copper
-%memory 0,0,0
 %const hello "Hello World\n"
 %entry main
 

@@ -216,7 +216,9 @@ func (casm *Casm) bindConst(directive DirectiveLine, location FileLocation) {
 	// and use the his start location as binding value
 	if value.Kind == ExpressionKindStringLit {
 		strBase := len(casm.Memory)
-		casm.Memory = append(casm.Memory, []byte(value.AsStringLit)...)
+		byteStr := []byte(value.AsStringLit)
+		byteStr = append(byteStr, 0)
+		casm.Memory = append(casm.Memory, byteStr...)
 		value = Expression{
 			Kind:        ExpressionKindNumLitInt,
 			AsNumLitInt: int64(strBase),
@@ -244,11 +246,33 @@ func (casm *Casm) bindEntry(name string, location FileLocation) {
 
 // Binds a memory definition
 func (casm *Casm) bindMemory(directive DirectiveLine, location FileLocation) {
-	chunk, err := ParseByteListFromString(directive.Block)
+	name, block := SplitByDelim(directive.Block, ' ')
+	name = strings.TrimSpace(name)
+	block = strings.TrimSpace(block)
+
+	exist, binding := casm.getBindingByName(name)
+	if exist {
+		log.Fatalf("%s: [ERROR]: Name '%s' is already bound at location '%s'",
+			location,
+			name,
+			binding.Location)
+	}
+
+	chunk, err := ParseByteListFromString(block)
 	if err != nil {
 		log.Fatalf("%s: [ERROR]: %s", location, err)
 	}
+	memAddr := len(casm.Memory)
 	casm.Memory = append(casm.Memory, chunk...)
+
+	casm.Bindings = append(casm.Bindings, Binding{
+		Name: name,
+		Value: Expression{
+			Kind:        ExpressionKindNumLitInt,
+			AsNumLitInt: int64(memAddr),
+		},
+		Location: location,
+	})
 }
 
 // Translate include directive
