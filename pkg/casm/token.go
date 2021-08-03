@@ -13,7 +13,9 @@ const (
 	TokenKindNumLit TokenKind = iota
 	TokenKindStringLit
 	TokenKindSymbol
+	TokenKindPlus
 	TokenKindMinus
+	TokenKindAsterisk
 	TokenKindComma
 )
 
@@ -29,11 +31,23 @@ func Tokenize(source string) (out []Token, err error) {
 	for source != "" {
 		source = strings.TrimSpace(source)
 		switch source[0] {
+		case '+':
+			source = source[1:]
+			out = append(out, Token{
+				Kind: TokenKindPlus,
+				Text: "+",
+			})
 		case '-':
 			source = source[1:]
 			out = append(out, Token{
 				Kind: TokenKindMinus,
 				Text: "-",
+			})
+		case '*':
+			source = source[1:]
+			out = append(out, Token{
+				Kind: TokenKindAsterisk,
+				Text: "*",
 			})
 		case ',':
 			source = source[1:]
