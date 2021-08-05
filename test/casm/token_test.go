@@ -60,6 +60,10 @@ func TestTokenize(t *testing.T) {
 			{Kind: casm.TokenKindMinus, Text: "-"},
 			{Kind: casm.TokenKindAsterisk, Text: "*"},
 		}, false},
+		{"()", []casm.Token{
+			{Kind: casm.TokenKindOpenParen, Text: "("},
+			{Kind: casm.TokenKindCloseParen, Text: ")"},
+		}, false},
 		{"$", []casm.Token{}, true},
 	}
 

@@ -124,6 +124,14 @@ func TestParseExprFromString(t *testing.T) {
 				},
 			},
 		}, false},
+		{"-2*3", casm.Expression{
+			Kind:        casm.ExpressionKindNumLitInt,
+			AsNumLitInt: -6,
+		}, false},
+		{"(1+2)*(1+2)", casm.Expression{
+			Kind:        casm.ExpressionKindNumLitInt,
+			AsNumLitInt: 9,
+		}, false},
 		{"0xG", casm.Expression{}, true},
 		{"1.2.3", casm.Expression{}, true},
 		{"1$", casm.Expression{}, true},

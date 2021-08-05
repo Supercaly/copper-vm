@@ -17,6 +17,8 @@ const (
 	TokenKindMinus
 	TokenKindAsterisk
 	TokenKindComma
+	TokenKindOpenParen
+	TokenKindCloseParen
 )
 
 type Token struct {
@@ -72,6 +74,18 @@ func Tokenize(source string) (out []Token, err error) {
 			} else {
 				return []Token{}, fmt.Errorf("could not find closing \"")
 			}
+		case '(':
+			source = source[1:]
+			out = append(out, Token{
+				Kind: TokenKindOpenParen,
+				Text: "(",
+			})
+		case ')':
+			source = source[1:]
+			out = append(out, Token{
+				Kind: TokenKindCloseParen,
+				Text: ")",
+			})
 		default:
 			if isDigit(rune(source[0])) {
 				// Tokenize a number

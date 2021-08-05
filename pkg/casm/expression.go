@@ -144,11 +144,10 @@ func ParseExprFromString(source string) (Expression, error) {
 // - "https://www.engr.mun.ca/~theo/Misc/exp_parsing.htm"
 // - "https://en.wikipedia.org/wiki/Operator-precedence_parser"
 func parseExprBinaryOp(tokens *[]Token, precedence int) (result Expression, err error) {
-	result, err = parseExprPrimary(*tokens)
+	result, err = parseExprPrimary(tokens)
 	if err != nil {
 		return Expression{}, err
 	}
-	*tokens = (*tokens)[1:]
 
 	for len(*tokens) > 1 && tokenIsOperator((*tokens)[0]) &&
 		binOpPrecedenceMap[tokenAsBinaryOpKind((*tokens)[0])] >= precedence {
@@ -162,6 +161,7 @@ func parseExprBinaryOp(tokens *[]Token, precedence int) (result Expression, err 
 		// left and right have the same type and are not bindings
 		// so we can already compute the operation ad return the result.
 		if result.Kind == rhs.Kind && result.Kind != ExpressionKindBinding {
+			// TODO: move operation computation in it's own function
 			switch result.Kind {
 			case ExpressionKindNumLitInt:
 				switch op {
@@ -210,33 +210,33 @@ func parseExprBinaryOp(tokens *[]Token, precedence int) (result Expression, err 
 
 // Parse a primary expression form a list of tokens.
 // Returns an error if something went wrong.
-func parseExprPrimary(tokens []Token) (result Expression, err error) {
-	if len(tokens) == 0 {
+func parseExprPrimary(tokens *[]Token) (result Expression, err error) {
+	if len(*tokens) == 0 {
 		return Expression{}, fmt.Errorf("trying to parse empty expression")
 	}
-	switch tokens[0].Kind {
+	switch (*tokens)[0].Kind {
 	case TokenKindNumLit:
 		// Try hexadecimal
-		if strings.HasPrefix(tokens[0].Text, "0x") {
-			number := tokens[0].Text[2:]
+		if strings.HasPrefix((*tokens)[0].Text, "0x") {
+			number := (*tokens)[0].Text[2:]
 			hexNumber, err := strconv.ParseUint(number, 16, 64)
 			if err != nil {
 				return Expression{},
 					fmt.Errorf("error parsing hex number literal '%s'",
-						tokens[0].Text)
+						(*tokens)[0].Text)
 			}
 			result.Kind = ExpressionKindNumLitInt
 			result.AsNumLitInt = int64(hexNumber)
 		} else {
 			// Try integer
-			intNumber, err := strconv.ParseInt(tokens[0].Text, 10, 64)
+			intNumber, err := strconv.ParseInt((*tokens)[0].Text, 10, 64)
 			if err != nil {
 				// Try floating point
-				floatNumber, err := strconv.ParseFloat(tokens[0].Text, 64)
+				floatNumber, err := strconv.ParseFloat((*tokens)[0].Text, 64)
 				if err != nil {
 					return Expression{},
 						fmt.Errorf("error parsing number literal '%s'",
-							tokens[0].Text)
+							(*tokens)[0].Text)
 				}
 				result.Kind = ExpressionKindNumLitFloat
 				result.AsNumLitFloat = floatNumber
@@ -245,19 +245,36 @@ func parseExprPrimary(tokens []Token) (result Expression, err error) {
 				result.AsNumLitInt = intNumber
 			}
 		}
+		*tokens = (*tokens)[1:]
 	case TokenKindStringLit:
 		result.Kind = ExpressionKindStringLit
-		result.AsStringLit = tokens[0].Text
+		result.AsStringLit = (*tokens)[0].Text
+		*tokens = (*tokens)[1:]
 	case TokenKindSymbol:
 		result.Kind = ExpressionKindBinding
-		result.AsBinding = tokens[0].Text
+		result.AsBinding = (*tokens)[0].Text
+		*tokens = (*tokens)[1:]
 	case TokenKindMinus:
-		result, err = parseExprPrimary(tokens[1:])
+		*tokens = (*tokens)[1:]
+		result, err = parseExprBinaryOp(tokens, 3)
+		if err != nil {
+			return Expression{}, err
+		}
 		if result.Kind == ExpressionKindNumLitInt {
 			result.AsNumLitInt = -result.AsNumLitInt
 		} else if result.Kind == ExpressionKindNumLitFloat {
 			result.AsNumLitFloat = -result.AsNumLitFloat
 		}
+	case TokenKindOpenParen:
+		*tokens = (*tokens)[1:]
+		result, err = parseExprBinaryOp(tokens, 0)
+		if err != nil {
+			return Expression{}, err
+		}
+		if len(*tokens) == 0 || (*tokens)[0].Kind != TokenKindCloseParen {
+			return Expression{}, fmt.Errorf("cannot find matching closing parenthesis")
+		}
+		*tokens = (*tokens)[1:]
 	}
 	return result, err
 }
@@ -285,7 +302,7 @@ func parseByteArrayFromTokens(tokens []Token) (out []byte, err error) {
 		return []byte{}, fmt.Errorf("misplaced comma inside list")
 	}
 
-	expr, err := parseExprPrimary([]Token{tokens[0]})
+	expr, err := parseExprPrimary(&[]Token{tokens[0]})
 	if err != nil {
 		return []byte{}, err
 	}
