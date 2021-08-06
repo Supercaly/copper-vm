@@ -150,7 +150,7 @@ func TestParseExprFromString(t *testing.T) {
 	}
 }
 
-func TestParseByteListFromString(t *testing.T) {
+func TestParseByteArrayFromString(t *testing.T) {
 	tests := []struct {
 		in       string
 		out      []byte
@@ -161,14 +161,17 @@ func TestParseByteListFromString(t *testing.T) {
 		{"1", []byte{1}, false},
 		{"1,", []byte{1}, false},
 		{"", []byte{}, false},
+		{"1,\"test\"", []byte{1, 0x74, 0x65, 0x73, 0x74}, false},
+		{"1, 0xf", []byte{1, 0xf}, false},
 		{"1 2 3", []byte{}, true},
 		{"1,,2", []byte{}, true},
 		{",1", []byte{}, true},
 		{",", []byte{}, true},
+		{"1.2,test", []byte{}, true},
 	}
 
 	for _, test := range tests {
-		expr, err := casm.ParseByteListFromString(test.in)
+		expr, err := casm.ParseByteArrayFromString(test.in)
 
 		if err != nil && !test.hasError {
 			t.Error(err)

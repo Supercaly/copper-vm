@@ -246,7 +246,7 @@ func (casm *Casm) bindMemory(directive DirectiveLine, location FileLocation) {
 			binding.Location)
 	}
 
-	chunk, err := ParseByteListFromString(block)
+	chunk, err := ParseByteArrayFromString(block)
 	if err != nil {
 		log.Fatalf("%s: [ERROR]: %s", location, err)
 	}
