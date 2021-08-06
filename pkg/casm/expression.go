@@ -131,6 +131,7 @@ func tokenAsBinaryOpKind(token Token) (out BinaryOpKind) {
 // Note: Before calling this method make sure that lhs and rhs have the same type.
 // Some operation are not supported, so this method could return an error.
 func computeOpWithSameType(lhs Expression, rhs Expression, op BinaryOpKind) (out Expression, err error) {
+	out.Kind = lhs.Kind
 	switch lhs.Kind {
 	case ExpressionKindNumLitInt:
 		switch op {
