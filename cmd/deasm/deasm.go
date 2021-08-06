@@ -14,6 +14,7 @@ func usage(stream io.Writer, program string) {
 	fmt.Fprintf(stream, "Usage: %s [OPTIONS] <input.vm>\n", program)
 	fmt.Fprintf(stream, "[OPTIONS]: \n")
 	fmt.Fprintf(stream, "    -m     Print the program memory to stdout.\n")
+	fmt.Fprintf(stream, "    -l     Print the line number before the line.\n")
 	fmt.Fprintf(stream, "    -h     Print this help message.\n")
 }
 
@@ -22,6 +23,7 @@ func main() {
 	var program string
 	program, args = au.Shift(args)
 	printMemory := false
+	printLineNbr := false
 	var inputFilePath string
 
 	for len(args) > 0 {
@@ -33,6 +35,8 @@ func main() {
 			os.Exit(0)
 		} else if flag == "-m" {
 			printMemory = true
+		} else if flag == "-l" {
+			printLineNbr = true
 		} else {
 			if inputFilePath != "" {
 				usage(os.Stderr, program)
@@ -64,6 +68,9 @@ func main() {
 	fmt.Fprintf(os.Stdout, "Entry point: %d\n", vm.Ip)
 	for i := 0; i < len(vm.Program); i++ {
 		inst := vm.Program[i]
+		if printLineNbr {
+			fmt.Fprintf(os.Stdout, "%d: ", i)
+		}
 		fmt.Fprintf(os.Stdout, "%s", inst.Name)
 		if inst.HasOperand {
 			fmt.Fprintf(os.Stdout, " (%s)", inst.Operand)
