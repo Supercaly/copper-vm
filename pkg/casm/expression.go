@@ -127,6 +127,44 @@ func tokenAsBinaryOpKind(token Token) (out BinaryOpKind) {
 	return out
 }
 
+// Computes an operation between two expression that have the same type and return it.
+// Note: Before calling this method make sure that lhs and rhs have the same type.
+// Some operation are not supported, so this method could return an error.
+func computeOpWithSameType(lhs Expression, rhs Expression, op BinaryOpKind) (out Expression, err error) {
+	switch lhs.Kind {
+	case ExpressionKindNumLitInt:
+		switch op {
+		case BinaryOpKindPlus:
+			out.AsNumLitInt = lhs.AsNumLitInt + rhs.AsNumLitInt
+		case BinaryOpKindMinus:
+			out.AsNumLitInt = lhs.AsNumLitInt - rhs.AsNumLitInt
+		case BinaryOpKindTimes:
+			out.AsNumLitInt = lhs.AsNumLitInt * rhs.AsNumLitInt
+		}
+	case ExpressionKindNumLitFloat:
+		switch op {
+		case BinaryOpKindPlus:
+			out.AsNumLitFloat = lhs.AsNumLitFloat + rhs.AsNumLitFloat
+		case BinaryOpKindMinus:
+			out.AsNumLitFloat = lhs.AsNumLitFloat - rhs.AsNumLitFloat
+		case BinaryOpKindTimes:
+			out.AsNumLitFloat = lhs.AsNumLitFloat * rhs.AsNumLitFloat
+		}
+	case ExpressionKindStringLit:
+		switch op {
+		case BinaryOpKindPlus:
+			out.AsStringLit = lhs.AsStringLit + rhs.AsStringLit
+		case BinaryOpKindMinus:
+			err = fmt.Errorf("unsupported operation '-' between string literals")
+		case BinaryOpKindTimes:
+			err = fmt.Errorf("unsupported operation '*' between string literals")
+		}
+	case ExpressionKindBinaryOp:
+		err = fmt.Errorf("at this point binary op is unreachable! Something really went wrong WTF")
+	}
+	return out, err
+}
+
 // Parse an expression from a source string.
 // The string is first tokenized and then is parsed to extract
 // an expression.
@@ -161,37 +199,9 @@ func parseExprBinaryOp(tokens *[]Token, precedence int) (result Expression, err 
 		// left and right have the same type and are not bindings
 		// so we can already compute the operation ad return the result.
 		if result.Kind == rhs.Kind && result.Kind != ExpressionKindBinding {
-			// TODO: move operation computation in it's own function
-			switch result.Kind {
-			case ExpressionKindNumLitInt:
-				switch op {
-				case BinaryOpKindPlus:
-					result.AsNumLitInt = result.AsNumLitInt + rhs.AsNumLitInt
-				case BinaryOpKindMinus:
-					result.AsNumLitInt = result.AsNumLitInt - rhs.AsNumLitInt
-				case BinaryOpKindTimes:
-					result.AsNumLitInt = result.AsNumLitInt * rhs.AsNumLitInt
-				}
-			case ExpressionKindNumLitFloat:
-				switch op {
-				case BinaryOpKindPlus:
-					result.AsNumLitFloat = result.AsNumLitFloat + rhs.AsNumLitFloat
-				case BinaryOpKindMinus:
-					result.AsNumLitFloat = result.AsNumLitFloat - rhs.AsNumLitFloat
-				case BinaryOpKindTimes:
-					result.AsNumLitFloat = result.AsNumLitFloat * rhs.AsNumLitFloat
-				}
-			case ExpressionKindStringLit:
-				switch op {
-				case BinaryOpKindPlus:
-					result.AsStringLit = result.AsStringLit + rhs.AsStringLit
-				case BinaryOpKindMinus:
-					return Expression{}, fmt.Errorf("unsupported operation '-' between string literals")
-				case BinaryOpKindTimes:
-					return Expression{}, fmt.Errorf("unsupported operation '*' between string literals")
-				}
-			case ExpressionKindBinaryOp:
-				return Expression{}, fmt.Errorf("WTF, unreachable")
+			result, err = computeOpWithSameType(result, rhs, op)
+			if err != nil {
+				return Expression{}, err
 			}
 		} else {
 			// we can't compute the operation yet, so we return an expression
