@@ -212,18 +212,6 @@ func (casm *Casm) bindConst(directive DirectiveLine, location FileLocation) {
 		log.Fatalf("%s: [ERROR]: %s", location, err)
 	}
 
-	// If the expression is a string push it in memory
-	// and use the his start location as binding value
-	if value.Kind == ExpressionKindStringLit {
-		strBase := len(casm.Memory)
-		byteStr := []byte(value.AsStringLit)
-		byteStr = append(byteStr, 0)
-		casm.Memory = append(casm.Memory, byteStr...)
-		value = Expression{
-			Kind:        ExpressionKindNumLitInt,
-			AsNumLitInt: int64(strBase),
-		}
-	}
 	casm.Bindings = append(casm.Bindings, Binding{
 		Name:     name,
 		Value:    value,
@@ -332,6 +320,25 @@ func (casm *Casm) evaluateExpression(expr Expression, location FileLocation) (re
 		ret = coppervm.WordI64(expr.AsNumLitInt)
 	case ExpressionKindNumLitFloat:
 		ret = coppervm.WordF64(expr.AsNumLitFloat)
+	case ExpressionKindStringLit:
+		strBase := len(casm.Memory)
+		byteStr := []byte(expr.AsStringLit)
+		byteStr = append(byteStr, 0)
+		casm.Memory = append(casm.Memory, byteStr...)
+		ret = coppervm.WordU64(uint64(strBase))
+	case ExpressionKindBinaryOp:
+		// TODO: Fix binary operation evaluation in compiler
+		// Remove wordTypeRep since Word is a union (all the types should be compute everytime).
+		lhs := casm.evaluateExpression(*expr.AsBinaryOp.Lhs, location)
+		rhs := casm.evaluateExpression(*expr.AsBinaryOp.Rhs, location)
+		switch expr.AsBinaryOp.Kind {
+		case BinaryOpKindPlus:
+			ret = coppervm.AddWord(lhs, rhs, coppervm.WordTypeRepU64)
+		case BinaryOpKindMinus:
+			ret = coppervm.SubWord(lhs, rhs, coppervm.WordTypeRepU64)
+		case BinaryOpKindTimes:
+			ret = coppervm.MulWord(lhs, rhs, coppervm.WordTypeRepU64)
+		}
 	}
 	return ret
 }

@@ -1,7 +1,6 @@
-; allocate 10 bytes in memory used for printing
+; allocate 20 bytes in memory used for printing
 %memory std_print_memory 0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,
 %const std_print_memory_size 20
-%const std_print_memory_end 19
 
 ; standard input, output, error
 %const STDIN 0
@@ -48,9 +47,7 @@ std_print_positive:
     swap 1 ; swap return address
 
     dup
-    push std_print_memory
-    push std_print_memory_end ; counter start at end of std_print_memory
-    add
+    push std_print_memory + std_print_memory_size - 1 ; counter start at end of std_print_memory
     swap 1
 
     std_print_positive_loop:

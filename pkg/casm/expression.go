@@ -37,7 +37,7 @@ type Expression struct {
 
 func (expr Expression) String() (out string) {
 	out += "{"
-	out += fmt.Sprintf("Kind: %s", expr.Kind)
+	out += fmt.Sprintf("Kind: %s, ", expr.Kind)
 	switch expr.Kind {
 	case ExpressionKindNumLitInt:
 		out += fmt.Sprintf("AsNumLitInt: %d", expr.AsNumLitInt)
@@ -78,9 +78,9 @@ type BinaryOp struct {
 
 func (binop BinaryOp) String() (out string) {
 	out += "{"
-	out += fmt.Sprintf("Kind: %s", binop.Kind)
+	out += fmt.Sprintf("Kind: %s, ", binop.Kind)
 	if binop.Lhs != nil {
-		out += fmt.Sprintf("Lhs: %s", *binop.Lhs)
+		out += fmt.Sprintf("Lhs: %s, ", *binop.Lhs)
 	}
 	if binop.Rhs != nil {
 		out += fmt.Sprintf("Rhs: %s", *binop.Rhs)
