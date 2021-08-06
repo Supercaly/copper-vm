@@ -1,6 +1,11 @@
 push 1
+print
 push 2.0
+print
 push -5
+print
 push -3.2
+print
 push 0xFF
+print
 halt
