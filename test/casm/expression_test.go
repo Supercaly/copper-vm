@@ -48,9 +48,93 @@ func TestParseExprFromString(t *testing.T) {
 			Kind:        casm.ExpressionKindNumLitInt,
 			AsNumLitInt: 255,
 		}, false},
+		{"2+3*4+5", casm.Expression{
+			Kind:        casm.ExpressionKindNumLitInt,
+			AsNumLitInt: 19,
+		}, false},
+		{"1.2+2.3", casm.Expression{
+			Kind:          casm.ExpressionKindNumLitFloat,
+			AsNumLitFloat: 3.5,
+		}, false},
+		{"\"first\"+\"second\"", casm.Expression{
+			Kind:        casm.ExpressionKindStringLit,
+			AsStringLit: "firstsecond",
+		}, false},
+		{"\"first\"-\"second\"", casm.Expression{}, true},
+		{"\"first\"*\"second\"", casm.Expression{}, true},
+		{"1+test", casm.Expression{
+			Kind: casm.ExpressionKindBinaryOp,
+			AsBinaryOp: casm.BinaryOp{
+				Kind: casm.BinaryOpKindPlus,
+				Lhs: &casm.Expression{
+					Kind:        casm.ExpressionKindNumLitInt,
+					AsNumLitInt: 1,
+				},
+				Rhs: &casm.Expression{
+					Kind:      casm.ExpressionKindBinding,
+					AsBinding: "test",
+				},
+			},
+		}, false},
+		{"2*1+test", casm.Expression{
+			Kind: casm.ExpressionKindBinaryOp,
+			AsBinaryOp: casm.BinaryOp{
+				Kind: casm.BinaryOpKindPlus,
+				Lhs: &casm.Expression{
+					Kind:        casm.ExpressionKindNumLitInt,
+					AsNumLitInt: 2,
+				},
+				Rhs: &casm.Expression{
+					Kind:      casm.ExpressionKindBinding,
+					AsBinding: "test",
+				},
+			},
+		}, false},
+		{"2.1+1+test+\"str\"", casm.Expression{
+			Kind: casm.ExpressionKindBinaryOp,
+			AsBinaryOp: casm.BinaryOp{
+				Kind: casm.BinaryOpKindPlus,
+				Lhs: &casm.Expression{
+					Kind: casm.ExpressionKindBinaryOp,
+					AsBinaryOp: casm.BinaryOp{
+						Kind: casm.BinaryOpKindPlus,
+						Lhs: &casm.Expression{
+							Kind: casm.ExpressionKindBinaryOp,
+							AsBinaryOp: casm.BinaryOp{
+								Kind: casm.BinaryOpKindPlus,
+								Lhs: &casm.Expression{
+									Kind:          casm.ExpressionKindNumLitFloat,
+									AsNumLitFloat: 2.1,
+								},
+								Rhs: &casm.Expression{
+									Kind:        casm.ExpressionKindNumLitInt,
+									AsNumLitInt: 1,
+								},
+							},
+						},
+						Rhs: &casm.Expression{
+							Kind:      casm.ExpressionKindBinding,
+							AsBinding: "test",
+						},
+					},
+				},
+				Rhs: &casm.Expression{
+					Kind:        casm.ExpressionKindStringLit,
+					AsStringLit: "str",
+				},
+			},
+		}, false},
+		{"-2*3", casm.Expression{
+			Kind:        casm.ExpressionKindNumLitInt,
+			AsNumLitInt: -6,
+		}, false},
+		{"(1+2)*(1+2)", casm.Expression{
+			Kind:        casm.ExpressionKindNumLitInt,
+			AsNumLitInt: 9,
+		}, false},
 		{"0xG", casm.Expression{}, true},
 		{"1.2.3", casm.Expression{}, true},
-		{"1+", casm.Expression{}, true},
+		{"1$", casm.Expression{}, true},
 	}
 
 	for _, test := range tests {
@@ -60,8 +144,8 @@ func TestParseExprFromString(t *testing.T) {
 			t.Error(err)
 		} else if err == nil && test.hasError {
 			t.Errorf("Expecting an error")
-		} else if expr != test.out {
-			t.Errorf("Expected '%#v' but got '%#v'", test.out, expr)
+		} else if !expressionEquals(expr, test.out) {
+			t.Errorf("Expected '%s' but got '%s'", test.out, expr)
 		}
 	}
 }
@@ -106,4 +190,16 @@ func byteArrayEquals(a []byte, b []byte) bool {
 		}
 	}
 	return true
+}
+
+func expressionEquals(a casm.Expression, b casm.Expression) bool {
+	if a.Kind != b.Kind {
+		return false
+	}
+	if a.Kind == casm.ExpressionKindBinaryOp {
+		return a.AsBinaryOp.Kind == b.AsBinaryOp.Kind &&
+			expressionEquals(*a.AsBinaryOp.Lhs, *b.AsBinaryOp.Lhs) &&
+			expressionEquals(*a.AsBinaryOp.Rhs, *b.AsBinaryOp.Rhs)
+	}
+	return a == b
 }

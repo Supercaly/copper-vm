@@ -13,8 +13,12 @@ const (
 	TokenKindNumLit TokenKind = iota
 	TokenKindStringLit
 	TokenKindSymbol
+	TokenKindPlus
 	TokenKindMinus
+	TokenKindAsterisk
 	TokenKindComma
+	TokenKindOpenParen
+	TokenKindCloseParen
 )
 
 type Token struct {
@@ -29,11 +33,23 @@ func Tokenize(source string) (out []Token, err error) {
 	for source != "" {
 		source = strings.TrimSpace(source)
 		switch source[0] {
+		case '+':
+			source = source[1:]
+			out = append(out, Token{
+				Kind: TokenKindPlus,
+				Text: "+",
+			})
 		case '-':
 			source = source[1:]
 			out = append(out, Token{
 				Kind: TokenKindMinus,
 				Text: "-",
+			})
+		case '*':
+			source = source[1:]
+			out = append(out, Token{
+				Kind: TokenKindAsterisk,
+				Text: "*",
 			})
 		case ',':
 			source = source[1:]
@@ -58,6 +74,18 @@ func Tokenize(source string) (out []Token, err error) {
 			} else {
 				return []Token{}, fmt.Errorf("could not find closing \"")
 			}
+		case '(':
+			source = source[1:]
+			out = append(out, Token{
+				Kind: TokenKindOpenParen,
+				Text: "(",
+			})
+		case ')':
+			source = source[1:]
+			out = append(out, Token{
+				Kind: TokenKindCloseParen,
+				Text: ")",
+			})
 		default:
 			if isDigit(rune(source[0])) {
 				// Tokenize a number

@@ -39,67 +39,67 @@ func (word Word) String() string {
 		word.AsF64)
 }
 
-type typeRep int
+type WordTypeRep int
 
 const (
-	typeRepU64 typeRep = iota
-	typeRepI64
-	typeRepF64
+	WordTypeRepU64 WordTypeRep = iota
+	WordTypeRepI64
+	WordTypeRepF64
 )
 
-func addWord(a Word, b Word, rep typeRep) (out Word) {
+func AddWord(a Word, b Word, rep WordTypeRep) (out Word) {
 	switch rep {
-	case typeRepU64:
+	case WordTypeRepU64:
 		out = WordU64(a.AsU64 + b.AsU64)
-	case typeRepI64:
+	case WordTypeRepI64:
 		out = WordI64(a.AsI64 + b.AsI64)
-	case typeRepF64:
+	case WordTypeRepF64:
 		out = WordF64(a.AsF64 + b.AsF64)
 	}
 	return out
 }
 
-func subWord(a Word, b Word, rep typeRep) (out Word) {
+func SubWord(a Word, b Word, rep WordTypeRep) (out Word) {
 	switch rep {
-	case typeRepU64:
+	case WordTypeRepU64:
 		out = WordU64(a.AsU64 - b.AsU64)
-	case typeRepI64:
+	case WordTypeRepI64:
 		out = WordI64(a.AsI64 - b.AsI64)
-	case typeRepF64:
+	case WordTypeRepF64:
 		out = WordF64(a.AsF64 - b.AsF64)
 	}
 	return out
 }
 
-func mulWord(a Word, b Word, rep typeRep) (out Word) {
+func MulWord(a Word, b Word, rep WordTypeRep) (out Word) {
 	switch rep {
-	case typeRepU64:
+	case WordTypeRepU64:
 		out = WordU64(a.AsU64 * b.AsU64)
-	case typeRepI64:
+	case WordTypeRepI64:
 		out = WordI64(a.AsI64 * b.AsI64)
-	case typeRepF64:
+	case WordTypeRepF64:
 		out = WordF64(a.AsF64 * b.AsF64)
 	}
 	return out
 }
 
-func divWord(a Word, b Word, rep typeRep) (out Word) {
+func DivWord(a Word, b Word, rep WordTypeRep) (out Word) {
 	switch rep {
-	case typeRepU64:
+	case WordTypeRepU64:
 		out = WordU64(a.AsU64 / b.AsU64)
-	case typeRepI64:
+	case WordTypeRepI64:
 		out = WordI64(a.AsI64 / b.AsI64)
-	case typeRepF64:
+	case WordTypeRepF64:
 		out = WordF64(a.AsF64 / b.AsF64)
 	}
 	return out
 }
 
-func modWord(a Word, b Word, rep typeRep) (out Word) {
+func ModWord(a Word, b Word, rep WordTypeRep) (out Word) {
 	switch rep {
-	case typeRepU64:
+	case WordTypeRepU64:
 		out = WordU64(a.AsU64 % b.AsU64)
-	case typeRepI64:
+	case WordTypeRepI64:
 		out = WordI64(a.AsI64 % b.AsI64)
 	}
 	return out

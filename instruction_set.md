@@ -62,5 +62,10 @@ To interact with the underlying system you can use the `syscall` instruction whi
 
 | Operand | Name | Arg0 | Arg1 | Arg2 | Description |
 | --- | :---: | :---: | :---: | :---: | --- |
-| 0 | read | fd | buffer | count | Reads count bytes form fd and put them to buffer.<br/>At the end pushes on stack top the number of bytes read |
-| 1 | write | fd | buffer | count | Writes count bytes from buffer to fd.<br/>At the end pushes on stack top the number of bytes written |
+| 0 | read | fd | buffer | count | reads count bytes form fd and put them to buffer.<br/>At the end pushes on stack top the number of bytes read |
+| 1 | write | fd | buffer | count | writes count bytes from buffer to fd.<br/>At the end pushes on stack top the number of bytes written |
+
+## Debug
+| Mnemonic | Operand | Description |
+| --- | :---: | ---|
+| print | - | debug print the stack top consuming it |

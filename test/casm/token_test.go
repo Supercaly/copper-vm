@@ -55,7 +55,16 @@ func TestTokenize(t *testing.T) {
 		{"0x5CFF", []casm.Token{
 			{Kind: casm.TokenKindNumLit, Text: "0x5CFF"},
 		}, false},
-		{"+", []casm.Token{}, true},
+		{"+-*", []casm.Token{
+			{Kind: casm.TokenKindPlus, Text: "+"},
+			{Kind: casm.TokenKindMinus, Text: "-"},
+			{Kind: casm.TokenKindAsterisk, Text: "*"},
+		}, false},
+		{"()", []casm.Token{
+			{Kind: casm.TokenKindOpenParen, Text: "("},
+			{Kind: casm.TokenKindCloseParen, Text: ")"},
+		}, false},
+		{"$", []casm.Token{}, true},
 	}
 
 	for _, test := range tests {
