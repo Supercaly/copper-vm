@@ -327,7 +327,7 @@ func (casm *Casm) evaluateExpression(expr Expression, location FileLocation) (re
 		casm.Memory = append(casm.Memory, byteStr...)
 		ret = coppervm.WordU64(uint64(strBase))
 	case ExpressionKindBinaryOp:
-		// TODO: Fix binary operation evaluation in compiler
+		// TODO(#39): Fix binary operation evaluation in compiler
 		// Remove wordTypeRep since Word is a union (all the types should be compute everytime).
 		lhs := casm.evaluateExpression(*expr.AsBinaryOp.Lhs, location)
 		rhs := casm.evaluateExpression(*expr.AsBinaryOp.Rhs, location)
