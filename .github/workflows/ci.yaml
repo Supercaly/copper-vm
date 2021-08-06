@@ -8,7 +8,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+      
+      - name: Build programs
+        run: ./scripts/build_programs.sh
+
+      - name: Build examples
+        run: ./scripts/build_examples.sh
+
       - name: Tests
         run: go test ./test/casm 
-      - name: Build examples
-        run: ./scripts/linux/build_examples.sh
