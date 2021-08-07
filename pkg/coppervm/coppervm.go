@@ -32,7 +32,8 @@ type Coppervm struct {
 	FDs []*os.File
 
 	// Is the VM halted?
-	Halt bool
+	Halt     bool
+	ExitCode int
 }
 
 // Load program's binary to vm from file.
@@ -51,10 +52,12 @@ func (vm *Coppervm) LoadProgramFromFile(filePath string) {
 			err)
 	}
 
+	// Init program
 	vm.Halt = false
 	vm.Ip = InstAddr(meta.Entry)
 	vm.Program = meta.Program
 
+	// Init memory
 	if len(meta.Memory) > int(CoppervmMemoryCapacity) {
 		log.Fatalf("[ERROR]: Memory exceed the maximum memory capacity!")
 	}
@@ -124,7 +127,7 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 		vm.StackSize--
 		vm.Ip++
 	case InstHalt:
-		vm.Halt = true
+		vm.haltVm(0)
 	// Integer arithmetics
 	case InstAddInt:
 		if vm.StackSize < 2 {
@@ -474,6 +477,13 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 			}
 			vm.StackSize -= 2
 			vm.Ip++
+		case SysCallExit:
+			if vm.StackSize < 1 {
+				return ErrorStackUnderflow
+			}
+			statusCode := vm.Stack[vm.StackSize-1]
+			vm.haltVm(int(statusCode.AsI64))
+			vm.StackSize--
 		default:
 			log.Fatalf("Unknown system call %d", sysCall)
 		}
@@ -509,6 +519,18 @@ func (vm *Coppervm) pushStack(w Word) CoppervmError {
 	vm.Stack[vm.StackSize] = w
 	vm.StackSize++
 	return ErrorOk
+}
+
+// Set the virtual machine in an halt state.
+func (vm *Coppervm) haltVm(code int) {
+	// Set halt flag to true
+	vm.Halt = true
+	// Set status code to code
+	vm.ExitCode = code
+	// Close all open files
+	for _, f := range vm.FDs {
+		f.Close()
+	}
 }
 
 // Prints the stack content to standard output.

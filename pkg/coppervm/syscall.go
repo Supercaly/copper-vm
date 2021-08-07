@@ -9,4 +9,5 @@ const (
 	SysCallOpen
 	SysCallClose
 	SysCallSeek
+	SysCallExit
 )

@@ -69,4 +69,7 @@ func main() {
 			err,
 			vm.Ip)
 	}
+
+	// Exit the program with vm's exit code
+	os.Exit(vm.ExitCode)
 }
