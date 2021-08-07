@@ -6,13 +6,7 @@ type SysCall int
 const (
 	SysCallRead SysCall = iota
 	SysCallWrite
-)
-
-// Represent a file
-type FileDescriptor int
-
-const (
-	FdStdIn FileDescriptor = iota
-	FdStdOut
-	FdStdErr
+	SysCallOpen
+	SysCallClose
+	SysCallSeek
 )

@@ -1,0 +1,55 @@
+%const file_name "test.txt"
+%const msg "Hi from the file."
+%memory fd 0x0
+%memory buffer 0x0,0x0,0x0
+
+; open the file
+push file_name
+syscall 2
+dup
+jl exit
+
+; save fd to memory for later use
+push fd
+write
+
+; write to file
+push fd
+read
+push msg
+push 17
+syscall 1
+jl close_and_exit
+
+; seek the fd at the start of the file
+push fd
+read
+push 0
+push 0
+syscall 4
+jl close_and_exit
+
+; read from file
+push fd
+read
+push buffer
+push 2
+syscall 0
+jl close_and_exit
+
+; print buffer to stdout
+push 1
+push buffer
+push 2
+syscall 1
+drop
+
+close_and_exit:
+    ; close the file
+    push fd
+    read
+    syscall 3
+    drop
+
+exit:
+    halt
