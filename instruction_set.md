@@ -49,7 +49,7 @@
 | Mnemonic | Operand | Description |
 | --- | :---: | --- |
 | call | location | moves the ip to given location; it's like jmp, but before moving push the current ip to the stack so ret can go back |
-| ret | - | set the ip to the stack top |
+| ret | - | set the ip to the stack top and pop it |
 
 ## Memory access
 | Mnemonic | Operand | Description |
@@ -62,8 +62,11 @@ To interact with the underlying system you can use the `syscall` instruction whi
 
 | Operand | Name | Arg0 | Arg1 | Arg2 | Description |
 | --- | :---: | :---: | :---: | :---: | --- |
-| 0 | read | fd | buffer | count | reads count bytes form fd and put them to buffer.<br/>At the end pushes on stack top the number of bytes read |
-| 1 | write | fd | buffer | count | writes count bytes from buffer to fd.<br/>At the end pushes on stack top the number of bytes written |
+| 0 | read | fd | buffer | count | reads count bytes form fd and put them to buffer.<br/>At the end pushes on stack top the number of bytes read of -1 in case of error |
+| 1 | write | fd | buffer | count | writes count bytes from buffer to fd.<br/>At the end pushes on stack top the number of bytes written of -1 in case of error |
+| 2 | open | file_name | - | - | opens a file with given name and returns his file descriptor or -1 on case of error | 
+| 3 | close | fd | - | - | close file descriptor fd. At the end pushes on stack top 0 on success or -1 in case of error | 
+| 4 | seek | fd | offset | whence | set the offset of the next read/write operation to offset, interpreted according to whence: 0 relative to file origin, 1 relative to current offset, 2 relative to file end. At the end pushes on stack top the new offset or -1 in case of error | 
 
 ## Debug
 | Mnemonic | Operand | Description |
