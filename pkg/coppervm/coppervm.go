@@ -28,6 +28,9 @@ type Coppervm struct {
 	// VM Memory
 	Memory [CoppervmMemoryCapacity]byte
 
+	// Opened File Descriptors
+	FDs []*os.File
+
 	// Is the VM halted?
 	Halt bool
 }
@@ -58,6 +61,11 @@ func (vm *Coppervm) LoadProgramFromFile(filePath string) {
 	for i := 0; i < len(meta.Memory); i++ {
 		vm.Memory[i] = meta.Memory[i]
 	}
+
+	// Append Stdin, Stdout, Stderr to open file descriptors
+	vm.FDs = append(vm.FDs, os.Stdin)
+	vm.FDs = append(vm.FDs, os.Stdout)
+	vm.FDs = append(vm.FDs, os.Stderr)
 }
 
 // Executes all the program of the vm.
@@ -349,27 +357,23 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 			}
 
 			// Get file descriptor
-			fd := FileDescriptor(vm.Stack[vm.StackSize-3].AsU64)
-			var file *os.File
-			switch fd {
-			case FdStdIn:
-				file = os.Stdin
-			case FdStdOut:
-				fallthrough
-			case FdStdErr:
-				fallthrough
-			default:
-				log.Fatalf("Unsupported file descriptor '%d'", fd)
+			fd := vm.Stack[vm.StackSize-3].AsU64
+			if fd >= uint64(len(vm.FDs)) {
+				vm.Stack[vm.StackSize-3] = WordI64(-1)
+			} else {
+				// Read form file
+				file := vm.FDs[fd]
+				buf := make([]byte, count)
+				readBytesCount, err := file.Read(buf)
+				if err != nil {
+					vm.Stack[vm.StackSize-3] = WordI64(-1)
+				} else {
+					for i := bufStart; i < bufStart+uint64(readBytesCount); i++ {
+						vm.Memory[i] = buf[i-bufStart]
+					}
+					vm.Stack[vm.StackSize-3] = WordU64(uint64(readBytesCount))
+				}
 			}
-
-			// Read form file
-			buf := make([]byte, count)
-			readBytesCount, _ := file.Read(buf)
-			for i := bufStart; i < bufStart+uint64(readBytesCount); i++ {
-				vm.Memory[i] = buf[i-bufStart]
-			}
-
-			vm.Stack[vm.StackSize-3] = WordU64(uint64(readBytesCount))
 			vm.StackSize -= 2
 			vm.Ip++
 		case SysCallWrite:
@@ -385,22 +389,89 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 			buf := vm.Memory[bufStart : bufStart+count]
 
 			// Get file descriptor
-			fd := FileDescriptor(vm.Stack[vm.StackSize-3].AsU64)
-			var file *os.File
-			switch fd {
-			case FdStdOut:
-				file = os.Stdout
-			case FdStdErr:
-				file = os.Stderr
-			case FdStdIn:
-				fallthrough
-			default:
-				log.Fatalf("Unsupported file descriptor '%d'", fd)
+			fd := vm.Stack[vm.StackSize-3].AsU64
+			if fd >= uint64(len(vm.FDs)) {
+				vm.Stack[vm.StackSize-3] = WordI64(-1)
+			} else {
+				// Write to file
+				file := vm.FDs[fd]
+				writtenBytesCount, err := file.Write(buf)
+				if err != nil {
+					vm.Stack[vm.StackSize-3] = WordI64(-1)
+				} else {
+					vm.Stack[vm.StackSize-3] = WordU64(uint64(writtenBytesCount))
+				}
 			}
-
-			// Write to file
-			writtenBytesCount, _ := file.Write(buf)
-			vm.Stack[vm.StackSize-3] = WordU64(uint64(writtenBytesCount))
+			vm.StackSize -= 2
+			vm.Ip++
+		case SysCallOpen:
+			if vm.StackSize < 1 {
+				return ErrorStackUnderflow
+			}
+			// Get file name form memory
+			bufStart := vm.Stack[vm.StackSize-1].AsU64
+			if int64(bufStart) > CoppervmMemoryCapacity {
+				return ErrorIllegalMemoryAccess
+			}
+			var fileNameBytes []byte
+			for i := int(bufStart); i < len(vm.Memory); i++ {
+				if vm.Memory[i] != 0 {
+					fileNameBytes = append(fileNameBytes, vm.Memory[i])
+				} else {
+					break
+				}
+			}
+			// Open the file
+			// TODO: Files are opened only in O_RDWR mode
+			fd, err := os.OpenFile(string(fileNameBytes), os.O_RDWR, os.ModePerm)
+			if err != nil {
+				vm.Stack[vm.StackSize-1] = WordI64(-1)
+			} else {
+				vm.FDs = append(vm.FDs, fd)
+				vm.Stack[vm.StackSize-1] = WordI64(int64(len(vm.FDs) - 1))
+			}
+			vm.Ip++
+		case SysCallClose:
+			if vm.StackSize < 1 {
+				return ErrorStackUnderflow
+			}
+			// Get file descriptor
+			fd := vm.Stack[vm.StackSize-1].AsU64
+			if fd >= uint64(len(vm.FDs)) {
+				vm.Stack[vm.StackSize-1] = WordI64(-1)
+			} else {
+				// Close the file
+				file := vm.FDs[fd]
+				err := file.Close()
+				if err != nil {
+					vm.Stack[vm.StackSize-1] = WordI64(-1)
+				} else {
+					vm.FDs = append(vm.FDs[:fd], vm.FDs[fd+1:]...)
+					vm.Stack[vm.StackSize-1] = WordU64(0)
+				}
+			}
+			vm.Ip++
+		case SysCallSeek:
+			if vm.StackSize < 3 {
+				return ErrorStackUnderflow
+			}
+			// Get offset and whence
+			whence := vm.Stack[vm.StackSize-1].AsI64
+			offset := vm.Stack[vm.StackSize-2].AsI64
+			// Get file descriptor
+			fd := vm.Stack[vm.StackSize-3].AsU64
+			if fd >= uint64(len(vm.FDs)) {
+				vm.Stack[vm.StackSize-3] = WordI64(-1)
+			} else {
+				// Seek the file
+				file := vm.FDs[fd]
+				newPosition, err := file.Seek(offset, int(whence))
+				if err != nil {
+					vm.Stack[vm.StackSize-3] = WordI64(-1)
+				} else {
+					vm.Stack[vm.StackSize-3] = WordI64(newPosition)
+				}
+			}
 			vm.StackSize -= 2
 			vm.Ip++
 		default:
