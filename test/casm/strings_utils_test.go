@@ -4,7 +4,7 @@ import (
 	"testing"
 	"unicode"
 
-	"coppervm.com/coppervm/pkg/casm"
+	"github.com/Supercaly/coppervm/pkg/casm"
 )
 
 func TestSplitByDelim(t *testing.T) {

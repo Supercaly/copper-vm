@@ -7,8 +7,8 @@ import (
 	"os"
 	"strconv"
 
-	au "coppervm.com/coppervm/internal"
-	"coppervm.com/coppervm/pkg/coppervm"
+	au "github.com/Supercaly/coppervm/internal"
+	"github.com/Supercaly/coppervm/pkg/coppervm"
 )
 
 func usage(stream io.Writer, program string) {

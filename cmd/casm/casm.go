@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	au "coppervm.com/coppervm/internal"
-	c "coppervm.com/coppervm/pkg/casm"
+	au "github.com/Supercaly/coppervm/internal"
+	c "github.com/Supercaly/coppervm/pkg/casm"
 )
 
 func usage(stream io.Writer, program string) {

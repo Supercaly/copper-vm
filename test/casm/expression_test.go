@@ -3,7 +3,7 @@ package casm
 import (
 	"testing"
 
-	"coppervm.com/coppervm/pkg/casm"
+	"github.com/Supercaly/coppervm/pkg/casm"
 )
 
 func TestParseExprFromString(t *testing.T) {

@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"coppervm.com/coppervm/pkg/coppervm"
+	"github.com/Supercaly/coppervm/pkg/coppervm"
 )
 
 const (
