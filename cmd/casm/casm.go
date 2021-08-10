@@ -73,6 +73,6 @@ func main() {
 		outputFilePath = filepath.Join(fileDir, fileName)
 	}
 
-	casm.TranslateSource(inputFilePath)
+	casm.TranslateSourceFile(inputFilePath)
 	casm.SaveProgramToFile(outputFilePath)
 }

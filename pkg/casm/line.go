@@ -85,7 +85,7 @@ func lineFromString(line string, location FileLocation) (out Line, err error) {
 		// Fail if no block is declared
 		if block == "" {
 			return Line{},
-				fmt.Errorf("%s: [ERROR]: trying to declare a directive without a block",
+				fmt.Errorf("%s: trying to declare a directive without a block",
 					location)
 		}
 
