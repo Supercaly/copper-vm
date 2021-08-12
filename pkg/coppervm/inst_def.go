@@ -1,5 +1,9 @@
 package coppervm
 
+import (
+	"fmt"
+)
+
 // List of all existing instructions
 // of a coppervm program.
 var InstDefs = [InstCount]InstDef{
@@ -226,6 +230,14 @@ type InstDef struct {
 	HasOperand bool
 	Name       string
 	Operand    Word
+}
+
+func (inst InstDef) String() (out string) {
+	out += fmt.Sprint(inst.Name)
+	if inst.HasOperand {
+		out += fmt.Sprintf(" (%s)", inst.Operand)
+	}
+	return out
 }
 
 // Return an instruction definition by it's string

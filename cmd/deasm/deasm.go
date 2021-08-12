@@ -71,10 +71,7 @@ func main() {
 		if printLineNbr {
 			fmt.Fprintf(os.Stdout, "%d: ", i)
 		}
-		fmt.Fprintf(os.Stdout, "%s", inst.Name)
-		if inst.HasOperand {
-			fmt.Fprintf(os.Stdout, " (%s)", inst.Operand)
-		}
+		fmt.Fprintf(os.Stdout, "%s", inst)
 		fmt.Fprintf(os.Stdout, "\n")
 	}
 }

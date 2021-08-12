@@ -73,22 +73,22 @@ func (vm *Coppervm) LoadProgramFromFile(filePath string) {
 
 // Executes all the program of the vm.
 // Return a CoppervmError if something went wrong or ErrorOk.
-func (vm *Coppervm) ExecuteProgram(limit int) CoppervmError {
+func (vm *Coppervm) ExecuteProgram(limit int) *CoppervmError {
 	for limit != 0 && !vm.Halt {
-		if err := vm.ExecuteInstruction(); err != ErrorOk {
+		if err := vm.ExecuteInstruction(); err.Kind != ErrorKindOk {
 			return err
 		}
 		limit--
 	}
-	return ErrorOk
+	return ErrorOk(vm)
 }
 
 // Executes a single instruction of the program where the
 // current ip points and then increments the ip.
 // Return a CoppervmError if something went wrong or ErrorOk.
-func (vm *Coppervm) ExecuteInstruction() CoppervmError {
+func (vm *Coppervm) ExecuteInstruction() *CoppervmError {
 	if vm.Ip >= InstAddr(len(vm.Program)) {
-		return ErrorIllegalInstAccess
+		return ErrorIllegalInstAccess(vm)
 	}
 
 	currentInst := vm.Program[vm.Ip]
@@ -97,13 +97,13 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 	case InstNoop:
 		vm.Ip++
 	case InstPush:
-		if err := vm.pushStack(currentInst.Operand); err != ErrorOk {
+		if err := vm.pushStack(currentInst.Operand); err.Kind != ErrorKindOk {
 			return err
 		}
 		vm.Ip++
 	case InstSwap:
 		if currentInst.Operand.AsI64 >= vm.StackSize {
-			return ErrorStackUnderflow
+			return ErrorStackUnderflow(vm)
 		}
 		a := vm.StackSize - 1
 		b := vm.StackSize - 1 - currentInst.Operand.AsI64
@@ -113,16 +113,16 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 		vm.Ip++
 	case InstDup:
 		if vm.StackSize < 1 {
-			return ErrorStackUnderflow
+			return ErrorStackUnderflow(vm)
 		}
 		newVal := vm.Stack[vm.StackSize-1]
-		if err := vm.pushStack(newVal); err != ErrorOk {
+		if err := vm.pushStack(newVal); err.Kind != ErrorKindOk {
 			return err
 		}
 		vm.Ip++
 	case InstDrop:
 		if vm.StackSize < 1 {
-			return ErrorStackUnderflow
+			return ErrorStackUnderflow(vm)
 		}
 		vm.StackSize--
 		vm.Ip++
@@ -131,68 +131,68 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 	// Integer arithmetics
 	case InstAddInt:
 		if vm.StackSize < 2 {
-			return ErrorStackUnderflow
+			return ErrorStackUnderflow(vm)
 		}
 		vm.Stack[vm.StackSize-2] = AddWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1])
 		vm.StackSize--
 		vm.Ip++
 	case InstSubInt:
 		if vm.StackSize < 2 {
-			return ErrorStackUnderflow
+			return ErrorStackUnderflow(vm)
 		}
 		vm.Stack[vm.StackSize-2] = SubWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1])
 		vm.StackSize--
 		vm.Ip++
 	case InstMulInt:
 		if vm.StackSize < 2 {
-			return ErrorStackUnderflow
+			return ErrorStackUnderflow(vm)
 		}
 		vm.Stack[vm.StackSize-2] = MulWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1])
 		vm.StackSize--
 		vm.Ip++
 	case InstMulIntSigned:
 		if vm.StackSize < 2 {
-			return ErrorStackUnderflow
+			return ErrorStackUnderflow(vm)
 		}
 		vm.Stack[vm.StackSize-2] = MulWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1])
 		vm.StackSize--
 		vm.Ip++
 	case InstDivInt:
 		if vm.StackSize < 2 {
-			return ErrorStackUnderflow
+			return ErrorStackUnderflow(vm)
 		}
 		if vm.Stack[vm.StackSize-1].AsU64 == 0 {
-			return ErrorDivideByZero
+			return ErrorDivideByZero(vm)
 		}
 		vm.Stack[vm.StackSize-2] = DivWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1])
 		vm.StackSize--
 		vm.Ip++
 	case InstDivIntSigned:
 		if vm.StackSize < 2 {
-			return ErrorStackUnderflow
+			return ErrorStackUnderflow(vm)
 		}
 		if vm.Stack[vm.StackSize-1].AsI64 == 0 {
-			return ErrorDivideByZero
+			return ErrorDivideByZero(vm)
 		}
 		vm.Stack[vm.StackSize-2] = DivWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1])
 		vm.StackSize--
 		vm.Ip++
 	case InstModInt:
 		if vm.StackSize < 2 {
-			return ErrorStackUnderflow
+			return ErrorStackUnderflow(vm)
 		}
 		if vm.Stack[vm.StackSize-1].AsU64 == 0 {
-			return ErrorDivideByZero
+			return ErrorDivideByZero(vm)
 		}
 		vm.Stack[vm.StackSize-2] = ModWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1])
 		vm.StackSize--
 		vm.Ip++
 	case InstModIntSigned:
 		if vm.StackSize < 2 {
-			return ErrorStackUnderflow
+			return ErrorStackUnderflow(vm)
 		}
 		if vm.Stack[vm.StackSize-1].AsI64 == 0 {
-			return ErrorDivideByZero
+			return ErrorDivideByZero(vm)
 		}
 		vm.Stack[vm.StackSize-2] = ModWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1])
 		vm.StackSize--
@@ -200,31 +200,31 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 	// Floating point arithmetics
 	case InstAddFloat:
 		if vm.StackSize < 2 {
-			return ErrorStackUnderflow
+			return ErrorStackUnderflow(vm)
 		}
 		vm.Stack[vm.StackSize-2] = AddWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1])
 		vm.StackSize--
 		vm.Ip++
 	case InstSubFloat:
 		if vm.StackSize < 2 {
-			return ErrorStackUnderflow
+			return ErrorStackUnderflow(vm)
 		}
 		vm.Stack[vm.StackSize-2] = SubWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1])
 		vm.StackSize--
 		vm.Ip++
 	case InstMulFloat:
 		if vm.StackSize < 2 {
-			return ErrorStackUnderflow
+			return ErrorStackUnderflow(vm)
 		}
 		vm.Stack[vm.StackSize-2] = MulWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1])
 		vm.StackSize--
 		vm.Ip++
 	case InstDivFloat:
 		if vm.StackSize < 2 {
-			return ErrorStackUnderflow
+			return ErrorStackUnderflow(vm)
 		}
 		if vm.Stack[vm.StackSize-1].AsF64 == 0 {
-			return ErrorDivideByZero
+			return ErrorDivideByZero(vm)
 		}
 		vm.Stack[vm.StackSize-2] = DivWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1])
 		vm.StackSize--
@@ -232,7 +232,7 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 	// Flow control
 	case InstCmp:
 		if vm.StackSize < 2 {
-			return ErrorStackUnderflow
+			return ErrorStackUnderflow(vm)
 		}
 		a := vm.Stack[vm.StackSize-2]
 		b := vm.Stack[vm.StackSize-1]
@@ -251,7 +251,7 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 		vm.Ip = InstAddr(currentInst.Operand.AsI64)
 	case InstJmpZero:
 		if vm.StackSize < 1 {
-			return ErrorStackUnderflow
+			return ErrorStackUnderflow(vm)
 		}
 		if vm.Stack[vm.StackSize-1].AsI64 == 0 {
 			vm.Ip = InstAddr(currentInst.Operand.AsI64)
@@ -261,7 +261,7 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 		vm.StackSize--
 	case InstJmpNotZero:
 		if vm.StackSize < 1 {
-			return ErrorStackUnderflow
+			return ErrorStackUnderflow(vm)
 		}
 		if vm.Stack[vm.StackSize-1].AsI64 != 0 {
 			vm.Ip = InstAddr(currentInst.Operand.AsI64)
@@ -271,7 +271,7 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 		vm.StackSize--
 	case InstJmpGreater:
 		if vm.StackSize < 1 {
-			return ErrorStackUnderflow
+			return ErrorStackUnderflow(vm)
 		}
 		if vm.Stack[vm.StackSize-1].AsI64 > 0 {
 			vm.Ip = InstAddr(currentInst.Operand.AsI64)
@@ -281,7 +281,7 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 		vm.StackSize--
 	case InstJmpLess:
 		if vm.StackSize < 1 {
-			return ErrorStackUnderflow
+			return ErrorStackUnderflow(vm)
 		}
 		if vm.Stack[vm.StackSize-1].AsI64 < 0 {
 			vm.Ip = InstAddr(currentInst.Operand.AsI64)
@@ -291,7 +291,7 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 		vm.StackSize--
 	case InstJmpGreaterEqual:
 		if vm.StackSize < 1 {
-			return ErrorStackUnderflow
+			return ErrorStackUnderflow(vm)
 		}
 		if vm.Stack[vm.StackSize-1].AsI64 >= 0 {
 			vm.Ip = InstAddr(currentInst.Operand.AsI64)
@@ -301,7 +301,7 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 		vm.StackSize--
 	case InstJmpLessEqual:
 		if vm.StackSize < 1 {
-			return ErrorStackUnderflow
+			return ErrorStackUnderflow(vm)
 		}
 		if vm.Stack[vm.StackSize-1].AsI64 <= 0 {
 			vm.Ip = InstAddr(currentInst.Operand.AsI64)
@@ -311,13 +311,13 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 		vm.StackSize--
 	// Functions
 	case InstFunCall:
-		if err := vm.pushStack(WordU64(uint64(vm.Ip + 1))); err != ErrorOk {
+		if err := vm.pushStack(WordU64(uint64(vm.Ip + 1))); err.Kind != ErrorKindOk {
 			return err
 		}
 		vm.Ip = InstAddr(currentInst.Operand.AsU64)
 	case InstFunReturn:
 		if vm.StackSize < 1 {
-			return ErrorStackUnderflow
+			return ErrorStackUnderflow(vm)
 		}
 		retAdds := vm.Stack[vm.StackSize-1]
 		vm.StackSize--
@@ -325,21 +325,21 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 	// Memory Access
 	case InstMemRead:
 		if vm.StackSize < 1 {
-			return ErrorStackUnderflow
+			return ErrorStackUnderflow(vm)
 		}
 		addr := vm.Stack[vm.StackSize-1].AsU64
 		if addr >= uint64(CoppervmMemoryCapacity) {
-			return ErrorIllegalMemoryAccess
+			return ErrorIllegalMemoryAccess(vm)
 		}
 		vm.Stack[vm.StackSize-1] = WordU64(uint64(vm.Memory[addr]))
 		vm.Ip++
 	case InstMemWrite:
 		if vm.StackSize < 2 {
-			return ErrorStackUnderflow
+			return ErrorStackUnderflow(vm)
 		}
 		addr := vm.Stack[vm.StackSize-1].AsU64
 		if addr >= uint64(CoppervmMemoryCapacity) {
-			return ErrorIllegalMemoryAccess
+			return ErrorIllegalMemoryAccess(vm)
 		}
 		vm.Memory[addr] = byte(vm.Stack[vm.StackSize-2].AsU64)
 		vm.StackSize -= 2
@@ -350,13 +350,13 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 		switch sysCall {
 		case SysCallRead:
 			if vm.StackSize < 3 {
-				return ErrorStackUnderflow
+				return ErrorStackUnderflow(vm)
 			}
 			// Get count and start
 			count := vm.Stack[vm.StackSize-1].AsU64
 			bufStart := vm.Stack[vm.StackSize-2].AsU64
 			if bufStart > uint64(CoppervmMemoryCapacity) {
-				return ErrorIllegalMemoryAccess
+				return ErrorIllegalMemoryAccess(vm)
 			}
 
 			// Get file descriptor
@@ -381,13 +381,13 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 			vm.Ip++
 		case SysCallWrite:
 			if vm.StackSize < 3 {
-				return ErrorStackUnderflow
+				return ErrorStackUnderflow(vm)
 			}
 			// Get count and start
 			count := vm.Stack[vm.StackSize-1].AsU64
 			bufStart := vm.Stack[vm.StackSize-2].AsU64
 			if bufStart > uint64(CoppervmMemoryCapacity) {
-				return ErrorIllegalMemoryAccess
+				return ErrorIllegalMemoryAccess(vm)
 			}
 			buf := vm.Memory[bufStart : bufStart+count]
 
@@ -409,12 +409,12 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 			vm.Ip++
 		case SysCallOpen:
 			if vm.StackSize < 1 {
-				return ErrorStackUnderflow
+				return ErrorStackUnderflow(vm)
 			}
 			// Get file name form memory
 			bufStart := vm.Stack[vm.StackSize-1].AsU64
 			if int64(bufStart) > CoppervmMemoryCapacity {
-				return ErrorIllegalMemoryAccess
+				return ErrorIllegalMemoryAccess(vm)
 			}
 			var fileNameBytes []byte
 			for i := int(bufStart); i < len(vm.Memory); i++ {
@@ -436,7 +436,7 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 			vm.Ip++
 		case SysCallClose:
 			if vm.StackSize < 1 {
-				return ErrorStackUnderflow
+				return ErrorStackUnderflow(vm)
 			}
 			// Get file descriptor
 			fd := vm.Stack[vm.StackSize-1].AsU64
@@ -456,7 +456,7 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 			vm.Ip++
 		case SysCallSeek:
 			if vm.StackSize < 3 {
-				return ErrorStackUnderflow
+				return ErrorStackUnderflow(vm)
 			}
 			// Get offset and whence
 			whence := vm.Stack[vm.StackSize-1].AsI64
@@ -479,7 +479,7 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 			vm.Ip++
 		case SysCallExit:
 			if vm.StackSize < 1 {
-				return ErrorStackUnderflow
+				return ErrorStackUnderflow(vm)
 			}
 			statusCode := vm.Stack[vm.StackSize-1]
 			vm.haltVm(int(statusCode.AsI64))
@@ -490,7 +490,7 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 	// Debug print
 	case InstPrint:
 		if vm.StackSize < 1 {
-			return ErrorStackUnderflow
+			return ErrorStackUnderflow(vm)
 		}
 		fmt.Printf("%s\n", vm.Stack[vm.StackSize-1])
 		vm.StackSize--
@@ -506,19 +506,19 @@ func (vm *Coppervm) ExecuteInstruction() CoppervmError {
 		vm.dumpStack()
 	}
 
-	return ErrorOk
+	return ErrorOk(vm)
 }
 
 // Push a Word to the stack.
 // Return a ErrorStackOverflow if the stack overflows, or
 // ErrorOk otherwise.
-func (vm *Coppervm) pushStack(w Word) CoppervmError {
+func (vm *Coppervm) pushStack(w Word) *CoppervmError {
 	if vm.StackSize >= CoppervmStackCapacity {
-		return ErrorStackOverflow
+		return ErrorStackOverflow(vm)
 	}
 	vm.Stack[vm.StackSize] = w
 	vm.StackSize++
-	return ErrorOk
+	return ErrorOk(vm)
 }
 
 // Set the virtual machine in an halt state.
