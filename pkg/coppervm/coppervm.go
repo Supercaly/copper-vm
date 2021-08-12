@@ -22,11 +22,13 @@ type Coppervm struct {
 	StackSize int64
 
 	// VM Program
-	Program []InstDef
-	Ip      InstAddr
+	Program     []InstDef
+	Ip          InstAddr
+	initialAddr InstAddr
 
 	// VM Memory
-	Memory [CoppervmMemoryCapacity]byte
+	Memory        [CoppervmMemoryCapacity]byte
+	initialMemory [CoppervmMemoryCapacity]byte
 
 	// Opened File Descriptors
 	FDs []*os.File
@@ -55,6 +57,7 @@ func (vm *Coppervm) LoadProgramFromFile(filePath string) {
 	// Init program
 	vm.Halt = false
 	vm.Ip = InstAddr(meta.Entry)
+	vm.initialAddr = vm.Ip
 	vm.Program = meta.Program
 
 	// Init memory
@@ -64,6 +67,7 @@ func (vm *Coppervm) LoadProgramFromFile(filePath string) {
 	for i := 0; i < len(meta.Memory); i++ {
 		vm.Memory[i] = meta.Memory[i]
 	}
+	vm.initialMemory = vm.Memory
 
 	// Append Stdin, Stdout, Stderr to open file descriptors
 	vm.FDs = append(vm.FDs, os.Stdin)
@@ -503,7 +507,7 @@ func (vm *Coppervm) ExecuteInstruction() *CoppervmError {
 
 	// Print stack on debug
 	if CoppervmDebug {
-		vm.dumpStack()
+		vm.DumpStack()
 	}
 
 	return ErrorOk(vm)
@@ -528,13 +532,25 @@ func (vm *Coppervm) haltVm(code int) {
 	// Set status code to code
 	vm.ExitCode = code
 	// Close all open files
-	for _, f := range vm.FDs {
-		f.Close()
+	for i := 3; i < len(vm.FDs); i++ {
+		vm.FDs[i].Close()
 	}
 }
 
+// Reset the vm to his initial state.
+func (vm *Coppervm) Reset() {
+	// Reset the memory to initial
+	vm.Memory = vm.initialMemory
+	// Close all fds except the standard one
+	for i := 3; i < len(vm.FDs); i++ {
+		vm.FDs[i].Close()
+	}
+	vm.Ip = vm.initialAddr
+	vm.Halt = false
+}
+
 // Prints the stack content to standard output.
-func (vm *Coppervm) dumpStack() {
+func (vm *Coppervm) DumpStack() {
 	fmt.Printf("Stack:\n")
 	if vm.StackSize > 0 {
 		for i := int64(0); i < vm.StackSize; i++ {
