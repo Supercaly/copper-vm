@@ -3,6 +3,8 @@ package casm
 import (
 	"fmt"
 	"strings"
+
+	"github.com/Supercaly/coppervm/internal"
 )
 
 const (
@@ -58,7 +60,7 @@ func Linize(source string, fileName string) (out []Line, err error) {
 		if lineStr == "" || lineStr[0] == byte(CasmCommentSymbol) {
 			continue
 		}
-		lineStr, _ = SplitByDelim(lineStr, CasmCommentSymbol)
+		lineStr, _ = internal.SplitByDelim(lineStr, CasmCommentSymbol)
 
 		line, err := lineFromString(lineStr, FileLocation{
 			FileName: fileName,
@@ -77,7 +79,7 @@ func Linize(source string, fileName string) (out []Line, err error) {
 func lineFromString(line string, location FileLocation) (out Line, err error) {
 	if line[0] == byte(CasmPPSymbol) {
 		// Parse a directive line
-		name, block := SplitByDelim(line, ' ')
+		name, block := internal.SplitByDelim(line, ' ')
 		name = name[1:]
 		name = strings.TrimSpace(name)
 		block = strings.TrimSpace(block)
@@ -109,7 +111,7 @@ func lineFromString(line string, location FileLocation) (out Line, err error) {
 		}
 	} else {
 		// Parse an instruction line
-		name, operand := SplitByDelim(line, ' ')
+		name, operand := internal.SplitByDelim(line, ' ')
 		name = strings.TrimSpace(name)
 		operand = strings.TrimSpace(operand)
 

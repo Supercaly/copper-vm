@@ -1,10 +1,10 @@
-package casm
+package internal
 
 import (
 	"testing"
 	"unicode"
 
-	"github.com/Supercaly/coppervm/pkg/casm"
+	"github.com/Supercaly/coppervm/internal"
 )
 
 func TestSplitByDelim(t *testing.T) {
@@ -19,7 +19,7 @@ func TestSplitByDelim(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		f, s := casm.SplitByDelim(test.in, '.')
+		f, s := internal.SplitByDelim(test.in, '.')
 		if f != test.out {
 			t.Errorf("Expected '%s' but got '%s'", test.out, f)
 		}
@@ -42,7 +42,7 @@ func TestSplitWhile(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		f, s := casm.SplitWhile(test.in, func(r rune) bool {
+		f, s := internal.SplitWhile(test.in, func(r rune) bool {
 			return unicode.IsLetter(r)
 		})
 		if f != test.out {

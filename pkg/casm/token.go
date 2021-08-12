@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
+
+	"github.com/Supercaly/coppervm/internal"
 )
 
 type TokenKind int
@@ -60,7 +62,7 @@ func Tokenize(source string) (out []Token, err error) {
 		case '"':
 			source = source[1:]
 			if strings.Contains(source, "\"") {
-				str, rest := SplitByDelim(source, '"')
+				str, rest := internal.SplitByDelim(source, '"')
 				source = rest[1:]
 				unquotedStr, err := strconv.Unquote(`"` + str + `"`)
 				if err != nil {
@@ -89,7 +91,7 @@ func Tokenize(source string) (out []Token, err error) {
 		default:
 			if isDigit(rune(source[0])) {
 				// Tokenize a number
-				number, rest := SplitWhile(source, isNumber)
+				number, rest := internal.SplitWhile(source, isNumber)
 				source = rest
 				out = append(out, Token{
 					Kind: TokenKindNumLit,
@@ -97,7 +99,7 @@ func Tokenize(source string) (out []Token, err error) {
 				})
 			} else if isAlpha(rune(source[0])) {
 				// Tokenize a symbol
-				symbol, rest := SplitWhile(source, isAlpha)
+				symbol, rest := internal.SplitWhile(source, isAlpha)
 				source = rest
 				out = append(out, Token{
 					Kind: TokenKindSymbol,

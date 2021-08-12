@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Supercaly/coppervm/internal"
 	"github.com/Supercaly/coppervm/pkg/coppervm"
 )
 
@@ -235,7 +236,7 @@ func (casm *Casm) bindLabel(name string, address int, location FileLocation) err
 
 // Binds a constant.
 func (casm *Casm) bindConst(directive DirectiveLine, location FileLocation) error {
-	name, block := SplitByDelim(directive.Block, ' ')
+	name, block := internal.SplitByDelim(directive.Block, ' ')
 	name = strings.TrimSpace(name)
 	block = strings.TrimSpace(block)
 
@@ -275,7 +276,7 @@ func (casm *Casm) bindEntry(name string, location FileLocation) error {
 
 // Binds a memory definition
 func (casm *Casm) bindMemory(directive DirectiveLine, location FileLocation) error {
-	name, block := SplitByDelim(directive.Block, ' ')
+	name, block := internal.SplitByDelim(directive.Block, ' ')
 	name = strings.TrimSpace(name)
 	block = strings.TrimSpace(block)
 

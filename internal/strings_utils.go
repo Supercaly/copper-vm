@@ -1,4 +1,4 @@
-package casm
+package internal
 
 import "strings"
 
