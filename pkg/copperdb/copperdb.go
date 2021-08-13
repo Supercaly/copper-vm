@@ -105,7 +105,7 @@ func (db *Copperdb) RunProgram() {
 	if !db.Vm.Halt {
 		fmt.Println("The program has been started already.")
 		fmt.Println("Start it from the beginning? (y or n)")
-		// TODO: Ask the user to rerun the program
+		// TODO(#46): Ask the user to rerun the program
 	} else {
 		fmt.Printf("Starting program '%s'\n", db.InputFile)
 		db.Reset()
