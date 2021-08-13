@@ -429,7 +429,7 @@ func (vm *Coppervm) ExecuteInstruction() *CoppervmError {
 				}
 			}
 			// Open the file
-			// TODO: Files are opened only in O_RDWR mode
+			// TODO(#47): Files are opened only in O_RDWR mode
 			fd, err := os.OpenFile(string(fileNameBytes), os.O_RDWR, os.ModePerm)
 			if err != nil {
 				vm.Stack[vm.StackSize-1] = WordI64(-1)
