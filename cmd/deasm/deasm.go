@@ -57,10 +57,7 @@ func main() {
 
 	// Dump memory to stdout
 	if printMemory {
-		println("Memory:")
-		for _, v := range vm.Memory {
-			fmt.Printf("%x ", v)
-		}
+		vm.DumpMemory()
 		println()
 	}
 

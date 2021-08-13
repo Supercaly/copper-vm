@@ -560,3 +560,11 @@ func (vm *Coppervm) DumpStack() {
 		fmt.Printf("  [empty]\n")
 	}
 }
+
+// Prints the memory content to standard output.
+func (vm *Coppervm) DumpMemory() {
+	fmt.Println("Memory:")
+	for _, b := range vm.Memory {
+		fmt.Printf("%v ", b)
+	}
+}
