@@ -60,7 +60,12 @@ func (db *Copperdb) ExecuteInputString(input string) {
 	case "x":
 		fmt.Printf("[%d] -> %s\n", db.Vm.Ip, db.Vm.Program[db.Vm.Ip])
 	case "q":
-		// TODO(#45): Ask the user to quit if the program is running
+		if !db.Vm.Halt {
+			fmt.Println("A debugging session is still active")
+			if !AskConfirmation("Quit anyway?") {
+				return
+			}
+		}
 		fmt.Println("Bye!")
 		os.Exit(0)
 	case "h":
@@ -104,8 +109,10 @@ func (db *Copperdb) ExecuteInstructions(count int) {
 func (db *Copperdb) RunProgram() {
 	if !db.Vm.Halt {
 		fmt.Println("The program has been started already.")
-		fmt.Println("Start it from the beginning? (y or n)")
-		// TODO(#46): Ask the user to rerun the program
+		if AskConfirmation("Start it from the beginning?") {
+			db.Vm.Halt = true
+			db.RunProgram()
+		}
 	} else {
 		fmt.Printf("Starting program '%s'\n", db.InputFile)
 		db.Reset()
