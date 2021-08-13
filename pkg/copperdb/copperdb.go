@@ -52,8 +52,13 @@ func (db *Copperdb) ExecuteInputString(input string) {
 	case "l":
 		db.ListBreakpoints()
 	case "p":
+		db.Vm.DumpStack()
+		fmt.Println()
 	case "m":
+		db.Vm.DumpMemory()
+		fmt.Println()
 	case "x":
+		fmt.Printf("[%d] -> %s\n", db.Vm.Ip, db.Vm.Program[db.Vm.Ip])
 	case "q":
 		fmt.Println("Bye!")
 		os.Exit(0)
@@ -64,6 +69,7 @@ func (db *Copperdb) ExecuteInputString(input string) {
 	}
 }
 
+// Reset the debugger status.
 func (db *Copperdb) Reset() {
 	db.Breakpoints.Reset()
 	db.Vm.Reset()
@@ -115,6 +121,7 @@ func (db *Copperdb) ContinueProgram() {
 	}
 }
 
+// Execute a single instruction of the program.
 func (db *Copperdb) StepProgram() {
 	if db.Vm.Halt {
 		fmt.Println("The program is not being run. Use 'r' to run it first.")
@@ -138,6 +145,7 @@ func (db *Copperdb) ListBreakpoints() {
 
 // Add a new breakpoint at given address.
 func (db *Copperdb) AddBreakpoint(addr coppervm.InstAddr) {
+	// TODO: Add a table of compiler symbols to casm so we can keep track of labels
 	db.BreakpointCount++
 	newBr := Breakpoint{
 		Number:    db.BreakpointCount,
