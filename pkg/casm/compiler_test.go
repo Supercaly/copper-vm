@@ -3,16 +3,17 @@ package casm
 import (
 	"testing"
 
-	"github.com/Supercaly/coppervm/pkg/casm"
 	"github.com/Supercaly/coppervm/pkg/coppervm"
 )
 
+type TestHolder struct {
+	in       string
+	out      []coppervm.InstDef
+	hasError bool
+}
+
 func TestTranslateSource(t *testing.T) {
-	tests := []struct {
-		in       string
-		out      []coppervm.InstDef
-		hasError bool
-	}{
+	tests := []TestHolder{
 		{"main:\n", []coppervm.InstDef{}, false},
 		{"push 1\n", []coppervm.InstDef{
 			{
@@ -23,7 +24,7 @@ func TestTranslateSource(t *testing.T) {
 			},
 		}, false},
 		{"%const N 1\n", []coppervm.InstDef{}, false},
-		{":\n", []coppervm.InstDef{}, true},
+		{":", []coppervm.InstDef{}, true},
 		{"wrong\n", []coppervm.InstDef{}, true},
 		{"push \n", []coppervm.InstDef{}, true},
 		{"%dir 0\n", []coppervm.InstDef{}, true},
@@ -41,16 +42,25 @@ func TestTranslateSource(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		ctx := casm.Casm{}
-		err := ctx.TranslateSource(test.in, "test_file")
+		runTest(t, test)
+	}
+}
 
-		if err != nil && !test.hasError {
-			t.Error(err)
-		} else if err == nil && test.hasError {
-			t.Errorf("Expecting an error")
-		} else if !instArrayEquals(ctx.Program, test.out) {
-			t.Errorf("Expected '%#v' but got '%#v'", test.out, ctx.Program)
+func runTest(t *testing.T, test TestHolder) {
+	defer func() {
+		r := recover()
+		if r != nil && !test.hasError {
+			t.Error(r)
 		}
+	}()
+	ctx := Casm{}
+	ctx.translateSource(test.in, "test_file")
+
+	if test.hasError {
+		t.Error("expecting an error")
+	}
+	if !instArrayEquals(ctx.Program, test.out) {
+		t.Errorf("expected '%#v' but got '%#v'", test.out, ctx.Program)
 	}
 }
 
