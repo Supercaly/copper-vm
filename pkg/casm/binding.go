@@ -4,6 +4,7 @@ type Binding struct {
 	Name     string
 	Value    Expression
 	Location FileLocation
+	IsLabel  bool
 }
 
 type DeferredOperand struct {

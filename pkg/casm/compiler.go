@@ -19,6 +19,11 @@ const (
 )
 
 type Casm struct {
+	InputFile  string
+	OutputFile string
+
+	AddDebugSymbols bool
+
 	Bindings         []Binding
 	DeferredOperands []DeferredOperand
 
@@ -36,18 +41,31 @@ type Casm struct {
 }
 
 // Save a copper vm program to binary file.
-func (casm *Casm) SaveProgramToFile(filePath string) {
-	meta := coppervm.FileMeta(casm.Entry, casm.Program, casm.Memory)
+func (casm *Casm) SaveProgramToFile() {
+	var dbSymbols coppervm.DebugSymbols
+	// Append debug symbols
+	if casm.AddDebugSymbols {
+		for _, b := range casm.Bindings {
+			if b.IsLabel {
+				dbSymbols = append(dbSymbols, coppervm.DebugSymbol{
+					Name:    b.Name,
+					Address: coppervm.InstAddr(b.Value.AsNumLitInt),
+				})
+			}
+		}
+	}
+
+	meta := coppervm.FileMeta(casm.Entry, casm.Program, casm.Memory, dbSymbols)
 	metaJson, err := json.Marshal(meta)
 	if err != nil {
 		log.Fatalf("[ERROR]: Error writign program to file %s", err)
 	}
 
-	fileErr := ioutil.WriteFile(filePath, []byte(metaJson), os.ModePerm)
+	fileErr := ioutil.WriteFile(casm.OutputFile, []byte(metaJson), os.ModePerm)
 	if fileErr != nil {
-		log.Fatalf("[ERROR]: Error saving file '%s': %s", filePath, fileErr)
+		log.Fatalf("[ERROR]: Error saving file '%s': %s", casm.OutputFile, fileErr)
 	}
-	println("[INFO]: Program saved to '" + filePath + "'")
+	println("[INFO]: Program saved to '" + casm.OutputFile + "'")
 }
 
 // Translate a copper assembly file to copper vm's binary.
@@ -230,6 +248,7 @@ func (casm *Casm) bindLabel(name string, address int, location FileLocation) err
 			AsNumLitInt: int64(address),
 		},
 		Location: location,
+		IsLabel:  true,
 	})
 	return nil
 }
@@ -256,6 +275,7 @@ func (casm *Casm) bindConst(directive DirectiveLine, location FileLocation) erro
 		Name:     name,
 		Value:    value,
 		Location: location,
+		IsLabel:  false,
 	})
 	return nil
 }
@@ -301,6 +321,7 @@ func (casm *Casm) bindMemory(directive DirectiveLine, location FileLocation) err
 			AsNumLitInt: int64(memAddr),
 		},
 		Location: location,
+		IsLabel:  false,
 	})
 	return nil
 }

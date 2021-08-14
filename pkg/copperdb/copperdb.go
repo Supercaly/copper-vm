@@ -38,10 +38,14 @@ func (db *Copperdb) ExecuteInputString(input string) {
 	case "b":
 		addr, err := strconv.Atoi(args)
 		if err != nil {
-			fmt.Printf("Invalid address '%s'\n", args)
-		} else {
-			db.AddBreakpoint(coppervm.InstAddr(addr))
+			idx := db.Vm.DebugSymbols.GetIndexByName(args)
+			if idx == -1 {
+				fmt.Printf("Invalid address or debug symbol '%s'\n", args)
+				return
+			}
+			addr = int(db.Vm.DebugSymbols[idx].Address)
 		}
+		db.AddBreakpoint(coppervm.InstAddr(addr))
 	case "d":
 		num, err := strconv.ParseUint(args, 10, 64)
 		if err != nil {
@@ -181,15 +185,15 @@ func (db *Copperdb) RemoveBreakpoint(brNum uint) {
 
 // Print a help message.
 func (db *Copperdb) PrintHelp() {
-	fmt.Println("r       -- Start debugged program.")
-	fmt.Println("c       -- Continue program being debugged after breakpoint.")
-	fmt.Println("s       -- Step program to next instruction.")
-	fmt.Println("b <loc> -- Set a new breakpoint at specified location.")
-	fmt.Println("d <loc> -- Delete breakpoint at specified location.")
-	fmt.Println("l       -- List all breakpoints.")
-	fmt.Println("p       -- Dump the stack.")
-	fmt.Println("m       -- Dump the memory.")
-	fmt.Println("x       -- Print the instruction at ip.")
-	fmt.Println("q       -- Quit the debugger.")
-	fmt.Println("h       -- Print this help message.")
+	fmt.Println("r           -- Start debugged program.")
+	fmt.Println("c           -- Continue program being debugged after breakpoint.")
+	fmt.Println("s           -- Step program to next instruction.")
+	fmt.Println("b <loc|sym> -- Set a new breakpoint at specified location or symbol.")
+	fmt.Println("d <loc>     -- Delete breakpoint at specified location.")
+	fmt.Println("l           -- List all breakpoints.")
+	fmt.Println("p           -- Dump the stack.")
+	fmt.Println("m           -- Dump the memory.")
+	fmt.Println("x           -- Print the instruction at ip.")
+	fmt.Println("q           -- Quit the debugger.")
+	fmt.Println("h           -- Print this help message.")
 }

@@ -17,6 +17,7 @@ func usage(stream io.Writer, program string) {
 	fmt.Fprintf(stream, "[OPTIONS]: \n")
 	fmt.Fprintf(stream, "    -I <include/path>    Add include path.\n")
 	fmt.Fprintf(stream, "    -o <out.vm>          Specify the output path.\n")
+	fmt.Fprintf(stream, "    -d                   Add debug symbols to use with copperdb.\n")
 	fmt.Fprintf(stream, "    -h                   Print this help message.\n")
 }
 
@@ -25,8 +26,6 @@ func main() {
 	args := os.Args
 	var program string
 	program, args = au.Shift(args)
-	var inputFilePath string
-	var outputFilePath string
 
 	for len(args) > 0 {
 		var flag string
@@ -41,7 +40,9 @@ func main() {
 				log.Fatalf("[ERROR]: No argument provided for flag `%s`\n", flag)
 			}
 
-			outputFilePath, args = au.Shift(args)
+			casm.OutputFile, args = au.Shift(args)
+		} else if flag == "-d" {
+			casm.AddDebugSymbols = true
 		} else if flag == "-I" {
 			if len(args) == 0 {
 				usage(os.Stderr, program)
@@ -52,27 +53,27 @@ func main() {
 			includePath, args = au.Shift(args)
 			casm.IncludePaths = append(casm.IncludePaths, includePath)
 		} else {
-			if inputFilePath != "" {
+			if casm.InputFile != "" {
 				usage(os.Stderr, program)
-				log.Fatalf("[ERROR]: input file is already provided as `%s`.\n", inputFilePath)
+				log.Fatalf("[ERROR]: input file is already provided as `%s`.\n", casm.InputFile)
 			}
 
-			inputFilePath = flag
+			casm.InputFile = flag
 		}
 	}
 
-	if inputFilePath == "" {
+	if casm.InputFile == "" {
 		usage(os.Stderr, program)
 		log.Fatalf("[ERROR]: input was not provided\n")
 	}
 
-	if outputFilePath == "" {
-		fileName := filepath.Base(inputFilePath)
-		fileDir := filepath.Dir(inputFilePath)
+	if casm.OutputFile == "" {
+		fileName := filepath.Base(casm.InputFile)
+		fileDir := filepath.Dir(casm.InputFile)
 		fileName = strings.TrimSuffix(fileName, filepath.Ext(fileName)) + ".vm"
-		outputFilePath = filepath.Join(fileDir, fileName)
+		casm.OutputFile = filepath.Join(fileDir, fileName)
 	}
 
-	casm.TranslateSourceFile(inputFilePath)
-	casm.SaveProgramToFile(outputFilePath)
+	casm.TranslateSourceFile(casm.InputFile)
+	casm.SaveProgramToFile()
 }

@@ -36,6 +36,8 @@ type Coppervm struct {
 	// Is the VM halted?
 	Halt     bool
 	ExitCode int
+
+	DebugSymbols DebugSymbols
 }
 
 // Load program's binary to vm from file.
@@ -73,6 +75,9 @@ func (vm *Coppervm) LoadProgramFromFile(filePath string) {
 	vm.FDs = append(vm.FDs, os.Stdin)
 	vm.FDs = append(vm.FDs, os.Stdout)
 	vm.FDs = append(vm.FDs, os.Stderr)
+
+	// Init debug symbols
+	vm.DebugSymbols = append(vm.DebugSymbols, meta.DebugSymbols...)
 }
 
 // Executes all the program of the vm.
