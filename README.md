@@ -9,19 +9,22 @@ The Copper VM ecosystem is composed by this executables:
 * **casm** Assembler for the VM custom byte-code 
 * **deasm** Disassembler for the VM byte-code
 * **emulator** VM emulator that runs any binary program
+* **copperdb** Debugger for the VM program
 
 ## Quick Start
 
-To execute one of the programs you can use the scripts on linux or windows:
+Before executing the programs you need to build them; you can build them in a local `build` directory using:
 
 ```console
-$ ./scripts/linux/casm.sh -o output.vm input.copper
-$ ./scripts/linux/deasm.sh input.vm 
-$ ./scripts/linux/emulator.sh input.vm
+$ ./scripts/build_programs.sh
 ```
 
 ```console
-$> .\scripts\windows\casm.bat -o output.vm input.copper
-$> .\scripts\windows\deasm.bat input.vm 
-$> .\scripts\windows\emulator.bat input.vm
+$> .\scripts\build_programs.bat
+```
+
+or you can install them to the directory named by the `GOBIN` environment variable using:
+
+```console
+$ go install ./cmd/...
 ```
