@@ -61,8 +61,11 @@ func main() {
 		log.Fatalf("[ERROR]: input was not provided\n")
 	}
 
+	// Load and execute the program
 	vm := coppervm.Coppervm{}
-	vm.LoadProgramFromFile(inputFilePath)
+	if err := vm.LoadProgramFromFile(inputFilePath); err != nil {
+		log.Fatalf("[ERROR]: %s", err)
+	}
 	if err := vm.ExecuteProgram(limit); err.Kind != coppervm.ErrorKindOk {
 		log.Fatalf("%s: [ERROR]: %s", inputFilePath, *err)
 	}

@@ -74,6 +74,10 @@ func main() {
 		casm.OutputFile = filepath.Join(fileDir, fileName)
 	}
 
-	casm.TranslateSourceFile(casm.InputFile)
-	casm.SaveProgramToFile()
+	if err := casm.TranslateSourceFile(casm.InputFile); err != nil {
+		log.Fatalf("[ERROR]: %s", err)
+	}
+	if err := casm.SaveProgramToFile(); err != nil {
+		log.Fatalf("[ERROR]: %s", err)
+	}
 }

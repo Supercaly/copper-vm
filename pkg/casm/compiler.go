@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -41,7 +40,7 @@ type Casm struct {
 }
 
 // Save a copper vm program to binary file.
-func (casm *Casm) SaveProgramToFile() {
+func (casm *Casm) SaveProgramToFile() error {
 	var dbSymbols coppervm.DebugSymbols
 	// Append debug symbols
 	if casm.AddDebugSymbols {
@@ -58,14 +57,16 @@ func (casm *Casm) SaveProgramToFile() {
 	meta := coppervm.FileMeta(casm.Entry, casm.Program, casm.Memory, dbSymbols)
 	metaJson, err := json.Marshal(meta)
 	if err != nil {
-		log.Fatalf("[ERROR]: Error writign program to file %s", err)
+		return fmt.Errorf("error writign program to file %s", err)
 	}
 
 	fileErr := ioutil.WriteFile(casm.OutputFile, []byte(metaJson), os.ModePerm)
 	if fileErr != nil {
-		log.Fatalf("[ERROR]: Error saving file '%s': %s", casm.OutputFile, fileErr)
+		return fmt.Errorf("error saving file '%s': %s", casm.OutputFile, fileErr)
 	}
-	println("[INFO]: Program saved to '" + casm.OutputFile + "'")
+	fmt.Printf("[INFO]: Program saved to '%s'\n", casm.OutputFile)
+
+	return nil
 }
 
 // Translate a copper assembly file to copper vm's binary.
@@ -73,14 +74,15 @@ func (casm *Casm) SaveProgramToFile() {
 // the correct program in-memory.
 // Use TranslateSource is you already have a source string.
 // Use SaveProgramToFile to save the program to binary file.
-func (casm *Casm) TranslateSourceFile(filePath string) {
+func (casm *Casm) TranslateSourceFile(filePath string) error {
 	bytes, err := ioutil.ReadFile(filePath)
 	if err != nil {
-		log.Fatalf("[ERROR]: Error reading file '%s': %s", filePath, err)
+		return fmt.Errorf("error reading file '%s': %s", filePath, err)
 	}
 	if err := casm.TranslateSource(string(bytes), filePath); err != nil {
-		log.Fatalf("[ERROR]: %s", err)
+		return err
 	}
+	return nil
 }
 
 // Translate a copper assembly file to copper vm's binary.
@@ -338,7 +340,9 @@ func (casm *Casm) translateInclude(directive DirectiveLine, location FileLocatio
 	}
 
 	casm.IncludeLevel++
-	casm.TranslateSourceFile(resolvedPath)
+	if err := casm.TranslateSourceFile(resolvedPath); err != nil {
+		return err
+	}
 	casm.IncludeLevel--
 	return nil
 }
