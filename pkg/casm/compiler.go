@@ -74,15 +74,20 @@ func (casm *Casm) SaveProgramToFile() error {
 // the correct program in-memory.
 // Use TranslateSource is you already have a source string.
 // Use SaveProgramToFile to save the program to binary file.
-func (casm *Casm) TranslateSourceFile(filePath string) error {
+func (casm *Casm) TranslateSourceFile(filePath string) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("%s", r)
+		}
+	}()
+
 	bytes, err := ioutil.ReadFile(filePath)
 	if err != nil {
-		return fmt.Errorf("error reading file '%s': %s", filePath, err)
+		panic(fmt.Sprintf("error reading file '%s': %s", filePath, err))
 	}
-	if err := casm.TranslateSource(string(bytes), filePath); err != nil {
-		return err
-	}
-	return nil
+
+	casm.translateSource(string(bytes), filePath)
+	return err
 }
 
 // Translate a copper assembly file to copper vm's binary.
@@ -91,11 +96,11 @@ func (casm *Casm) TranslateSourceFile(filePath string) error {
 // in-memory.
 // Use TranslateSourceFile if you want to parse a file.
 // Use SaveProgramToFile to save the program to binary file.
-func (casm *Casm) TranslateSource(source string, filePath string) error {
+func (casm *Casm) translateSource(source string, filePath string) {
 	// Linize the source
 	lines, err := Linize(source, filePath)
 	if err != nil {
-		return err
+		panic(err)
 	}
 
 	// First Pass
@@ -103,25 +108,22 @@ func (casm *Casm) TranslateSource(source string, filePath string) error {
 		switch line.Kind {
 		case LineKindLabel:
 			if line.AsLabel.Name == "" {
-				return fmt.Errorf("%s: empty labels are not supported", line.Location)
+				panic(fmt.Sprintf("%s: empty labels are not supported", line.Location))
 			}
 
-			err := casm.bindLabel(line.AsLabel.Name, len(casm.Program), line.Location)
-			if err != nil {
-				return fmt.Errorf("%s: %s", line.Location, err)
-			}
+			casm.bindLabel(line.AsLabel.Name, len(casm.Program), line.Location)
 		case LineKindInstruction:
 			exist, instDef := coppervm.GetInstDefByName(line.AsInstruction.Name)
 			if !exist {
-				return fmt.Errorf("%s: unknown instruction '%s'",
+				panic(fmt.Sprintf("%s: unknown instruction '%s'",
 					line.Location,
-					line.AsInstruction.Name)
+					line.AsInstruction.Name))
 			}
 
 			if instDef.HasOperand {
 				operand, err := ParseExprFromString(line.AsInstruction.Operand)
 				if err != nil {
-					return fmt.Errorf("%s: %s", line.Location, err)
+					panic(fmt.Sprintf("%s: %s", line.Location, err))
 				}
 				if operand.Kind == ExpressionKindBinding {
 					if CasmDebug {
@@ -134,37 +136,22 @@ func (casm *Casm) TranslateSource(source string, filePath string) error {
 							Location: line.Location,
 						})
 				} else {
-					instDef.Operand, err = casm.evaluateExpression(operand)
-					if err != nil {
-						return fmt.Errorf("%s: %s", line.Location, err)
-					}
+					instDef.Operand = casm.evaluateExpression(operand, line.Location)
 				}
 			}
 			casm.Program = append(casm.Program, instDef)
 		case LineKindDirective:
 			switch line.AsDirective.Name {
 			case "entry":
-				err := casm.bindEntry(line.AsDirective.Block, line.Location)
-				if err != nil {
-					return fmt.Errorf("%s: %s", line.Location, err)
-				}
+				casm.bindEntry(line.AsDirective.Block, line.Location)
 			case "const":
-				err := casm.bindConst(line.AsDirective, line.Location)
-				if err != nil {
-					return fmt.Errorf("%s: %s", line.Location, err)
-				}
+				casm.bindConst(line.AsDirective, line.Location)
 			case "memory":
-				err := casm.bindMemory(line.AsDirective, line.Location)
-				if err != nil {
-					return fmt.Errorf("%s: %s", line.Location, err)
-				}
+				casm.bindMemory(line.AsDirective, line.Location)
 			case "include":
-				err := casm.translateInclude(line.AsDirective, line.Location)
-				if err != nil {
-					return fmt.Errorf("%s: %s", line.Location, err)
-				}
+				casm.translateInclude(line.AsDirective, line.Location)
 			default:
-				return fmt.Errorf("%s: unknown directive '%s'", line.Location, line.AsDirective.Name)
+				panic(fmt.Sprintf("%s: unknown directive '%s'", line.Location, line.AsDirective.Name))
 			}
 		}
 	}
@@ -177,14 +164,11 @@ func (casm *Casm) TranslateSource(source string, filePath string) error {
 
 		exist, binding := casm.getBindingByName(deferredOp.Name)
 		if !exist {
-			return fmt.Errorf("%s: unknown binding '%s'",
+			panic(fmt.Sprintf("%s: unknown binding '%s'",
 				deferredOp.Location,
-				deferredOp.Name)
+				deferredOp.Name))
 		}
-		casm.Program[deferredOp.Address].Operand, err = casm.evaluateBinding(&binding)
-		if err != nil {
-			return fmt.Errorf("%s: %s", deferredOp.Location, err)
-		}
+		casm.Program[deferredOp.Address].Operand = casm.evaluateBinding(&binding, deferredOp.Location)
 	}
 
 	// Print all the bindings
@@ -203,23 +187,18 @@ func (casm *Casm) TranslateSource(source string, filePath string) error {
 	if casm.HasEntry && casm.DeferredEntryName != "" {
 		exist, binding := casm.getBindingByName(casm.DeferredEntryName)
 		if !exist {
-			return fmt.Errorf("%s: unknown binding '%s'",
+			panic(fmt.Sprintf("%s: unknown binding '%s'",
 				casm.EntryLocation,
-				casm.DeferredEntryName)
+				casm.DeferredEntryName))
 		}
 
 		if binding.Value.Kind != ExpressionKindNumLitInt {
-			return fmt.Errorf("%s: only label names can be set as entry point",
-				casm.EntryLocation)
+			panic(fmt.Sprintf("%s: only label names can be set as entry point",
+				casm.EntryLocation))
 		}
-		entry, err := casm.evaluateBinding(&binding)
-		if err != nil {
-			return fmt.Errorf("%s: %s", casm.EntryLocation, err)
-		}
+		entry := casm.evaluateBinding(&binding, casm.EntryLocation)
 		casm.Entry = int(entry.AsI64)
 	}
-
-	return nil
 }
 
 // Returns a binding by its name.
@@ -235,12 +214,13 @@ func (casm *Casm) getBindingByName(name string) (bool, Binding) {
 }
 
 // Binds a label.
-func (casm *Casm) bindLabel(name string, address int, location FileLocation) error {
+func (casm *Casm) bindLabel(name string, address int, location FileLocation) {
 	exist, binding := casm.getBindingByName(name)
 	if exist {
-		return fmt.Errorf("label name '%s' is already bound at location '%s'",
+		panic(fmt.Sprintf("%s: label name '%s' is already bound at location '%s'",
+			location,
 			name,
-			binding.Location)
+			binding.Location))
 	}
 
 	casm.Bindings = append(casm.Bindings, Binding{
@@ -252,25 +232,25 @@ func (casm *Casm) bindLabel(name string, address int, location FileLocation) err
 		Location: location,
 		IsLabel:  true,
 	})
-	return nil
 }
 
 // Binds a constant.
-func (casm *Casm) bindConst(directive DirectiveLine, location FileLocation) error {
+func (casm *Casm) bindConst(directive DirectiveLine, location FileLocation) {
 	name, block := internal.SplitByDelim(directive.Block, ' ')
 	name = strings.TrimSpace(name)
 	block = strings.TrimSpace(block)
 
 	exist, binding := casm.getBindingByName(name)
 	if exist {
-		return fmt.Errorf("constant name '%s' is already bound at location '%s'",
+		panic(fmt.Sprintf("%s: constant name '%s' is already bound at location '%s'",
+			location,
 			name,
-			binding.Location)
+			binding.Location))
 	}
 
 	value, err := ParseExprFromString(block)
 	if err != nil {
-		return err
+		panic(fmt.Sprintf("%s: %s", location, err))
 	}
 
 	casm.Bindings = append(casm.Bindings, Binding{
@@ -279,39 +259,38 @@ func (casm *Casm) bindConst(directive DirectiveLine, location FileLocation) erro
 		Location: location,
 		IsLabel:  false,
 	})
-	return nil
 }
 
 // Binds an entry point.
-func (casm *Casm) bindEntry(name string, location FileLocation) error {
+func (casm *Casm) bindEntry(name string, location FileLocation) {
 	if casm.HasEntry {
-		return fmt.Errorf("entry point is already set to '%s'",
-			casm.EntryLocation)
+		panic(fmt.Sprintf("%s: entry point is already set to '%s'",
+			location,
+			casm.EntryLocation))
 	}
 
 	casm.DeferredEntryName = name
 	casm.HasEntry = true
 	casm.EntryLocation = location
-
-	return nil
 }
 
 // Binds a memory definition
-func (casm *Casm) bindMemory(directive DirectiveLine, location FileLocation) error {
+func (casm *Casm) bindMemory(directive DirectiveLine, location FileLocation) {
 	name, block := internal.SplitByDelim(directive.Block, ' ')
 	name = strings.TrimSpace(name)
 	block = strings.TrimSpace(block)
 
 	exist, binding := casm.getBindingByName(name)
 	if exist {
-		return fmt.Errorf("memory name '%s' is already bound at location '%s'",
+		panic(fmt.Sprintf("%s: memory name '%s' is already bound at location '%s'",
+			location,
 			name,
-			binding.Location)
+			binding.Location))
 	}
 
 	chunk, err := ParseByteArrayFromString(block)
 	if err != nil {
-		return err
+		panic(fmt.Sprintf("%s: %s", location, err))
 	}
 	memAddr := len(casm.Memory)
 	casm.Memory = append(casm.Memory, chunk...)
@@ -325,26 +304,24 @@ func (casm *Casm) bindMemory(directive DirectiveLine, location FileLocation) err
 		Location: location,
 		IsLabel:  false,
 	})
-	return nil
 }
 
 // Translate include directive
-func (casm *Casm) translateInclude(directive DirectiveLine, location FileLocation) error {
+func (casm *Casm) translateInclude(directive DirectiveLine, location FileLocation) {
 	exist, resolvedPath := casm.resolveIncludePath(directive.Block)
 	if !exist {
-		return fmt.Errorf("cannot resolve include file '%s'", directive.Block)
+		panic(fmt.Sprintf("%s: cannot resolve include file '%s'", location, directive.Block))
 	}
 
 	if casm.IncludeLevel >= CasmMaxIncludeLevel {
-		return fmt.Errorf("maximum include level reached")
+		panic("maximum include level reached")
 	}
 
 	casm.IncludeLevel++
 	if err := casm.TranslateSourceFile(resolvedPath); err != nil {
-		return err
+		panic(err)
 	}
 	casm.IncludeLevel--
-	return nil
 }
 
 // Resolve an include path from the list of includes.
@@ -367,43 +344,34 @@ func (casm *Casm) resolveIncludePath(path string) (exist bool, resolved string) 
 }
 
 // Evaluate a binding to extract a word.
-func (casm *Casm) evaluateBinding(binding *Binding) (value coppervm.Word, err error) {
+func (casm *Casm) evaluateBinding(binding *Binding, location FileLocation) coppervm.Word {
 	// TODO(#6): Cyclic bindings cause a stack overflow
-	return casm.evaluateExpression(binding.Value)
+	return casm.evaluateExpression(binding.Value, location)
 }
 
 // Evaluate an expression to extract a word.
-func (casm *Casm) evaluateExpression(expr Expression) (ret coppervm.Word, err error) {
+func (casm *Casm) evaluateExpression(expr Expression, location FileLocation) (ret coppervm.Word) {
 	switch expr.Kind {
 	case ExpressionKindBinding:
 		exist, binding := casm.getBindingByName(expr.AsBinding)
 		if !exist {
-			return coppervm.Word{}, fmt.Errorf("cannot find binding '%s'",
-				expr.AsBinding)
+			panic(fmt.Sprintf("%s: cannot find binding '%s'", location, expr.AsBinding))
 		}
-		ret, err = casm.evaluateBinding(&binding)
-		if err != nil {
-			return coppervm.Word{}, err
-		}
+		ret = casm.evaluateBinding(&binding, location)
 	case ExpressionKindNumLitInt:
 		ret = coppervm.WordI64(expr.AsNumLitInt)
 	case ExpressionKindNumLitFloat:
 		ret = coppervm.WordF64(expr.AsNumLitFloat)
 	case ExpressionKindStringLit:
+		// TODO: Create method push string to memory
 		strBase := len(casm.Memory)
 		byteStr := []byte(expr.AsStringLit)
 		byteStr = append(byteStr, 0)
 		casm.Memory = append(casm.Memory, byteStr...)
 		ret = coppervm.WordU64(uint64(strBase))
 	case ExpressionKindBinaryOp:
-		lhs, err := casm.evaluateExpression(*expr.AsBinaryOp.Lhs)
-		if err != nil {
-			return coppervm.Word{}, err
-		}
-		rhs, err := casm.evaluateExpression(*expr.AsBinaryOp.Rhs)
-		if err != nil {
-			return coppervm.Word{}, err
-		}
+		lhs := casm.evaluateExpression(*expr.AsBinaryOp.Lhs, location)
+		rhs := casm.evaluateExpression(*expr.AsBinaryOp.Rhs, location)
 		switch expr.AsBinaryOp.Kind {
 		case BinaryOpKindPlus:
 			ret = coppervm.AddWord(lhs, rhs)
@@ -413,5 +381,5 @@ func (casm *Casm) evaluateExpression(expr Expression) (ret coppervm.Word, err er
 			ret = coppervm.MulWord(lhs, rhs)
 		}
 	}
-	return ret, nil
+	return ret
 }
