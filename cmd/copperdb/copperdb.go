@@ -1,36 +1,33 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
+	"io"
 	"log"
 	"os"
-	"strings"
 
 	"github.com/Supercaly/coppervm/pkg/copperdb"
 	"github.com/Supercaly/coppervm/pkg/coppervm"
 )
 
+func usage(stream io.Writer, program string) {
+	fmt.Fprintf(stream, "Usage: %s <input.copper>\n", program)
+}
+
 func main() {
-	input := "examples/bin/123.vm"
+	if len(os.Args) != 2 {
+		usage(os.Stderr, os.Args[0])
+		log.Fatalf("[ERROR]: input was not provided\n")
+	}
+
+	inputFilePath := os.Args[1]
+
 	vm := coppervm.Coppervm{}
-	vm.LoadProgramFromFile(input)
+	vm.LoadProgramFromFile(inputFilePath)
 	vm.Halt = true
 	db := copperdb.Copperdb{
-		InputFile: input,
+		InputFile: inputFilePath,
 		Vm:        &vm,
 	}
-
-	reader := bufio.NewReader(os.Stdin)
-	for {
-		fmt.Print("(coppervm) ")
-		str, err := reader.ReadString('\n')
-		str = strings.TrimSuffix(str, "\n")
-		str = strings.TrimSpace(str)
-
-		if err != nil {
-			log.Fatalf("Something went wrong with the debugger: %s", err)
-		}
-		db.ExecuteInputString(str)
-	}
+	db.StartProgramDebug()
 }

@@ -1,7 +1,9 @@
 package copperdb
 
 import (
+	"bufio"
 	"fmt"
+	"log"
 	"os"
 	"sort"
 	"strconv"
@@ -18,7 +20,26 @@ type Copperdb struct {
 	BreakpointCount uint
 }
 
-func (db *Copperdb) ExecuteInputString(input string) {
+// Start the debugger session.
+// In this method the debugger will promp the user for commands
+// and execute them.
+func (db *Copperdb) StartProgramDebug() {
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		fmt.Print("(coppervm) ")
+		str, err := reader.ReadString('\n')
+		str = strings.TrimSuffix(str, "\n")
+		str = strings.TrimSpace(str)
+
+		if err != nil {
+			log.Fatalf("Something went wrong with the debugger: %s", err)
+		}
+		db.ExecuteCommand(str)
+	}
+}
+
+// Execute a command in input.
+func (db *Copperdb) ExecuteCommand(input string) {
 	cmd, args := internal.SplitByDelim(input, ' ')
 	cmd = strings.TrimSpace(cmd)
 	args = strings.TrimSpace(args)
@@ -36,22 +57,18 @@ func (db *Copperdb) ExecuteInputString(input string) {
 	case "s":
 		db.StepProgram()
 	case "b":
-		addr, err := strconv.Atoi(args)
+		addr, err := db.StringToBrAddress(args)
 		if err != nil {
-			idx := db.Vm.DebugSymbols.GetIndexByName(args)
-			if idx == -1 {
-				fmt.Printf("Invalid address or debug symbol '%s'\n", args)
-				return
-			}
-			addr = int(db.Vm.DebugSymbols[idx].Address)
+			fmt.Println(err)
+		} else {
+			db.AddBreakpoint(coppervm.InstAddr(addr))
 		}
-		db.AddBreakpoint(coppervm.InstAddr(addr))
 	case "d":
-		num, err := strconv.ParseUint(args, 10, 64)
+		num, err := db.StringToBrNum(args)
 		if err != nil {
 			fmt.Printf("Invalid breakpoint number '%s'\n", args)
 		} else {
-			db.RemoveBreakpoint(uint(num))
+			db.RemoveBreakpoint(num)
 		}
 	case "l":
 		db.ListBreakpoints()
@@ -196,4 +213,25 @@ func (db *Copperdb) PrintHelp() {
 	fmt.Println("x           -- Print the instruction at ip.")
 	fmt.Println("q           -- Quit the debugger.")
 	fmt.Println("h           -- Print this help message.")
+}
+
+// Parse a string to an breakpoint number.
+func (db *Copperdb) StringToBrNum(str string) (uint, error) {
+	out64, err := strconv.ParseUint(str, 10, 64)
+	return uint(out64), err
+}
+
+// Parse a string to an address.
+func (db *Copperdb) StringToBrAddress(str string) (out int, err error) {
+	// Try parse as address
+	out, err = strconv.Atoi(str)
+	if err != nil {
+		// Try parse as symbol name
+		idx := db.Vm.DebugSymbols.GetIndexByName(str)
+		if idx == -1 {
+			return out, fmt.Errorf("no debug symbol or address '%s'", str)
+		}
+		out = int(db.Vm.DebugSymbols[idx].Address)
+	}
+	return out, nil
 }
