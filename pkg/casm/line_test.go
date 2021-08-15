@@ -1,6 +1,7 @@
 package casm
 
 import (
+	"reflect"
 	"testing"
 )
 
@@ -60,20 +61,45 @@ func TestLinize(t *testing.T) {
 			t.Error(err)
 		} else if err == nil && test.hasError {
 			t.Errorf("Expecting an error")
-		} else if !lineArrayEquals(lines, test.out) {
+		} else if err == nil && !reflect.DeepEqual(lines, test.out) {
 			t.Errorf("Expected '%#v' but got '%#v'", test.out, lines)
 		}
 	}
 }
 
-func lineArrayEquals(a []Line, b []Line) bool {
-	if len(a) != len(b) {
-		return false
+func TestLineFromString(t *testing.T) {
+	tests := []struct {
+		in       string
+		out      Line
+		hasError bool
+	}{
+		{"label:", Line{
+			Kind:     LineKindLabel,
+			AsLabel:  LabelLine{Name: "label"},
+			Location: FileLocation{},
+		}, false},
+		{"inst op", Line{
+			Kind:          LineKindInstruction,
+			AsInstruction: InstructionLine{Name: "inst", Operand: "op"},
+			Location:      FileLocation{},
+		}, false},
+		{"%directive name", Line{
+			Kind:        LineKindDirective,
+			AsDirective: DirectiveLine{Name: "directive", Block: "name"},
+			Location:    FileLocation{},
+		}, false},
+		{"%directive", Line{}, true},
 	}
-	for i, v := range a {
-		if b[i] != v {
-			return false
+
+	for _, test := range tests {
+		line, err := lineFromString(test.in, FileLocation{})
+
+		if err != nil && !test.hasError {
+			t.Error(err)
+		} else if err == nil && test.hasError {
+			t.Errorf("Expecting an error")
+		} else if err == nil && line != test.out {
+			t.Errorf("Expected '%#v' but got '%#v'", test.out, line)
 		}
 	}
-	return true
 }

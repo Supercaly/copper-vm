@@ -1,6 +1,7 @@
 package casm
 
 import (
+	"reflect"
 	"testing"
 )
 
@@ -72,20 +73,97 @@ func TestTokenize(t *testing.T) {
 			t.Error(err)
 		} else if err == nil && test.hasError {
 			t.Errorf("Expecting an error")
-		} else if !tokenArrayEquals(tok, test.out) {
+		} else if err == nil && !reflect.DeepEqual(tok, test.out) {
 			t.Errorf("Expected '%#v' but got '%#v'", test.out, tok)
 		}
 	}
 }
 
-func tokenArrayEquals(a []Token, b []Token) bool {
-	if len(a) != len(b) {
-		return false
+type asciiTestHolder struct {
+	in  rune
+	out bool
+}
+
+func getAsciArray() (out []asciiTestHolder) {
+	for i := 32; i < 127; i++ {
+		out = append(out, asciiTestHolder{
+			in:  rune(i),
+			out: false,
+		})
 	}
-	for i, v := range a {
-		if b[i] != v {
-			return false
+	return out
+}
+
+func TestIsDigit(t *testing.T) {
+	tests := getAsciArray()
+	for i := 48; i < 58; i++ {
+		tests[i-32].out = true
+	}
+	tests[46-32].out = true
+
+	for _, test := range tests {
+		if isDigit(test.in) != test.out {
+			t.Errorf("Expecting %s %t but got %t", string(test.in), test.out, !test.out)
 		}
 	}
-	return true
+}
+
+func TestIsAlpha(t *testing.T) {
+	tests := getAsciArray()
+	for i := 48; i < 58; i++ {
+		tests[i-32].out = true
+	}
+	for i := 65; i < 91; i++ {
+		tests[i-32].out = true
+	}
+	for i := 97; i < 123; i++ {
+		tests[i-32].out = true
+	}
+	tests[95-32].out = true
+
+	for _, test := range tests {
+		if isAlpha(test.in) != test.out {
+			t.Errorf("Expecting %s %t but got %t", string(test.in), test.out, !test.out)
+		}
+	}
+}
+
+func TestIsHex(t *testing.T) {
+	tests := getAsciArray()
+	for i := 48; i < 58; i++ {
+		tests[i-32].out = true
+	}
+	for i := 65; i < 71; i++ {
+		tests[i-32].out = true
+	}
+	for i := 97; i < 103; i++ {
+		tests[i-32].out = true
+	}
+	tests[120-32].out = true
+
+	for _, test := range tests {
+		if isHex(test.in) != test.out {
+			t.Errorf("Expecting %s %t but got %t", string(test.in), test.out, !test.out)
+		}
+	}
+}
+func TestIsNumber(t *testing.T) {
+	tests := getAsciArray()
+	for i := 48; i < 58; i++ {
+		tests[i-32].out = true
+	}
+	for i := 65; i < 71; i++ {
+		tests[i-32].out = true
+	}
+	for i := 97; i < 103; i++ {
+		tests[i-32].out = true
+	}
+	tests[120-32].out = true
+	tests[46-32].out = true
+
+	for _, test := range tests {
+		if isNumber(test.in) != test.out {
+			t.Errorf("Expecting %s %t but got %t", string(test.in), test.out, !test.out)
+		}
+	}
 }
