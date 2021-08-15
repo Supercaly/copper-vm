@@ -54,6 +54,10 @@ func TestTokenAsBinaryOpKind(t *testing.T) {
 				}
 			}()
 			res := tokenAsBinaryOpKind(test.in)
+
+			if test.hasError {
+				t.Error("expecting an error")
+			}
 			if res != test.out {
 				t.Errorf("Expecting %#v %s but got %s", test.in, test.out, res)
 			}
@@ -284,6 +288,10 @@ func TestComputeOpWithSameType(t *testing.T) {
 				}
 			}()
 			res := computeOpWithSameType(test.left, test.right, test.op)
+
+			if test.hasError {
+				t.Error("expecting an error")
+			}
 			if !expressionEquals(res, test.out) {
 				t.Errorf("test %d: expected '%#v' but got '%#v'", i, test.out, res)
 			}

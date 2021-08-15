@@ -6,14 +6,12 @@ import (
 	"github.com/Supercaly/coppervm/pkg/coppervm"
 )
 
-type TestHolder struct {
-	in       string
-	out      []coppervm.InstDef
-	hasError bool
-}
-
 func TestTranslateSource(t *testing.T) {
-	tests := []TestHolder{
+	tests := []struct {
+		in       string
+		out      []coppervm.InstDef
+		hasError bool
+	}{
 		{"main:\n", []coppervm.InstDef{}, false},
 		{"push 1\n", []coppervm.InstDef{
 			{
@@ -42,25 +40,24 @@ func TestTranslateSource(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		runTest(t, test)
-	}
-}
+		func() {
+			defer func() {
+				r := recover()
+				if r != nil && !test.hasError {
+					t.Error(r)
+				}
+			}()
 
-func runTest(t *testing.T, test TestHolder) {
-	defer func() {
-		r := recover()
-		if r != nil && !test.hasError {
-			t.Error(r)
-		}
-	}()
-	ctx := Casm{}
-	ctx.translateSource(test.in, "test_file")
+			ctx := Casm{}
+			ctx.translateSource(test.in, "test_file")
 
-	if test.hasError {
-		t.Error("expecting an error")
-	}
-	if !instArrayEquals(ctx.Program, test.out) {
-		t.Errorf("expected '%#v' but got '%#v'", test.out, ctx.Program)
+			if test.hasError {
+				t.Error("expecting an error")
+			}
+			if !instArrayEquals(ctx.Program, test.out) {
+				t.Errorf("expected '%#v' but got '%#v'", test.out, ctx.Program)
+			}
+		}()
 	}
 }
 
