@@ -123,14 +123,20 @@ func tokenAsBinaryOpKind(token Token) (out BinaryOpKind) {
 		out = BinaryOpKindMinus
 	case TokenKindAsterisk:
 		out = BinaryOpKindTimes
+	default:
+		panic(fmt.Sprintf("token %#v is not a binary operatator", token))
 	}
 	return out
 }
 
 // Computes an operation between two expression that have the same type and return it.
 // Note: Before calling this method make sure that lhs and rhs have the same type.
-// Some operation are not supported, so this method could return an error.
-func computeOpWithSameType(lhs Expression, rhs Expression, op BinaryOpKind) (out Expression, err error) {
+// Some operation are not supported, so this method can call panic.
+func computeOpWithSameType(lhs Expression, rhs Expression, op BinaryOpKind) (out Expression) {
+	if lhs.Kind != rhs.Kind {
+		panic("lhs and rhs must have the same type")
+	}
+
 	out.Kind = lhs.Kind
 	switch lhs.Kind {
 	case ExpressionKindNumLitInt:
@@ -156,54 +162,55 @@ func computeOpWithSameType(lhs Expression, rhs Expression, op BinaryOpKind) (out
 		case BinaryOpKindPlus:
 			out.AsStringLit = lhs.AsStringLit + rhs.AsStringLit
 		case BinaryOpKindMinus:
-			err = fmt.Errorf("unsupported operation '-' between string literals")
+			panic("unsupported operation '-' between string literals")
 		case BinaryOpKindTimes:
-			err = fmt.Errorf("unsupported operation '*' between string literals")
+			panic("unsupported operation '*' between string literals")
 		}
 	case ExpressionKindBinaryOp:
-		err = fmt.Errorf("at this point binary op is unreachable! Something really went wrong WTF")
+		panic("at this point binary op is unreachable! Something really went wrong WTF")
+	case ExpressionKindBinding:
+		panic("at this point binding is unreachable! Something really went wrong WTF")
 	}
-	return out, err
+
+	return out
 }
 
 // Parse an expression from a source string.
 // The string is first tokenized and then is parsed to extract
 // an expression.
 // Returns an error if something went wrong.
-func ParseExprFromString(source string) (Expression, error) {
+func ParseExprFromString(source string) (out Expression, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("%s", r)
+		}
+	}()
+
 	tokens, err := Tokenize(source)
 	if err != nil {
-		return Expression{}, err
+		panic(err)
 	}
-	return parseExprBinaryOp(&tokens, 0)
+	out = parseExprBinaryOp(&tokens, 0)
+	return out, err
 }
 
 // Parse an expression as a binary operation using the precedence climbing algorithm.
 // The implementation is inspired by this:
 // - "https://www.engr.mun.ca/~theo/Misc/exp_parsing.htm"
 // - "https://en.wikipedia.org/wiki/Operator-precedence_parser"
-func parseExprBinaryOp(tokens *[]Token, precedence int) (result Expression, err error) {
-	result, err = parseExprPrimary(tokens)
-	if err != nil {
-		return Expression{}, err
-	}
+func parseExprBinaryOp(tokens *[]Token, precedence int) (result Expression) {
+	result = parseExprPrimary(tokens)
 
 	for len(*tokens) > 1 && tokenIsOperator((*tokens)[0]) &&
 		binOpPrecedenceMap[tokenAsBinaryOpKind((*tokens)[0])] >= precedence {
 		op := tokenAsBinaryOpKind((*tokens)[0])
 		*tokens = (*tokens)[1:]
-		rhs, err := parseExprBinaryOp(tokens, binOpPrecedenceMap[op]+1)
-		if err != nil {
-			return Expression{}, err
-		}
+		rhs := parseExprBinaryOp(tokens, binOpPrecedenceMap[op]+1)
 
 		// left and right have the same type and are not bindings
 		// so we can already compute the operation ad return the result.
 		if result.Kind == rhs.Kind && result.Kind != ExpressionKindBinding {
-			result, err = computeOpWithSameType(result, rhs, op)
-			if err != nil {
-				return Expression{}, err
-			}
+			result = computeOpWithSameType(result, rhs, op)
 		} else {
 			// we can't compute the operation yet, so we return an expression
 			// as a binary operation.
@@ -216,15 +223,16 @@ func parseExprBinaryOp(tokens *[]Token, precedence int) (result Expression, err 
 			}
 		}
 	}
-	return result, nil
+	return result
 }
 
 // Parse a primary expression form a list of tokens.
 // Returns an error if something went wrong.
-func parseExprPrimary(tokens *[]Token) (result Expression, err error) {
+func parseExprPrimary(tokens *[]Token) (result Expression) {
 	if len(*tokens) == 0 {
-		return Expression{}, fmt.Errorf("trying to parse empty expression")
+		panic("trying to parse empty expression")
 	}
+
 	switch (*tokens)[0].Kind {
 	case TokenKindNumLit:
 		// Try hexadecimal
@@ -232,9 +240,8 @@ func parseExprPrimary(tokens *[]Token) (result Expression, err error) {
 			number := (*tokens)[0].Text[2:]
 			hexNumber, err := strconv.ParseUint(number, 16, 64)
 			if err != nil {
-				return Expression{},
-					fmt.Errorf("error parsing hex number literal '%s'",
-						(*tokens)[0].Text)
+				panic(fmt.Sprintf("error parsing hex number literal '%s'",
+					(*tokens)[0].Text))
 			}
 			result.Kind = ExpressionKindNumLitInt
 			result.AsNumLitInt = int64(hexNumber)
@@ -245,9 +252,8 @@ func parseExprPrimary(tokens *[]Token) (result Expression, err error) {
 				// Try floating point
 				floatNumber, err := strconv.ParseFloat((*tokens)[0].Text, 64)
 				if err != nil {
-					return Expression{},
-						fmt.Errorf("error parsing number literal '%s'",
-							(*tokens)[0].Text)
+					panic(fmt.Sprintf("error parsing number literal '%s'",
+						(*tokens)[0].Text))
 				}
 				result.Kind = ExpressionKindNumLitFloat
 				result.AsNumLitFloat = floatNumber
@@ -267,10 +273,7 @@ func parseExprPrimary(tokens *[]Token) (result Expression, err error) {
 		*tokens = (*tokens)[1:]
 	case TokenKindMinus:
 		*tokens = (*tokens)[1:]
-		result, err = parseExprBinaryOp(tokens, 3)
-		if err != nil {
-			return Expression{}, err
-		}
+		result = parseExprBinaryOp(tokens, 3)
 		if result.Kind == ExpressionKindNumLitInt {
 			result.AsNumLitInt = -result.AsNumLitInt
 		} else if result.Kind == ExpressionKindNumLitFloat {
@@ -278,16 +281,13 @@ func parseExprPrimary(tokens *[]Token) (result Expression, err error) {
 		}
 	case TokenKindOpenParen:
 		*tokens = (*tokens)[1:]
-		result, err = parseExprBinaryOp(tokens, 0)
-		if err != nil {
-			return Expression{}, err
-		}
+		result = parseExprBinaryOp(tokens, 0)
 		if len(*tokens) == 0 || (*tokens)[0].Kind != TokenKindCloseParen {
-			return Expression{}, fmt.Errorf("cannot find matching closing parenthesis")
+			panic("cannot find matching closing parenthesis")
 		}
 		*tokens = (*tokens)[1:]
 	}
-	return result, err
+	return result
 }
 
 // Parse a byte list from a source string.
@@ -295,50 +295,49 @@ func parseExprPrimary(tokens *[]Token) (result Expression, err error) {
 // the data.
 // Returns an error if something went wrong.
 func ParseByteArrayFromString(source string) (out []byte, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("%s", r)
+		}
+	}()
+
 	tokens, err := Tokenize(source)
 	if err != nil {
-		return []byte{}, err
+		panic(err)
 	}
-	return parseByteArrayFromTokens(&tokens)
+	out = parseByteArrayFromTokens(&tokens)
+	return out, err
 }
 
 // Parse a byte list from some tokens.
 // Returns a byte array or an error.
-func parseByteArrayFromTokens(tokens *[]Token) (out []byte, err error) {
+func parseByteArrayFromTokens(tokens *[]Token) (out []byte) {
 	if len(*tokens) == 0 {
-		return []byte{}, nil
+		return []byte{}
 	}
 
 	if (*tokens)[0].Kind == TokenKindComma {
-		return []byte{}, fmt.Errorf("misplaced comma inside list")
+		panic("misplaced comma inside list")
 	}
 
-	expr, err := parseExprBinaryOp(tokens, 0)
-	if err != nil {
-		return []byte{}, err
-	}
+	expr := parseExprBinaryOp(tokens, 0)
 
 	if expr.Kind == ExpressionKindNumLitInt {
 		out = append(out, byte(expr.AsNumLitInt))
 	} else if expr.Kind == ExpressionKindStringLit {
 		out = append(out, []byte(expr.AsStringLit)...)
 	} else {
-		return []byte{},
-			fmt.Errorf("unsupported value of type '%s' inside byte array", expr.Kind)
+		panic(fmt.Sprintf("unsupported value of type '%s' inside byte array", expr.Kind))
 	}
 
 	if len(*tokens) != 0 {
 		if (*tokens)[0].Kind != TokenKindComma {
-			return []byte{},
-				fmt.Errorf("array values must be comma separated")
+			panic("array values must be comma separated")
 		}
 		*tokens = (*tokens)[1:]
-		next, err := parseByteArrayFromTokens(tokens)
-		if err != nil {
-			return []byte{}, err
-		}
+		next := parseByteArrayFromTokens(tokens)
 		out = append(out, next...)
 	}
 
-	return out, nil
+	return out
 }

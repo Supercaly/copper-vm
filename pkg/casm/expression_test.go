@@ -1,8 +1,295 @@
 package casm
 
 import (
+	"reflect"
 	"testing"
 )
+
+func TestTokenIsOperator(t *testing.T) {
+	tests := []struct {
+		in  Token
+		out bool
+	}{
+		{Token{Kind: TokenKindNumLit, Text: "1"}, false},
+		{Token{Kind: TokenKindStringLit, Text: ""}, false},
+		{Token{Kind: TokenKindSymbol, Text: "_a"}, false},
+		{Token{Kind: TokenKindPlus, Text: "+"}, true},
+		{Token{Kind: TokenKindMinus, Text: "-"}, true},
+		{Token{Kind: TokenKindAsterisk, Text: "*"}, true},
+		{Token{Kind: TokenKindComma, Text: ","}, false},
+		{Token{Kind: TokenKindOpenParen, Text: "("}, false},
+		{Token{Kind: TokenKindCloseParen, Text: ")"}, false},
+	}
+
+	for _, test := range tests {
+		if tokenIsOperator(test.in) != test.out {
+			t.Errorf("Expecting %#v %t but got %t", test.in, test.out, !test.out)
+		}
+	}
+}
+
+func TestTokenAsBinaryOpKind(t *testing.T) {
+	tests := []struct {
+		in       Token
+		out      BinaryOpKind
+		hasError bool
+	}{
+		{Token{Kind: TokenKindNumLit, Text: "1"}, 0, true},
+		{Token{Kind: TokenKindStringLit, Text: ""}, 0, true},
+		{Token{Kind: TokenKindSymbol, Text: "_a"}, 0, true},
+		{Token{Kind: TokenKindPlus, Text: "+"}, BinaryOpKindPlus, false},
+		{Token{Kind: TokenKindMinus, Text: "-"}, BinaryOpKindMinus, false},
+		{Token{Kind: TokenKindAsterisk, Text: "*"}, BinaryOpKindTimes, false},
+		{Token{Kind: TokenKindComma, Text: ","}, 0, true},
+		{Token{Kind: TokenKindOpenParen, Text: "("}, 0, true},
+		{Token{Kind: TokenKindCloseParen, Text: ")"}, 0, true},
+	}
+
+	for _, test := range tests {
+		func() {
+			defer func() {
+				r := recover()
+				if r != nil && !test.hasError {
+					t.Error(r)
+				}
+			}()
+			res := tokenAsBinaryOpKind(test.in)
+			if res != test.out {
+				t.Errorf("Expecting %#v %s but got %s", test.in, test.out, res)
+			}
+		}()
+	}
+}
+
+func TestComputeOpWithSameType(t *testing.T) {
+	tests := []struct {
+		left     Expression
+		right    Expression
+		op       BinaryOpKind
+		out      Expression
+		hasError bool
+	}{
+		{
+			left: Expression{
+				Kind:        ExpressionKindNumLitInt,
+				AsNumLitInt: int64(1),
+			},
+			right: Expression{
+				Kind:        ExpressionKindNumLitInt,
+				AsNumLitInt: int64(1),
+			},
+			op: BinaryOpKindPlus,
+			out: Expression{
+				Kind:        ExpressionKindNumLitInt,
+				AsNumLitInt: int64(2),
+			},
+			hasError: false,
+		},
+		{
+			left: Expression{
+				Kind:        ExpressionKindNumLitInt,
+				AsNumLitInt: int64(1),
+			},
+			right: Expression{
+				Kind:        ExpressionKindNumLitInt,
+				AsNumLitInt: int64(1),
+			},
+			op: BinaryOpKindMinus,
+			out: Expression{
+				Kind:        ExpressionKindNumLitInt,
+				AsNumLitInt: int64(0),
+			},
+			hasError: false,
+		},
+		{
+			left: Expression{
+				Kind:        ExpressionKindNumLitInt,
+				AsNumLitInt: int64(2),
+			},
+			right: Expression{
+				Kind:        ExpressionKindNumLitInt,
+				AsNumLitInt: int64(2),
+			},
+			op: BinaryOpKindTimes,
+			out: Expression{
+				Kind:        ExpressionKindNumLitInt,
+				AsNumLitInt: int64(4),
+			},
+			hasError: false,
+		},
+		{
+			left: Expression{
+				Kind:          ExpressionKindNumLitFloat,
+				AsNumLitFloat: float64(1.0),
+			},
+			right: Expression{
+				Kind:          ExpressionKindNumLitFloat,
+				AsNumLitFloat: float64(1.0),
+			},
+			op: BinaryOpKindPlus,
+			out: Expression{
+				Kind:          ExpressionKindNumLitFloat,
+				AsNumLitFloat: float64(2.0),
+			},
+			hasError: false,
+		},
+		{
+			left: Expression{
+				Kind:          ExpressionKindNumLitFloat,
+				AsNumLitFloat: float64(1.0),
+			},
+			right: Expression{
+				Kind:          ExpressionKindNumLitFloat,
+				AsNumLitFloat: float64(1.0),
+			},
+			op: BinaryOpKindMinus,
+			out: Expression{
+				Kind:          ExpressionKindNumLitFloat,
+				AsNumLitFloat: float64(0.0),
+			},
+			hasError: false,
+		},
+		{
+			left: Expression{
+				Kind:          ExpressionKindNumLitFloat,
+				AsNumLitFloat: float64(1.0),
+			},
+			right: Expression{
+				Kind:          ExpressionKindNumLitFloat,
+				AsNumLitFloat: float64(2.0),
+			},
+			op: BinaryOpKindTimes,
+			out: Expression{
+				Kind:          ExpressionKindNumLitFloat,
+				AsNumLitFloat: float64(2.0),
+			},
+			hasError: false,
+		},
+		{
+			left: Expression{
+				Kind:        ExpressionKindStringLit,
+				AsStringLit: "first",
+			},
+			right: Expression{
+				Kind:        ExpressionKindStringLit,
+				AsStringLit: "second",
+			},
+			op: BinaryOpKindPlus,
+			out: Expression{
+				Kind:        ExpressionKindStringLit,
+				AsStringLit: "firstsecond",
+			},
+			hasError: false,
+		},
+		{
+			left: Expression{
+				Kind:        ExpressionKindStringLit,
+				AsStringLit: "first",
+			},
+			right: Expression{
+				Kind:        ExpressionKindStringLit,
+				AsStringLit: "second",
+			},
+			op:       BinaryOpKindMinus,
+			out:      Expression{},
+			hasError: true,
+		},
+		{
+			left: Expression{
+				Kind:        ExpressionKindStringLit,
+				AsStringLit: "first",
+			},
+			right: Expression{
+				Kind:        ExpressionKindStringLit,
+				AsStringLit: "second",
+			},
+			op:       BinaryOpKindTimes,
+			out:      Expression{},
+			hasError: true,
+		},
+		{
+			left: Expression{
+				Kind: ExpressionKindBinaryOp,
+			},
+			right: Expression{
+				Kind: ExpressionKindBinaryOp,
+			},
+			op:       BinaryOpKindPlus,
+			out:      Expression{},
+			hasError: true,
+		},
+		{
+			left: Expression{
+				Kind: ExpressionKindBinaryOp,
+			},
+			right: Expression{
+				Kind: ExpressionKindBinaryOp,
+			},
+			op:       BinaryOpKindMinus,
+			out:      Expression{},
+			hasError: true,
+		},
+		{
+			left: Expression{
+				Kind: ExpressionKindBinaryOp,
+			},
+			right: Expression{
+				Kind: ExpressionKindBinaryOp,
+			},
+			op:       BinaryOpKindTimes,
+			out:      Expression{},
+			hasError: true,
+		},
+		{
+			left: Expression{
+				Kind: ExpressionKindBinding,
+			},
+			right: Expression{
+				Kind: ExpressionKindBinding,
+			},
+			op:       BinaryOpKindPlus,
+			out:      Expression{},
+			hasError: true,
+		},
+		{
+			left: Expression{
+				Kind: ExpressionKindBinding,
+			},
+			right: Expression{
+				Kind: ExpressionKindBinding,
+			},
+			op:       BinaryOpKindMinus,
+			out:      Expression{},
+			hasError: true,
+		},
+		{
+			left: Expression{
+				Kind: ExpressionKindBinding,
+			},
+			right: Expression{
+				Kind: ExpressionKindBinding,
+			},
+			op:       BinaryOpKindTimes,
+			out:      Expression{},
+			hasError: true,
+		},
+	}
+
+	for i, test := range tests {
+		func() {
+			defer func() {
+				r := recover()
+				if r != nil && !test.hasError {
+					t.Error(r)
+				}
+			}()
+			res := computeOpWithSameType(test.left, test.right, test.op)
+			if !expressionEquals(res, test.out) {
+				t.Errorf("test %d: expected '%#v' but got '%#v'", i, test.out, res)
+			}
+		}()
+	}
+}
 
 func TestParseExprFromString(t *testing.T) {
 	tests := []struct {
@@ -133,6 +420,7 @@ func TestParseExprFromString(t *testing.T) {
 		{"0xG", Expression{}, true},
 		{"1.2.3", Expression{}, true},
 		{"1$", Expression{}, true},
+		{"(1", Expression{}, true},
 	}
 
 	for _, test := range tests {
@@ -175,22 +463,10 @@ func TestParseByteArrayFromString(t *testing.T) {
 			t.Error(err)
 		} else if err == nil && test.hasError {
 			t.Errorf("Expecting an error")
-		} else if !byteArrayEquals(expr, test.out) {
+		} else if err == nil && !reflect.DeepEqual(expr, test.out) {
 			t.Errorf("Expected '%#v' but got '%#v'", test.out, expr)
 		}
 	}
-}
-
-func byteArrayEquals(a []byte, b []byte) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i, v := range a {
-		if b[i] != v {
-			return false
-		}
-	}
-	return true
 }
 
 func expressionEquals(a Expression, b Expression) bool {
