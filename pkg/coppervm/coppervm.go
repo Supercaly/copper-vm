@@ -39,21 +39,31 @@ type Coppervm struct {
 }
 
 // Load program's binary to vm from file.
-func (vm *Coppervm) LoadProgramFromFile(filePath string) (CoppervmFileMeta, error) {
+func (vm *Coppervm) LoadProgramFromFile(filePath string) (meta CoppervmFileMeta, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("%s", r)
+		}
+	}()
+
 	content, fileErr := ioutil.ReadFile(filePath)
 	if fileErr != nil {
-		return CoppervmFileMeta{}, fmt.Errorf("error reading file '%s': %s",
+		panic(fmt.Sprintf("error reading file '%s': %s",
 			filePath,
-			fileErr)
+			fileErr))
 	}
 
-	var meta CoppervmFileMeta
 	if err := json.Unmarshal(content, &meta); err != nil {
-		return CoppervmFileMeta{}, fmt.Errorf("error reading content of file '%s': %s",
+		panic(fmt.Sprintf("error reading content of file '%s': %s",
 			filePath,
-			err)
+			err))
 	}
 
+	vm.loadProgramFromMeta(meta)
+	return meta, nil
+}
+
+func (vm *Coppervm) loadProgramFromMeta(meta CoppervmFileMeta) {
 	// Init program
 	vm.Halt = false
 	vm.Ip = InstAddr(meta.Entry)
@@ -62,7 +72,7 @@ func (vm *Coppervm) LoadProgramFromFile(filePath string) (CoppervmFileMeta, erro
 
 	// Init memory
 	if len(meta.Memory) > int(CoppervmMemoryCapacity) {
-		return CoppervmFileMeta{}, fmt.Errorf("memory exceed the maximum memory capacity")
+		panic("memory exceed the maximum memory capacity")
 	}
 	for i := 0; i < len(meta.Memory); i++ {
 		vm.Memory[i] = meta.Memory[i]
@@ -73,8 +83,6 @@ func (vm *Coppervm) LoadProgramFromFile(filePath string) (CoppervmFileMeta, erro
 	vm.FDs = append(vm.FDs, os.Stdin)
 	vm.FDs = append(vm.FDs, os.Stdout)
 	vm.FDs = append(vm.FDs, os.Stderr)
-
-	return meta, nil
 }
 
 // Executes all the program of the vm.
@@ -504,7 +512,7 @@ func (vm *Coppervm) ExecuteInstruction() *CoppervmError {
 	case InstCount:
 		fallthrough
 	default:
-		log.Fatalf("Invalid instruction %s", currentInst.Name)
+		return ErrorInvalidInstruction(vm)
 	}
 
 	// Print stack on debug

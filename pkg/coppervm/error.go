@@ -52,6 +52,14 @@ func ErrorIllegalMemoryAccess(vm *Coppervm) *CoppervmError {
 	}
 }
 
+func ErrorInvalidInstruction(vm *Coppervm) *CoppervmError {
+	return &CoppervmError{
+		Kind:        ErrorKindInvalidInstruction,
+		CurrentIp:   vm.Ip,
+		CurrentInst: vm.Program[vm.Ip],
+	}
+}
+
 func (err CoppervmError) String() string {
 	return fmt.Sprintf("'%s' executing instruction '%s' at ip '%d'",
 		err.Kind,
@@ -68,6 +76,7 @@ const (
 	ErrorKindStackUnderflow
 	ErrorKindDivideByZero
 	ErrorKindIllegalMemoryAccess
+	ErrorKindInvalidInstruction
 )
 
 func (err CoppervmErrorKind) String() string {
@@ -78,5 +87,6 @@ func (err CoppervmErrorKind) String() string {
 		"ErrorStackUnderflow",
 		"ErrorDivideByZero",
 		"ErrorIllegalMemoryAccess",
+		"ErrorKindInvalidInstruction",
 	}[err]
 }
