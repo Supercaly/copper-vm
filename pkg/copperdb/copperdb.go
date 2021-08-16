@@ -176,7 +176,6 @@ func (db *Copperdb) ListBreakpoints() {
 
 // Add a new breakpoint at given address.
 func (db *Copperdb) AddBreakpoint(addr coppervm.InstAddr) {
-	// TODO(#48): Add a table of compiler symbols to casm so we can keep track of labels
 	db.BreakpointCount++
 	newBr := Breakpoint{
 		Number:    db.BreakpointCount,
