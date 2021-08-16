@@ -63,7 +63,7 @@ func main() {
 
 	// Load and execute the program
 	vm := coppervm.Coppervm{}
-	if err := vm.LoadProgramFromFile(inputFilePath); err != nil {
+	if _, err := vm.LoadProgramFromFile(inputFilePath); err != nil {
 		log.Fatalf("[ERROR]: %s", err)
 	}
 	if err := vm.ExecuteProgram(limit); err.Kind != coppervm.ErrorKindOk {

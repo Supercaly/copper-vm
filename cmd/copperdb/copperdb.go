@@ -23,11 +23,15 @@ func main() {
 	inputFilePath := os.Args[1]
 
 	vm := coppervm.Coppervm{}
-	vm.LoadProgramFromFile(inputFilePath)
+	meta, err := vm.LoadProgramFromFile(inputFilePath)
+	if err != nil {
+		log.Fatalf("[ERROR]: %s", err)
+	}
 	vm.Halt = true
 	db := copperdb.Copperdb{
-		InputFile: inputFilePath,
-		Vm:        &vm,
+		InputFile:    inputFilePath,
+		Vm:           &vm,
+		DebugSymbols: meta.DebugSymbols,
 	}
 	db.StartProgramDebug()
 }

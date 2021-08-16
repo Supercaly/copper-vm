@@ -36,22 +36,20 @@ type Coppervm struct {
 	// Is the VM halted?
 	Halt     bool
 	ExitCode int
-
-	DebugSymbols DebugSymbols
 }
 
 // Load program's binary to vm from file.
-func (vm *Coppervm) LoadProgramFromFile(filePath string) error {
+func (vm *Coppervm) LoadProgramFromFile(filePath string) (CoppervmFileMeta, error) {
 	content, fileErr := ioutil.ReadFile(filePath)
 	if fileErr != nil {
-		return fmt.Errorf("error reading file '%s': %s",
+		return CoppervmFileMeta{}, fmt.Errorf("error reading file '%s': %s",
 			filePath,
 			fileErr)
 	}
 
 	var meta CoppervmFileMeta
 	if err := json.Unmarshal(content, &meta); err != nil {
-		return fmt.Errorf("error reading content of file '%s': %s",
+		return CoppervmFileMeta{}, fmt.Errorf("error reading content of file '%s': %s",
 			filePath,
 			err)
 	}
@@ -64,7 +62,7 @@ func (vm *Coppervm) LoadProgramFromFile(filePath string) error {
 
 	// Init memory
 	if len(meta.Memory) > int(CoppervmMemoryCapacity) {
-		return fmt.Errorf("memory exceed the maximum memory capacity")
+		return CoppervmFileMeta{}, fmt.Errorf("memory exceed the maximum memory capacity")
 	}
 	for i := 0; i < len(meta.Memory); i++ {
 		vm.Memory[i] = meta.Memory[i]
@@ -76,10 +74,7 @@ func (vm *Coppervm) LoadProgramFromFile(filePath string) error {
 	vm.FDs = append(vm.FDs, os.Stdout)
 	vm.FDs = append(vm.FDs, os.Stderr)
 
-	// Init debug symbols
-	vm.DebugSymbols = append(vm.DebugSymbols, meta.DebugSymbols...)
-
-	return nil
+	return meta, nil
 }
 
 // Executes all the program of the vm.

@@ -18,6 +18,7 @@ type Copperdb struct {
 	Vm              *coppervm.Coppervm
 	Breakpoints     Breakpoints
 	BreakpointCount uint
+	DebugSymbols    coppervm.DebugSymbols
 }
 
 // Start the debugger session.
@@ -227,11 +228,11 @@ func (db *Copperdb) StringToBrAddress(str string) (out int, err error) {
 	out, err = strconv.Atoi(str)
 	if err != nil {
 		// Try parse as symbol name
-		idx := db.Vm.DebugSymbols.GetIndexByName(str)
+		idx := db.DebugSymbols.GetIndexByName(str)
 		if idx == -1 {
 			return out, fmt.Errorf("no debug symbol or address '%s'", str)
 		}
-		out = int(db.Vm.DebugSymbols[idx].Address)
+		out = int(db.DebugSymbols[idx].Address)
 	}
 	return out, nil
 }
