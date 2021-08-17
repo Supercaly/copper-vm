@@ -1,8 +1,9 @@
 package casm
 
 import (
-	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestTokenIsOperator(t *testing.T) {
@@ -22,9 +23,7 @@ func TestTokenIsOperator(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		if tokenIsOperator(test.in) != test.out {
-			t.Errorf("Expecting %#v %t but got %t", test.in, test.out, !test.out)
-		}
+		assert.Equal(t, test.out, tokenIsOperator(test.in))
 	}
 }
 
@@ -55,11 +54,9 @@ func TestTokenAsBinaryOpKind(t *testing.T) {
 			}()
 			res := tokenAsBinaryOpKind(test.in)
 
+			assert.Equal(t, test.out, res)
 			if test.hasError {
 				t.Error("expecting an error")
-			}
-			if res != test.out {
-				t.Errorf("Expecting %#v %s but got %s", test.in, test.out, res)
 			}
 		}()
 	}
@@ -279,7 +276,7 @@ func TestComputeOpWithSameType(t *testing.T) {
 		},
 	}
 
-	for i, test := range tests {
+	for _, test := range tests {
 		func() {
 			defer func() {
 				r := recover()
@@ -289,11 +286,9 @@ func TestComputeOpWithSameType(t *testing.T) {
 			}()
 			res := computeOpWithSameType(test.left, test.right, test.op)
 
+			assert.Equal(t, test.out, res)
 			if test.hasError {
 				t.Error("expecting an error")
-			}
-			if !expressionEquals(res, test.out) {
-				t.Errorf("test %d: expected '%#v' but got '%#v'", i, test.out, res)
 			}
 		}()
 	}
@@ -434,12 +429,11 @@ func TestParseExprFromString(t *testing.T) {
 	for _, test := range tests {
 		expr, err := ParseExprFromString(test.in)
 
-		if err != nil && !test.hasError {
-			t.Error(err)
-		} else if err == nil && test.hasError {
-			t.Errorf("Expecting an error")
-		} else if !expressionEquals(expr, test.out) {
-			t.Errorf("Expected '%s' but got '%s'", test.out, expr)
+		if test.hasError {
+			assert.Error(t, err)
+		} else {
+			assert.NoError(t, err)
+			assert.Condition(t, func() (success bool) { return expressionEquals(expr, test.out) })
 		}
 	}
 }
@@ -467,12 +461,11 @@ func TestParseByteArrayFromString(t *testing.T) {
 	for _, test := range tests {
 		expr, err := ParseByteArrayFromString(test.in)
 
-		if err != nil && !test.hasError {
-			t.Error(err)
-		} else if err == nil && test.hasError {
-			t.Errorf("Expecting an error")
-		} else if err == nil && !reflect.DeepEqual(expr, test.out) {
-			t.Errorf("Expected '%#v' but got '%#v'", test.out, expr)
+		if test.hasError {
+			assert.Error(t, err)
+		} else {
+			assert.NoError(t, err)
+			assert.Equal(t, test.out, expr)
 		}
 	}
 }

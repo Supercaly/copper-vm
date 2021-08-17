@@ -63,6 +63,7 @@ func (vm *Coppervm) LoadProgramFromFile(filePath string) (meta CoppervmFileMeta,
 	return meta, nil
 }
 
+// Loads a program's binary from a CoppervmFileMeta.
 func (vm *Coppervm) loadProgramFromMeta(meta CoppervmFileMeta) {
 	// Init program
 	vm.Halt = false
@@ -537,26 +538,24 @@ func (vm *Coppervm) pushStack(w Word) *CoppervmError {
 
 // Set the virtual machine in an halt state.
 func (vm *Coppervm) haltVm(code int) {
-	// Set halt flag to true
 	vm.Halt = true
-	// Set status code to code
 	vm.ExitCode = code
-	// Close all open files
-	for i := 3; i < len(vm.FDs); i++ {
-		vm.FDs[i].Close()
-	}
+	vm.closeFds()
 }
 
 // Reset the vm to his initial state.
 func (vm *Coppervm) Reset() {
-	// Reset the memory to initial
 	vm.Memory = vm.initialMemory
-	// Close all fds except the standard one
+	vm.closeFds()
+	vm.Ip = vm.initialAddr
+	vm.Halt = false
+}
+
+// Close all open files except for the stdin, stdout, stderr.
+func (vm *Coppervm) closeFds() {
 	for i := 3; i < len(vm.FDs); i++ {
 		vm.FDs[i].Close()
 	}
-	vm.Ip = vm.initialAddr
-	vm.Halt = false
 }
 
 // Prints the stack content to standard output.

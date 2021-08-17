@@ -1,8 +1,9 @@
 package casm
 
 import (
-	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestLinize(t *testing.T) {
@@ -57,12 +58,11 @@ func TestLinize(t *testing.T) {
 	for _, test := range tests {
 		lines, err := Linize(test.in, filepath)
 
-		if err != nil && !test.hasError {
-			t.Error(err)
-		} else if err == nil && test.hasError {
-			t.Errorf("Expecting an error")
-		} else if err == nil && !reflect.DeepEqual(lines, test.out) {
-			t.Errorf("Expected '%#v' but got '%#v'", test.out, lines)
+		if test.hasError {
+			assert.Error(t, err)
+		} else {
+			assert.NoError(t, err)
+			assert.Equal(t, test.out, lines)
 		}
 	}
 }
@@ -94,12 +94,11 @@ func TestLineFromString(t *testing.T) {
 	for _, test := range tests {
 		line, err := lineFromString(test.in, FileLocation{})
 
-		if err != nil && !test.hasError {
-			t.Error(err)
-		} else if err == nil && test.hasError {
-			t.Errorf("Expecting an error")
-		} else if err == nil && line != test.out {
-			t.Errorf("Expected '%#v' but got '%#v'", test.out, line)
+		if test.hasError {
+			assert.Error(t, err)
+		} else {
+			assert.NoError(t, err)
+			assert.Equal(t, test.out, line)
 		}
 	}
 }

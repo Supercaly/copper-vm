@@ -1,10 +1,10 @@
 package casm
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/Supercaly/coppervm/pkg/coppervm"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestTranslateSource(t *testing.T) {
@@ -55,9 +55,7 @@ func TestTranslateSource(t *testing.T) {
 			if test.hasError {
 				t.Error("expecting an error")
 			}
-			if !instArrayEquals(ctx.Program, test.out) {
-				t.Errorf("expected '%#v' but got '%#v'", test.out, ctx.Program)
-			}
+			assert.Condition(t, func() (success bool) { return instArrayEquals(test.out, ctx.Program) })
 		}()
 	}
 }
@@ -89,25 +87,15 @@ func TestGetBindingByName(t *testing.T) {
 	}
 
 	e, b := casm.getBindingByName("a_label")
-	if !e {
-		t.Errorf("cannot find binging with name 'a_label'")
-	}
-	if b != casm.Bindings[0] {
-		t.Errorf("expecting %#v but got %#v", casm.Bindings[0], b)
-	}
+	assert.True(t, e)
+	assert.Equal(t, b, casm.Bindings[0])
 
 	e, b = casm.getBindingByName("a_const")
-	if !e {
-		t.Errorf("cannot find binging with name 'a_const'")
-	}
-	if b != casm.Bindings[1] {
-		t.Errorf("expecting %#v but got %#v", casm.Bindings[1], b)
-	}
+	assert.True(t, e)
+	assert.Equal(t, b, casm.Bindings[1])
 
 	e, b = casm.getBindingByName("test")
-	if e {
-		t.Errorf("no binding with name 'test' should exist")
-	}
+	assert.False(t, e)
 }
 
 func TestBindLabel(t *testing.T) {
@@ -128,9 +116,7 @@ func TestBindLabel(t *testing.T) {
 
 	casm.bindLabel("new_label", 2, FileLocation{})
 	e, b := casm.getBindingByName("new_label")
-	if !e {
-		t.Error("the new_label was not bound correctly")
-	}
+	assert.True(t, e)
 
 	lab := Binding{
 		Name: "new_label",
@@ -141,9 +127,7 @@ func TestBindLabel(t *testing.T) {
 		Location: FileLocation{},
 		IsLabel:  true,
 	}
-	if !reflect.DeepEqual(b, lab) {
-		t.Errorf("expecting %#v but got %#v", lab, b)
-	}
+	assert.Equal(t, b, lab)
 }
 
 func TestBindConst(t *testing.T) {
@@ -166,9 +150,8 @@ func TestBindConst(t *testing.T) {
 	casm.bindConst(DirectiveLine{Name: "const", Block: "new_const 2"},
 		FileLocation{})
 	e, b := casm.getBindingByName("new_const")
-	if !e {
-		t.Error("the new_const was not bound correctly")
-	}
+	assert.True(t, e)
+
 	c := Binding{
 		Name: "new_const",
 		Value: Expression{
@@ -178,9 +161,7 @@ func TestBindConst(t *testing.T) {
 		Location: FileLocation{},
 		IsLabel:  false,
 	}
-	if !reflect.DeepEqual(b, c) {
-		t.Errorf("expecting %#v but got %#v", c, b)
-	}
+	assert.Equal(t, b, c)
 
 	func() {
 		defer func() {
@@ -191,6 +172,7 @@ func TestBindConst(t *testing.T) {
 		t.Error("Expecting an error")
 	}()
 }
+
 func TestBindEntry(t *testing.T) {
 	func() {
 		casm := Casm{}
@@ -202,11 +184,9 @@ func TestBindEntry(t *testing.T) {
 
 	casm := Casm{}
 	casm.bindEntry("entry", FileLocation{"", 10})
-	if !casm.HasEntry ||
-		casm.DeferredEntryName != "entry" ||
-		casm.EntryLocation.Location != 10 {
-		t.Error("entry location not set")
-	}
+	assert.True(t, casm.HasEntry)
+	assert.Equal(t, "entry", casm.DeferredEntryName)
+	assert.Equal(t, 10, casm.EntryLocation.Location)
 }
 
 func TestBindMemory(t *testing.T) {
@@ -229,9 +209,8 @@ func TestBindMemory(t *testing.T) {
 	casm.bindMemory(DirectiveLine{Name: "memory", Block: "new_mem 2,3"},
 		FileLocation{})
 	e, b := casm.getBindingByName("new_mem")
-	if !e {
-		t.Error("the new_mem was not bound correctly")
-	}
+	assert.True(t, e)
+
 	c := Binding{
 		Name: "new_mem",
 		Value: Expression{
@@ -241,9 +220,7 @@ func TestBindMemory(t *testing.T) {
 		Location: FileLocation{},
 		IsLabel:  false,
 	}
-	if !reflect.DeepEqual(b, c) {
-		t.Errorf("expecting %#v but got %#v", c, b)
-	}
+	assert.Equal(t, b, c)
 
 	func() {
 		defer func() {
@@ -257,84 +234,79 @@ func TestBindMemory(t *testing.T) {
 
 func TestEvaluateExpression(t *testing.T) {
 	casm := Casm{}
+	tests := []struct {
+		expr Expression
+		res  coppervm.Word
+	}{
+		{Expression{
+			Kind:        ExpressionKindNumLitInt,
+			AsNumLitInt: 10,
+		}, coppervm.WordU64(10)},
+		{Expression{
+			Kind:          ExpressionKindNumLitFloat,
+			AsNumLitFloat: 2.3,
+		}, coppervm.WordF64(2.3)},
+		{Expression{
+			Kind:        ExpressionKindStringLit,
+			AsStringLit: "str",
+		}, coppervm.WordI64(0)},
+		{Expression{
+			Kind: ExpressionKindBinaryOp,
+			AsBinaryOp: BinaryOp{
+				Kind: BinaryOpKindPlus,
+				Lhs: &Expression{
+					Kind:        ExpressionKindNumLitInt,
+					AsNumLitInt: 2,
+				},
+				Rhs: &Expression{
+					Kind:        ExpressionKindNumLitInt,
+					AsNumLitInt: 5,
+				},
+			},
+		}, coppervm.WordI64(7)},
+		{Expression{
+			Kind: ExpressionKindBinaryOp,
+			AsBinaryOp: BinaryOp{
+				Kind: BinaryOpKindMinus,
+				Lhs: &Expression{
+					Kind:        ExpressionKindNumLitInt,
+					AsNumLitInt: 2,
+				},
+				Rhs: &Expression{
+					Kind:        ExpressionKindNumLitInt,
+					AsNumLitInt: 5,
+				},
+			},
+		}, coppervm.WordI64(-3)},
+		{Expression{
+			Kind: ExpressionKindBinaryOp,
+			AsBinaryOp: BinaryOp{
+				Kind: BinaryOpKindTimes,
+				Lhs: &Expression{
+					Kind:        ExpressionKindNumLitInt,
+					AsNumLitInt: 2,
+				},
+				Rhs: &Expression{
+					Kind:        ExpressionKindNumLitInt,
+					AsNumLitInt: 5,
+				},
+			},
+		}, coppervm.WordU64(10)},
+	}
 
+	for _, test := range tests {
+		assert.Equal(t, test.res, casm.evaluateExpression(test.expr, FileLocation{}))
+	}
+
+	casm.Bindings = append(casm.Bindings, Binding{
+		Name:  "a_bind",
+		Value: Expression{Kind: ExpressionKindNumLitInt, AsNumLitInt: 3},
+	})
 	w := casm.evaluateExpression(Expression{
-		Kind:        ExpressionKindNumLitInt,
-		AsNumLitInt: 10,
+		Kind:      ExpressionKindBinding,
+		AsBinding: "a_bind",
 	}, FileLocation{})
-	if w != coppervm.WordU64(10) {
-		t.Errorf("expecting %#v but got %#v", coppervm.WordI64(10), w)
-	}
-
-	w2 := casm.evaluateExpression(Expression{
-		Kind:          ExpressionKindNumLitFloat,
-		AsNumLitFloat: 2.3,
-	}, FileLocation{})
-	if w2 != coppervm.WordF64(2.3) {
-		t.Errorf("expecting %#v but got %#v", coppervm.WordF64(2.3), w2)
-	}
-
-	w3 := casm.evaluateExpression(Expression{
-		Kind:        ExpressionKindStringLit,
-		AsStringLit: "str",
-	}, FileLocation{})
-	if w3 != coppervm.WordI64(0) {
-		t.Errorf("expecting %#v but got %#v", coppervm.WordF64(0), w3)
-	}
-
-	w4 := casm.evaluateExpression(Expression{
-		Kind: ExpressionKindBinaryOp,
-		AsBinaryOp: BinaryOp{
-			Kind: BinaryOpKindPlus,
-			Lhs: &Expression{
-				Kind:        ExpressionKindNumLitInt,
-				AsNumLitInt: 2,
-			},
-			Rhs: &Expression{
-				Kind:        ExpressionKindNumLitInt,
-				AsNumLitInt: 5,
-			},
-		},
-	}, FileLocation{})
-	if w4 != coppervm.WordI64(7) {
-		t.Errorf("expecting %#v but got %#v", coppervm.WordF64(7), w4)
-	}
-
-	w5 := casm.evaluateExpression(Expression{
-		Kind: ExpressionKindBinaryOp,
-		AsBinaryOp: BinaryOp{
-			Kind: BinaryOpKindMinus,
-			Lhs: &Expression{
-				Kind:        ExpressionKindNumLitInt,
-				AsNumLitInt: 2,
-			},
-			Rhs: &Expression{
-				Kind:        ExpressionKindNumLitInt,
-				AsNumLitInt: 5,
-			},
-		},
-	}, FileLocation{})
-	if w5 != coppervm.WordI64(-3) {
-		t.Errorf("expecting %#v but got %#v", coppervm.WordF64(-3), w5)
-	}
-
-	w6 := casm.evaluateExpression(Expression{
-		Kind: ExpressionKindBinaryOp,
-		AsBinaryOp: BinaryOp{
-			Kind: BinaryOpKindTimes,
-			Lhs: &Expression{
-				Kind:        ExpressionKindNumLitInt,
-				AsNumLitInt: 2,
-			},
-			Rhs: &Expression{
-				Kind:        ExpressionKindNumLitInt,
-				AsNumLitInt: 5,
-			},
-		},
-	}, FileLocation{})
-	if w6 != coppervm.WordI64(10) {
-		t.Errorf("expecting %#v but got %#v", coppervm.WordF64(10), w6)
-	}
+	assert.Equal(t, coppervm.WordI64(3), w)
 
 	func() {
 		defer func() { recover() }()
@@ -344,18 +316,6 @@ func TestEvaluateExpression(t *testing.T) {
 		}, FileLocation{})
 		t.Error("expecting an error")
 	}()
-
-	casm.Bindings = append(casm.Bindings, Binding{
-		Name:  "a_bind",
-		Value: Expression{Kind: ExpressionKindNumLitInt, AsNumLitInt: 3},
-	})
-	w7 := casm.evaluateExpression(Expression{
-		Kind:      ExpressionKindBinding,
-		AsBinding: "a_bind",
-	}, FileLocation{})
-	if w7 != coppervm.WordI64(3) {
-		t.Errorf("expecting %#v but got %#v", coppervm.WordF64(3), w7)
-	}
 }
 
 func TestEvaluateBinding(t *testing.T) {
@@ -386,9 +346,7 @@ func TestEvaluateBinding(t *testing.T) {
 	}
 
 	w := casm.evaluateBinding(&casm.Bindings[0], FileLocation{})
-	if w != coppervm.WordU64(5) {
-		t.Errorf("expecting %#v but got %#v", coppervm.WordU64(5), w)
-	}
+	assert.Equal(t, coppervm.WordU64(5), w)
 
 	// w2 := casm.evaluateBinding(&casm.Bindings[1], FileLocation{})
 	// if w2 != coppervm.WordU64(5) {
