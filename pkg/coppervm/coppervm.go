@@ -545,10 +545,13 @@ func (vm *Coppervm) haltVm(code int) {
 
 // Reset the vm to his initial state.
 func (vm *Coppervm) Reset() {
+	copy(vm.Stack[:], []Word{})
+	vm.StackSize = 0
+	vm.Ip = vm.initialAddr
 	vm.Memory = vm.initialMemory
 	vm.closeFds()
-	vm.Ip = vm.initialAddr
 	vm.Halt = false
+	vm.ExitCode = 0
 }
 
 // Close all open files except for the stdin, stdout, stderr.
