@@ -14,11 +14,12 @@ import (
 )
 
 type Copperdb struct {
-	InputFile       string
-	Vm              *coppervm.Coppervm
-	Breakpoints     Breakpoints
-	BreakpointCount uint
-	DebugSymbols    coppervm.DebugSymbols
+	InputFile         string
+	Vm                *coppervm.Coppervm
+	Breakpoints       Breakpoints
+	BreakpointCount   uint
+	DebugSymbols      coppervm.DebugSymbols
+	CurrentBreakpoint Breakpoint
 }
 
 // Start the debugger session.
@@ -99,25 +100,28 @@ func (db *Copperdb) ExecuteCommand(input string) {
 
 // Reset the debugger status.
 func (db *Copperdb) Reset() {
-	db.Breakpoints.Reset()
+	db.CurrentBreakpoint = EmptyBreakpoint()
 	db.Vm.Reset()
 }
 
 // Executes count instructions of the debugged program.
 func (db *Copperdb) ExecuteInstructions(count int) {
 	for count != 0 && !db.Vm.Halt {
-		if db.Breakpoints.IsAddressNonReachedBr(db.Vm.Ip) {
-			// Reached a breakpoint... stop the execution
-			brIdx := db.Breakpoints.GetIndexByAddress(db.Vm.Ip)
-			db.Breakpoints[brIdx].IsReached = true
-			br := db.Breakpoints[brIdx]
-			fmt.Printf("\nBreakpoint %d, %d\n", br.Number, br.Addr)
+		if db.BrakeAtAddr(db.Vm.Ip) {
+			// Reached a breakpoint
+			db.CurrentBreakpoint = db.Breakpoints[db.Breakpoints.GetIndexByAddress(db.Vm.Ip)]
+			fmt.Printf("\nBreakpoint %d, %d\n",
+				db.CurrentBreakpoint.Number,
+				db.CurrentBreakpoint.Addr)
 			return
 		} else {
+			db.CurrentBreakpoint = EmptyBreakpoint()
 			// Execute current instruction
 			err := db.Vm.ExecuteInstruction()
 			if err.Kind != coppervm.ErrorKindOk {
 				fmt.Println("Error", err)
+				db.Vm.Halt = true
+				return
 			}
 		}
 		count--
@@ -125,6 +129,16 @@ func (db *Copperdb) ExecuteInstructions(count int) {
 	if db.Vm.Halt {
 		fmt.Printf("Program executed with exit code '%d'\n", db.Vm.ExitCode)
 	}
+}
+
+// Returns true if the current address is a brakepoint not reached,
+// false otherwise.
+func (db *Copperdb) BrakeAtAddr(addr coppervm.InstAddr) bool {
+	brIdx := db.Breakpoints.GetIndexByAddress(addr)
+	if brIdx == -1 {
+		return false
+	}
+	return db.Breakpoints[brIdx] != db.CurrentBreakpoint
 }
 
 // Run the debugged program if it's not already running.
@@ -165,9 +179,9 @@ func (db *Copperdb) StepProgram() {
 // Print all set breakpoints.
 func (db *Copperdb) ListBreakpoints() {
 	if len(db.Breakpoints) > 0 {
-		fmt.Println("Num\tAddress\tBroke")
+		fmt.Println("Num\tAddress")
 		for _, br := range db.Breakpoints {
-			fmt.Printf("%d\t%d\t%t\n", br.Number, br.Addr, br.IsReached)
+			fmt.Printf("%d\t%d\n", br.Number, br.Addr)
 		}
 	} else {
 		fmt.Println("No breakpoints.")
@@ -178,9 +192,8 @@ func (db *Copperdb) ListBreakpoints() {
 func (db *Copperdb) AddBreakpoint(addr coppervm.InstAddr) {
 	db.BreakpointCount++
 	newBr := Breakpoint{
-		Number:    db.BreakpointCount,
-		Addr:      addr,
-		IsReached: false,
+		Number: db.BreakpointCount,
+		Addr:   addr,
 	}
 	db.Breakpoints = append(db.Breakpoints, newBr)
 	fmt.Println("Breakpoint", newBr.Number, "at", newBr.Addr)
