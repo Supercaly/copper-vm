@@ -1,0 +1,58 @@
+%const N 10 ; number of iterations
+%memory n 0x00 ; store n in memory
+
+; 1/1 + 1/1 + 1/(1 * 2) + 1/(1 * 2 * 3) + ...
+main:
+    push 1.0 ; n
+    push n
+    write
+    push 1.0 ; n!
+    push 2.0 ; sum
+
+    call compute_e
+    print
+    halt
+
+; recursive function that computes e until n < N
+compute_e:
+    swap 2
+    
+    ; n++
+    push n
+    read
+    push 1
+    add
+    dup
+    push n
+    write
+
+    ; n! = n+1!
+    mul
+    dup
+
+    ; 1/n!
+    push 1
+    swap 1
+    fdiv
+
+    ; sum = 1/n!
+    swap 1
+    swap 2
+    fadd
+
+    ; if n < N compute_e
+    push n
+    read
+    push N
+    cmp
+    jg base_case
+
+    call compute_e
+    swap 1
+    ret
+
+    base_case:
+        swap 1
+        drop
+        swap 1
+        ret
