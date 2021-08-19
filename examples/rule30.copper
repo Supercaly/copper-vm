@@ -1,0 +1,144 @@
+%const N          30
+%memory bits      0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x1,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0
+%memory new_bits  0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0
+%const bits_len   41
+%memory print_mem 0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0
+%const mem_len    bits_len + 1
+%memory i 0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0
+%entry main
+
+main:
+    push 0
+    main_loop:
+        push 1
+        add
+
+        call print
+        call next_state
+        
+        dup
+        push N
+        cmp
+        jle main_loop
+    halt
+
+next_state:
+    push bits + 1
+    push i
+    iwrite
+
+    next_state_loop:
+        ; xi or xi+1
+        push i
+        iread
+        dup
+        push 1
+        add
+        read
+        swap 1
+        read
+        swap 1
+        or
+        ; xi-1 xor (xi or xi+1)
+        push i
+        iread
+        push 1
+        sub
+        read
+        swap 1
+        xor
+        push i
+        iread
+        push new_bits
+        add
+        write
+
+        push i
+        iread
+        push 1
+        add
+        push i
+        iwrite
+
+        push i
+        iread
+        
+        push bits +bits_len-1
+        cmp
+        jle next_state_loop
+
+    ; memcpy new_bits to bits
+    push 1
+    push i
+    iwrite
+
+    next_state_memcpy_loop:
+        push i
+        iread
+        dup
+        push new_bits
+        add
+        read
+        swap 1
+        push bits
+        add
+        write
+
+        push i
+        iread
+        push 1
+        add
+        push i
+        iwrite
+
+        push i
+        iread
+        push bits_len-1
+        cmp
+        jle next_state_memcpy_loop
+    ret
+
+print:
+    push 0
+    print_loop:
+        dup
+        push bits
+        add
+        read
+        jnz print_loop_else
+            dup
+            push print_mem
+            add
+            push 0x20
+            swap 1
+            write
+            jmp print_loop_if_end
+
+        print_loop_else:
+            dup
+            push print_mem
+            add
+            push 0x2E
+            swap 1
+            write
+
+        print_loop_if_end:
+            push 1
+            add
+            dup
+            push bits_len
+            cmp
+            jle print_loop
+    drop
+
+    push 0x0A
+    push print_mem + mem_len-1
+    write
+
+    push 1
+    push print_mem
+    push mem_len
+    syscall 1
+    drop
+
+    ret

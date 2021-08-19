@@ -246,6 +246,48 @@ func (vm *Coppervm) ExecuteInstruction() *CoppervmError {
 		vm.Stack[vm.StackSize-2] = DivWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1])
 		vm.StackSize--
 		vm.Ip++
+	// Boolean operations
+	case InstAnd:
+		if vm.StackSize < 2 {
+			return ErrorStackUnderflow(vm)
+		}
+		vm.Stack[vm.StackSize-2] = WordU64(vm.Stack[vm.StackSize-2].AsU64 & vm.Stack[vm.StackSize-1].AsU64)
+		vm.StackSize--
+		vm.Ip++
+	case InstOr:
+		if vm.StackSize < 2 {
+			return ErrorStackUnderflow(vm)
+		}
+		vm.Stack[vm.StackSize-2] = WordU64(vm.Stack[vm.StackSize-2].AsU64 | vm.Stack[vm.StackSize-1].AsU64)
+		vm.StackSize--
+		vm.Ip++
+	case InstXor:
+		if vm.StackSize < 2 {
+			return ErrorStackUnderflow(vm)
+		}
+		vm.Stack[vm.StackSize-2] = WordU64(vm.Stack[vm.StackSize-2].AsU64 ^ vm.Stack[vm.StackSize-1].AsU64)
+		vm.StackSize--
+		vm.Ip++
+	case InstShiftLeft:
+		if vm.StackSize < 2 {
+			return ErrorStackUnderflow(vm)
+		}
+		vm.Stack[vm.StackSize-2] = WordU64(vm.Stack[vm.StackSize-2].AsU64 << vm.Stack[vm.StackSize-1].AsU64)
+		vm.StackSize--
+		vm.Ip++
+	case InstShiftRight:
+		if vm.StackSize < 2 {
+			return ErrorStackUnderflow(vm)
+		}
+		vm.Stack[vm.StackSize-2] = WordU64(vm.Stack[vm.StackSize-2].AsU64 >> vm.Stack[vm.StackSize-1].AsU64)
+		vm.StackSize--
+		vm.Ip++
+	case InstNot:
+		if vm.StackSize < 1 {
+			return ErrorStackUnderflow(vm)
+		}
+		vm.Stack[vm.StackSize-1] = WordU64(^vm.Stack[vm.StackSize-1].AsU64)
+		vm.Ip++
 	// Flow control
 	case InstCmp:
 		if vm.StackSize < 2 {

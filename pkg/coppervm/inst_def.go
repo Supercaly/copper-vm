@@ -93,6 +93,36 @@ var InstDefs = [InstCount]InstDef{
 		Name:       "fdiv",
 	},
 	{
+		Kind:       InstAnd,
+		HasOperand: false,
+		Name:       "and",
+	},
+	{
+		Kind:       InstOr,
+		HasOperand: false,
+		Name:       "or",
+	},
+	{
+		Kind:       InstXor,
+		HasOperand: false,
+		Name:       "xor",
+	},
+	{
+		Kind:       InstShiftLeft,
+		HasOperand: false,
+		Name:       "shl",
+	},
+	{
+		Kind:       InstShiftRight,
+		HasOperand: false,
+		Name:       "shr",
+	},
+	{
+		Kind:       InstNot,
+		HasOperand: false,
+		Name:       "not",
+	},
+	{
 		Kind:       InstCmp,
 		HasOperand: false,
 		Name:       "cmp",
@@ -217,6 +247,14 @@ const (
 	InstSubFloat
 	InstMulFloat
 	InstDivFloat
+
+	// Boolean operations
+	InstAnd
+	InstOr
+	InstXor
+	InstNot
+	InstShiftLeft
+	InstShiftRight
 
 	// Flow control
 	InstCmp

@@ -1,0 +1,30 @@
+push 1
+push 2
+and
+print
+
+push 1
+push 2
+or
+print
+
+push 1
+push 3
+xor
+print
+
+push 2
+not
+print
+
+push 5
+push 1
+shr
+print
+
+push 5
+push 2
+shl
+print
+
+halt
