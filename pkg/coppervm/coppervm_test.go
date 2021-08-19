@@ -632,6 +632,56 @@ func TestExecuteInstruction(t *testing.T) {
 			func(vm Coppervm) {},
 			ErrorKindStackUnderflow,
 		},
+		// mem iread
+		{
+			[]InstDef{{Kind: InstMemReadInt}},
+			[]Word{WordU64(0)},
+			[]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05},
+			func(vm Coppervm) {
+				assert.Equal(int64(1), vm.StackSize)
+				assert.Equal(int64(5), vm.Stack[0].AsI64)
+			},
+			ErrorKindOk,
+		},
+		{
+			[]InstDef{{Kind: InstMemReadInt}},
+			[]Word{WordU64(uint64(CoppervmMemoryCapacity))},
+			[]byte{},
+			func(vm Coppervm) {},
+			ErrorKindIllegalMemoryAccess,
+		},
+		{
+			[]InstDef{{Kind: InstMemReadInt}},
+			[]Word{},
+			[]byte{},
+			func(vm Coppervm) {},
+			ErrorKindStackUnderflow,
+		},
+		// mem fread
+		{
+			[]InstDef{{Kind: InstMemReadFloat}},
+			[]Word{WordU64(0)},
+			[]byte{0x40, 0x2, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66},
+			func(vm Coppervm) {
+				assert.Equal(int64(1), vm.StackSize)
+				assert.Equal(float64(2.3), vm.Stack[0].AsF64)
+			},
+			ErrorKindOk,
+		},
+		{
+			[]InstDef{{Kind: InstMemReadFloat}},
+			[]Word{WordU64(uint64(CoppervmMemoryCapacity))},
+			[]byte{},
+			func(vm Coppervm) {},
+			ErrorKindIllegalMemoryAccess,
+		},
+		{
+			[]InstDef{{Kind: InstMemReadFloat}},
+			[]Word{},
+			[]byte{},
+			func(vm Coppervm) {},
+			ErrorKindStackUnderflow,
+		},
 		// mem write
 		{
 			[]InstDef{{Kind: InstMemWrite}},
@@ -652,6 +702,70 @@ func TestExecuteInstruction(t *testing.T) {
 		},
 		{
 			[]InstDef{{Kind: InstMemWrite}},
+			[]Word{},
+			[]byte{},
+			func(vm Coppervm) {},
+			ErrorKindStackUnderflow,
+		},
+		// mem iwrite
+		{
+			[]InstDef{{Kind: InstMemWriteInt}},
+			[]Word{WordU64(5), WordU64(0)},
+			[]byte{},
+			func(vm Coppervm) {
+				assert.Equal(int64(0), vm.StackSize)
+				assert.Equal(byte(0x0), vm.Memory[0])
+				assert.Equal(byte(0x0), vm.Memory[1])
+				assert.Equal(byte(0x0), vm.Memory[2])
+				assert.Equal(byte(0x0), vm.Memory[3])
+				assert.Equal(byte(0x0), vm.Memory[4])
+				assert.Equal(byte(0x0), vm.Memory[5])
+				assert.Equal(byte(0x0), vm.Memory[6])
+				assert.Equal(byte(0x5), vm.Memory[7])
+			},
+			ErrorKindOk,
+		},
+		{
+			[]InstDef{{Kind: InstMemWriteInt}},
+			[]Word{WordU64(0), WordU64(uint64(CoppervmMemoryCapacity))},
+			[]byte{},
+			func(vm Coppervm) {},
+			ErrorKindIllegalMemoryAccess,
+		},
+		{
+			[]InstDef{{Kind: InstMemWriteInt}},
+			[]Word{},
+			[]byte{},
+			func(vm Coppervm) {},
+			ErrorKindStackUnderflow,
+		},
+		// mem fwrite
+		{
+			[]InstDef{{Kind: InstMemWriteFloat}},
+			[]Word{WordF64(2.3), WordU64(0)},
+			[]byte{},
+			func(vm Coppervm) {
+				assert.Equal(int64(0), vm.StackSize)
+				assert.Equal(byte(0x40), vm.Memory[0])
+				assert.Equal(byte(0x02), vm.Memory[1])
+				assert.Equal(byte(0x66), vm.Memory[2])
+				assert.Equal(byte(0x66), vm.Memory[3])
+				assert.Equal(byte(0x66), vm.Memory[4])
+				assert.Equal(byte(0x66), vm.Memory[5])
+				assert.Equal(byte(0x66), vm.Memory[6])
+				assert.Equal(byte(0x66), vm.Memory[7])
+			},
+			ErrorKindOk,
+		},
+		{
+			[]InstDef{{Kind: InstMemWriteFloat}},
+			[]Word{WordF64(0.0), WordU64(uint64(CoppervmMemoryCapacity))},
+			[]byte{},
+			func(vm Coppervm) {},
+			ErrorKindIllegalMemoryAccess,
+		},
+		{
+			[]InstDef{{Kind: InstMemWriteFloat}},
 			[]Word{},
 			[]byte{},
 			func(vm Coppervm) {},

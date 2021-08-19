@@ -54,8 +54,12 @@
 ## Memory access
 | Mnemonic | Operand | Description |
 | --- | :---: | --- |
-| read | - | reads a byte from the memory.<br/> The memory address to read is the stack top, that is replaced with the byte read after the instruction is executed |
+| read | - | reads a byte from the memory at address given by stack top; the top is replaced with the value read |
+| iread | - | reads a 64 bit (4 byte) integer from the memory at address given by stack top; the top is replaced with the value read interpreted as integer |
+| fread | - | reads a 64 bit (4 byte) float from the memory at address given by stack top; the top is replaced with the value read interpreted as float |
 | write | - | writes a byte to the memory.<br/> The value to write and his destination are the first two elements on the stack; the values are consumed after the instruction is executed. |
+| iwrite | - | writes a 64 bit (4 byte) integer to the memory.<br/> The value to write and his destination are the first two elements on the stack; the values are consumed after the instruction is executed. |
+| fwrite | - | writes a 64 bit (4 byte) float to the memory.<br/> The value to write and his destination are the first two elements on the stack; the values are consumed after the instruction is executed. |
 
 ## System Calls
 To interact with the underlying system you can use the `syscall` instruction which has one of the following as operands:

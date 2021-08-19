@@ -1,4 +1,4 @@
-%memory _ 0x48, 0x65, 0x6A, 0x6A, 0x6F
+%memory _ 0x48, 0x65
 %entry main
 
 main:
@@ -7,19 +7,44 @@ main:
     read
     print
     
-    ; read byte at 2
-    push 2
-    read
-    print
-    
-    ; write at 5
+    ; write at 1
     push 48
-    push 5
+    push 1
     write
 
-    ; read byte at 5
-    push 5
+    ; read byte at 1
+    push 1
     read
+    print
+
+    ; write uint
+    push 123456
+    push 2
+    iwrite
+
+    ; write int
+    push -1234
+    push 10
+    iwrite
+
+    ; write float
+    push 1.23456
+    push 18
+    fwrite
+
+    ; read uint
+    push 2
+    iread
+    print
+    
+    ; read int
+    push 10
+    iread
+    print
+
+    ; read float
+    push 18
+    fread
     print
 
     halt
