@@ -81,7 +81,11 @@ func (db *Copperdb) ExecuteCommand(input string) {
 		db.Vm.DumpMemory()
 		fmt.Println()
 	case "x":
-		fmt.Printf("[%d] -> %s\n", db.Vm.Ip, db.Vm.Program[db.Vm.Ip])
+		if !db.Vm.Halt {
+			fmt.Printf("[%d] -> %s\n", db.Vm.Ip, db.Vm.Program[db.Vm.Ip])
+		} else {
+			fmt.Println("The program is not being run. Use 'r' to run it first.")
+		}
 	case "q":
 		if !db.Vm.Halt {
 			fmt.Println("A debugging session is still active")
