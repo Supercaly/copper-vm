@@ -199,6 +199,17 @@ func (casm *Casm) translateSource(source string, filePath string) {
 		entry := casm.evaluateBinding(&binding, casm.EntryLocation)
 		casm.Entry = int(entry.AsI64)
 	}
+
+	// Check if halt instruction exist
+	hasHalt := false
+	for _, inst := range casm.Program {
+		if inst.Kind == coppervm.InstHalt {
+			hasHalt = true
+		}
+	}
+	if !hasHalt {
+		fmt.Printf("[WARN]: no 'halt' instruction found in the program! This program could not work as intended.\n")
+	}
 }
 
 // Returns a binding by its name.
