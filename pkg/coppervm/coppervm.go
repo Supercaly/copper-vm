@@ -1,10 +1,12 @@
 package coppervm
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math"
 	"os"
 )
 
@@ -348,6 +350,30 @@ func (vm *Coppervm) ExecuteInstruction() *CoppervmError {
 		}
 		vm.Stack[vm.StackSize-1] = WordU64(uint64(vm.Memory[addr]))
 		vm.Ip++
+	case InstMemReadInt:
+		if vm.StackSize < 1 {
+			return ErrorStackUnderflow(vm)
+		}
+		addr := vm.Stack[vm.StackSize-1].AsU64
+		if addr >= uint64(CoppervmMemoryCapacity) {
+			return ErrorIllegalMemoryAccess(vm)
+		}
+		buffer := vm.Memory[addr : addr+8]
+		value := binary.BigEndian.Uint64(buffer)
+		vm.Stack[vm.StackSize-1] = WordI64(int64(value))
+		vm.Ip++
+	case InstMemReadFloat:
+		if vm.StackSize < 1 {
+			return ErrorStackUnderflow(vm)
+		}
+		addr := vm.Stack[vm.StackSize-1].AsU64
+		if addr >= uint64(CoppervmMemoryCapacity) {
+			return ErrorIllegalMemoryAccess(vm)
+		}
+		buffer := vm.Memory[addr : addr+8]
+		value := binary.BigEndian.Uint64(buffer)
+		vm.Stack[vm.StackSize-1] = WordF64(math.Float64frombits(value))
+		vm.Ip++
 	case InstMemWrite:
 		if vm.StackSize < 2 {
 			return ErrorStackUnderflow(vm)
@@ -357,6 +383,38 @@ func (vm *Coppervm) ExecuteInstruction() *CoppervmError {
 			return ErrorIllegalMemoryAccess(vm)
 		}
 		vm.Memory[addr] = byte(vm.Stack[vm.StackSize-2].AsU64)
+		vm.StackSize -= 2
+		vm.Ip++
+	case InstMemWriteInt:
+		if vm.StackSize < 2 {
+			return ErrorStackUnderflow(vm)
+		}
+		addr := vm.Stack[vm.StackSize-1].AsU64
+		if addr >= uint64(CoppervmMemoryCapacity) {
+			return ErrorIllegalMemoryAccess(vm)
+		}
+		value := vm.Stack[vm.StackSize-2].AsI64
+		var buffer [8]byte
+		binary.BigEndian.PutUint64(buffer[:], uint64(value))
+		for i := uint64(0); i < uint64(8); i++ {
+			vm.Memory[addr+i] = buffer[i]
+		}
+		vm.StackSize -= 2
+		vm.Ip++
+	case InstMemWriteFloat:
+		if vm.StackSize < 2 {
+			return ErrorStackUnderflow(vm)
+		}
+		addr := vm.Stack[vm.StackSize-1].AsU64
+		if addr >= uint64(CoppervmMemoryCapacity) {
+			return ErrorIllegalMemoryAccess(vm)
+		}
+		value := math.Float64bits(vm.Stack[vm.StackSize-2].AsF64)
+		var buffer [8]byte
+		binary.BigEndian.PutUint64(buffer[:], uint64(value))
+		for i := uint64(0); i < uint64(8); i++ {
+			vm.Memory[addr+i] = buffer[i]
+		}
 		vm.StackSize -= 2
 		vm.Ip++
 	// Syscall
@@ -577,6 +635,6 @@ func (vm *Coppervm) DumpStack() {
 func (vm *Coppervm) DumpMemory() {
 	fmt.Println("Memory:")
 	for _, b := range vm.Memory {
-		fmt.Printf("%v ", b)
+		fmt.Printf("%x ", b)
 	}
 }

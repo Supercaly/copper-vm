@@ -149,9 +149,28 @@ var InstDefs = [InstCount]InstDef{
 		Name:       "read",
 	},
 	{
+		Kind:       InstMemReadInt,
+		HasOperand: false,
+		Name:       "iread",
+	},
+	{
+		Kind:       InstMemReadFloat,
+		HasOperand: false,
+		Name:       "fread",
+	},
+	{
 		Kind:       InstMemWrite,
 		HasOperand: false,
 		Name:       "write",
+	}, {
+		Kind:       InstMemWriteInt,
+		HasOperand: false,
+		Name:       "iwrite",
+	},
+	{
+		Kind:       InstMemWriteFloat,
+		HasOperand: false,
+		Name:       "fwrite",
 	},
 	{
 		Kind:       InstSyscall,
@@ -215,7 +234,11 @@ const (
 
 	// Memory access
 	InstMemRead
+	InstMemReadInt
+	InstMemReadFloat
 	InstMemWrite
+	InstMemWriteInt
+	InstMemWriteFloat
 
 	// Syscall
 	InstSyscall
