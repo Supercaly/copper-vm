@@ -15,5 +15,8 @@ jobs:
       - name: Build examples
         run: ./scripts/build_examples.sh
 
-      - name: Tests
+      - name: Unit Tests
         run: go test ./...
+
+      - name: Test Examples
+        run: ./scripts/run_examples.sh
