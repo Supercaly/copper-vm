@@ -171,6 +171,20 @@ func TestBindConst(t *testing.T) {
 			FileLocation{})
 		t.Error("Expecting an error")
 	}()
+
+	casm.bindConst(DirectiveLine{Name: "const", Block: "str_const \"test_str\""}, FileLocation{})
+	e, b = casm.getBindingByName("str_const")
+	assert.True(t, e)
+	assert.Equal(t, Binding{
+		Name: "str_const",
+		Value: Expression{
+			Kind:        ExpressionKindNumLitInt,
+			AsNumLitInt: 0,
+		},
+		Location: FileLocation{},
+		IsLabel:  false,
+	}, b)
+	assert.Equal(t, 9, len(casm.Memory))
 }
 
 func TestBindEntry(t *testing.T) {
@@ -352,4 +366,13 @@ func TestEvaluateBinding(t *testing.T) {
 	// if w2 != coppervm.WordU64(5) {
 	// 	t.Errorf("expecting %#v but got %#v", coppervm.WordU64(5), w2)
 	// }
+}
+
+func TestStrings(t *testing.T) {
+	casm := Casm{}
+	casm.translateSource("%const str \"a string\"\npush str\npush str\npush \"a new string\"", "")
+	assert.Equal(t, uint64(0), casm.Program[0].Operand.AsU64)
+	assert.Equal(t, uint64(0), casm.Program[1].Operand.AsU64)
+	assert.Equal(t, uint64(9), casm.Program[2].Operand.AsU64)
+	assert.Equal(t, 22, len(casm.Memory))
 }

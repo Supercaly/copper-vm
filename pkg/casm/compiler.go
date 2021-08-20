@@ -264,6 +264,15 @@ func (casm *Casm) bindConst(directive DirectiveLine, location FileLocation) {
 		panic(fmt.Sprintf("%s: %s", location, err))
 	}
 
+	// If it's a const string push it in memory and bind his base address
+	if value.Kind == ExpressionKindStringLit {
+		baseAddr := casm.pushStringToMemory(value.AsStringLit)
+		value = Expression{
+			Kind:        ExpressionKindNumLitInt,
+			AsNumLitInt: int64(baseAddr),
+		}
+	}
+
 	casm.Bindings = append(casm.Bindings, Binding{
 		Name:     name,
 		Value:    value,
@@ -360,6 +369,15 @@ func (casm *Casm) evaluateBinding(binding *Binding, location FileLocation) coppe
 	return casm.evaluateExpression(binding.Value, location)
 }
 
+// Push a string to casm memory and return the base address.
+func (casm *Casm) pushStringToMemory(str string) int {
+	strBase := len(casm.Memory)
+	byteStr := []byte(str)
+	byteStr = append(byteStr, 0)
+	casm.Memory = append(casm.Memory, byteStr...)
+	return strBase
+}
+
 // Evaluate an expression to extract a word.
 func (casm *Casm) evaluateExpression(expr Expression, location FileLocation) (ret coppervm.Word) {
 	switch expr.Kind {
@@ -374,11 +392,7 @@ func (casm *Casm) evaluateExpression(expr Expression, location FileLocation) (re
 	case ExpressionKindNumLitFloat:
 		ret = coppervm.WordF64(expr.AsNumLitFloat)
 	case ExpressionKindStringLit:
-		// TODO: Create method push string to memory
-		strBase := len(casm.Memory)
-		byteStr := []byte(expr.AsStringLit)
-		byteStr = append(byteStr, 0)
-		casm.Memory = append(casm.Memory, byteStr...)
+		strBase := casm.pushStringToMemory(expr.AsStringLit)
 		ret = coppervm.WordU64(uint64(strBase))
 	case ExpressionKindBinaryOp:
 		lhs := casm.evaluateExpression(*expr.AsBinaryOp.Lhs, location)
