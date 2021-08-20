@@ -200,15 +200,18 @@ func (casm *Casm) translateSource(source string, filePath string) {
 		casm.Entry = int(entry.AsI64)
 	}
 
-	// Check if halt instruction exist
-	hasHalt := false
-	for _, inst := range casm.Program {
-		if inst.Kind == coppervm.InstHalt {
-			hasHalt = true
+	// Check if halt instruction exist only in the main program
+	// skip this when translating includes
+	if casm.IncludeLevel == 0 {
+		hasHalt := false
+		for _, inst := range casm.Program {
+			if inst.Kind == coppervm.InstHalt {
+				hasHalt = true
+			}
 		}
-	}
-	if !hasHalt {
-		fmt.Printf("[WARN]: no 'halt' instruction found in the program! This program could not work as intended.\n")
+		if !hasHalt {
+			fmt.Printf("[WARN]: no 'halt' instruction found in the program! This program could not work as intended.\n")
+		}
 	}
 }
 
