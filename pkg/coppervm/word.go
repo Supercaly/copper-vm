@@ -91,7 +91,6 @@ func MulWord(a Word, b Word, t TypeRepresentation) (out Word) {
 
 // Returns the division of two Words.
 func DivWord(a Word, b Word, t TypeRepresentation) (out Word) {
-	fmt.Println(a, b)
 	switch t {
 	case TypeU64:
 		out = WordU64(a.AsU64 / b.AsU64)
