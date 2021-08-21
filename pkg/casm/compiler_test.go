@@ -362,10 +362,17 @@ func TestEvaluateBinding(t *testing.T) {
 	w := casm.evaluateBinding(&casm.Bindings[0], FileLocation{}).Word
 	assert.Equal(t, coppervm.WordU64(5), w)
 
-	// w2 := casm.evaluateBinding(&casm.Bindings[1], FileLocation{})
-	// if w2 != coppervm.WordU64(5) {
-	// 	t.Errorf("expecting %#v but got %#v", coppervm.WordU64(5), w2)
-	// }
+	w2 := casm.evaluateBinding(&casm.Bindings[0], FileLocation{}).Word
+	assert.Equal(t, coppervm.WordU64(5), w2)
+
+	func() {
+		defer func() { recover() }()
+		w3 := casm.evaluateBinding(&casm.Bindings[1], FileLocation{}).Word
+		if w3 != coppervm.WordU64(5) {
+			t.Errorf("expecting %#v but got %#v", coppervm.WordU64(5), w3)
+		}
+		t.Error("expecting an error")
+	}()
 }
 
 func TestStrings(t *testing.T) {

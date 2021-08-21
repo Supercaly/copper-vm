@@ -373,9 +373,22 @@ type EvalResult struct {
 }
 
 // Evaluate a binding to extract am eval result.
-func (casm *Casm) evaluateBinding(binding *Binding, location FileLocation) EvalResult {
-	// TODO(#6): Cyclic bindings cause a stack overflow
-	return casm.evaluateExpression(binding.Value, location)
+func (casm *Casm) evaluateBinding(binding *Binding, location FileLocation) (ret EvalResult) {
+	switch binding.Status {
+	case BindingUnevaluated:
+		binding.Status = BindingEvaluating
+		ret = casm.evaluateExpression(binding.Value, location)
+		binding.Status = BindingEvaluated
+		binding.EvaluatedWord = ret.Word
+	case BindingEvaluating:
+		panic("cycling binding definition detected")
+	case BindingEvaluated:
+		ret = EvalResult{
+			binding.EvaluatedWord,
+			binding.Value.Kind,
+		}
+	}
+	return ret
 }
 
 // Evaluate an expression to extract an eval result.

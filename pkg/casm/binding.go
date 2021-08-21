@@ -1,11 +1,23 @@
 package casm
 
+import "github.com/Supercaly/coppervm/pkg/coppervm"
+
 type Binding struct {
-	Name     string
-	Value    Expression
-	Location FileLocation
-	IsLabel  bool
+	Status        BindingStatus
+	Name          string
+	Value         Expression
+	EvaluatedWord coppervm.Word
+	Location      FileLocation
+	IsLabel       bool
 }
+
+type BindingStatus int
+
+const (
+	BindingUnevaluated BindingStatus = iota
+	BindingEvaluating
+	BindingEvaluated
+)
 
 type DeferredOperand struct {
 	Name     string
