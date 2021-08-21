@@ -150,28 +150,28 @@ func (vm *Coppervm) ExecuteInstruction() *CoppervmError {
 		if vm.StackSize < 2 {
 			return ErrorStackUnderflow(vm)
 		}
-		vm.Stack[vm.StackSize-2] = AddWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1])
+		vm.Stack[vm.StackSize-2] = AddWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], TypeU64)
 		vm.StackSize--
 		vm.Ip++
 	case InstSubInt:
 		if vm.StackSize < 2 {
 			return ErrorStackUnderflow(vm)
 		}
-		vm.Stack[vm.StackSize-2] = SubWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1])
+		vm.Stack[vm.StackSize-2] = SubWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], TypeU64)
 		vm.StackSize--
 		vm.Ip++
 	case InstMulInt:
 		if vm.StackSize < 2 {
 			return ErrorStackUnderflow(vm)
 		}
-		vm.Stack[vm.StackSize-2] = MulWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1])
+		vm.Stack[vm.StackSize-2] = MulWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], TypeU64)
 		vm.StackSize--
 		vm.Ip++
 	case InstMulIntSigned:
 		if vm.StackSize < 2 {
 			return ErrorStackUnderflow(vm)
 		}
-		vm.Stack[vm.StackSize-2] = MulWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1])
+		vm.Stack[vm.StackSize-2] = MulWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], TypeI64)
 		vm.StackSize--
 		vm.Ip++
 	case InstDivInt:
@@ -181,7 +181,7 @@ func (vm *Coppervm) ExecuteInstruction() *CoppervmError {
 		if vm.Stack[vm.StackSize-1].AsU64 == 0 {
 			return ErrorDivideByZero(vm)
 		}
-		vm.Stack[vm.StackSize-2] = DivWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1])
+		vm.Stack[vm.StackSize-2] = DivWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], TypeU64)
 		vm.StackSize--
 		vm.Ip++
 	case InstDivIntSigned:
@@ -191,7 +191,7 @@ func (vm *Coppervm) ExecuteInstruction() *CoppervmError {
 		if vm.Stack[vm.StackSize-1].AsI64 == 0 {
 			return ErrorDivideByZero(vm)
 		}
-		vm.Stack[vm.StackSize-2] = DivWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1])
+		vm.Stack[vm.StackSize-2] = DivWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], TypeI64)
 		vm.StackSize--
 		vm.Ip++
 	case InstModInt:
@@ -201,7 +201,7 @@ func (vm *Coppervm) ExecuteInstruction() *CoppervmError {
 		if vm.Stack[vm.StackSize-1].AsU64 == 0 {
 			return ErrorDivideByZero(vm)
 		}
-		vm.Stack[vm.StackSize-2] = ModWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1])
+		vm.Stack[vm.StackSize-2] = ModWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], TypeU64)
 		vm.StackSize--
 		vm.Ip++
 	case InstModIntSigned:
@@ -211,7 +211,7 @@ func (vm *Coppervm) ExecuteInstruction() *CoppervmError {
 		if vm.Stack[vm.StackSize-1].AsI64 == 0 {
 			return ErrorDivideByZero(vm)
 		}
-		vm.Stack[vm.StackSize-2] = ModWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1])
+		vm.Stack[vm.StackSize-2] = ModWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], TypeI64)
 		vm.StackSize--
 		vm.Ip++
 	// Floating point arithmetics
@@ -219,21 +219,21 @@ func (vm *Coppervm) ExecuteInstruction() *CoppervmError {
 		if vm.StackSize < 2 {
 			return ErrorStackUnderflow(vm)
 		}
-		vm.Stack[vm.StackSize-2] = AddWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1])
+		vm.Stack[vm.StackSize-2] = AddWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], TypeF64)
 		vm.StackSize--
 		vm.Ip++
 	case InstSubFloat:
 		if vm.StackSize < 2 {
 			return ErrorStackUnderflow(vm)
 		}
-		vm.Stack[vm.StackSize-2] = SubWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1])
+		vm.Stack[vm.StackSize-2] = SubWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], TypeF64)
 		vm.StackSize--
 		vm.Ip++
 	case InstMulFloat:
 		if vm.StackSize < 2 {
 			return ErrorStackUnderflow(vm)
 		}
-		vm.Stack[vm.StackSize-2] = MulWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1])
+		vm.Stack[vm.StackSize-2] = MulWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], TypeF64)
 		vm.StackSize--
 		vm.Ip++
 	case InstDivFloat:
@@ -243,7 +243,7 @@ func (vm *Coppervm) ExecuteInstruction() *CoppervmError {
 		if vm.Stack[vm.StackSize-1].AsF64 == 0 {
 			return ErrorDivideByZero(vm)
 		}
-		vm.Stack[vm.StackSize-2] = DivWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1])
+		vm.Stack[vm.StackSize-2] = DivWord(vm.Stack[vm.StackSize-2], vm.Stack[vm.StackSize-1], TypeF64)
 		vm.StackSize--
 		vm.Ip++
 	// Boolean operations
