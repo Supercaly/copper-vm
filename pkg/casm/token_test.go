@@ -1,7 +1,6 @@
 package casm
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -212,7 +211,6 @@ func (s *AsciiTestSuite) TestIsHex() {
 	s.result[102] = true
 	s.result[120] = true
 
-	fmt.Println(s.result)
 	for i := 0; i < len(s.runes); i++ {
 		assert.Equal(s.T(), s.result[i], isHex(s.runes[i]))
 	}

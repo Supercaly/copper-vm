@@ -136,7 +136,7 @@ func (casm *Casm) translateSource(source string, filePath string) {
 							Location: line.Location,
 						})
 				} else {
-					instDef.Operand = casm.evaluateExpression(operand, line.Location)
+					instDef.Operand = casm.evaluateExpression(operand, line.Location).Word
 				}
 			}
 			casm.Program = append(casm.Program, instDef)
@@ -168,7 +168,7 @@ func (casm *Casm) translateSource(source string, filePath string) {
 				deferredOp.Location,
 				deferredOp.Name))
 		}
-		casm.Program[deferredOp.Address].Operand = casm.evaluateBinding(&binding, deferredOp.Location)
+		casm.Program[deferredOp.Address].Operand = casm.evaluateBinding(&binding, deferredOp.Location).Word
 	}
 
 	// Print all the bindings
@@ -196,7 +196,7 @@ func (casm *Casm) translateSource(source string, filePath string) {
 			panic(fmt.Sprintf("%s: only label names can be set as entry point",
 				casm.EntryLocation))
 		}
-		entry := casm.evaluateBinding(&binding, casm.EntryLocation)
+		entry := casm.evaluateBinding(&binding, casm.EntryLocation).Word
 		casm.Entry = int(entry.AsI64)
 	}
 
@@ -366,10 +366,97 @@ func (casm *Casm) resolveIncludePath(path string) (exist bool, resolved string) 
 	return false, ""
 }
 
-// Evaluate a binding to extract a word.
-func (casm *Casm) evaluateBinding(binding *Binding, location FileLocation) coppervm.Word {
+// Represent the result of an expression evaluation.
+type EvalResult struct {
+	Word coppervm.Word
+	Type ExpressionKind
+}
+
+// Evaluate a binding to extract am eval result.
+func (casm *Casm) evaluateBinding(binding *Binding, location FileLocation) EvalResult {
 	// TODO(#6): Cyclic bindings cause a stack overflow
 	return casm.evaluateExpression(binding.Value, location)
+}
+
+// Evaluate an expression to extract an eval result.
+func (casm *Casm) evaluateExpression(expr Expression, location FileLocation) (ret EvalResult) {
+	switch expr.Kind {
+	case ExpressionKindBinding:
+		exist, binding := casm.getBindingByName(expr.AsBinding)
+		if !exist {
+			panic(fmt.Sprintf("%s: cannot find binding '%s'", location, expr.AsBinding))
+		}
+		ret = casm.evaluateBinding(&binding, location)
+	case ExpressionKindNumLitInt:
+		ret = EvalResult{
+			coppervm.WordI64(expr.AsNumLitInt),
+			ExpressionKindNumLitInt,
+		}
+	case ExpressionKindNumLitFloat:
+		ret = EvalResult{
+			coppervm.WordF64(expr.AsNumLitFloat),
+			ExpressionKindNumLitFloat,
+		}
+	case ExpressionKindStringLit:
+		strBase := casm.pushStringToMemory(expr.AsStringLit)
+		ret = EvalResult{
+			coppervm.WordU64(uint64(strBase)),
+			ExpressionKindStringLit,
+		}
+	case ExpressionKindBinaryOp:
+		ret = casm.evaluateBinaryOp(expr, location)
+	}
+	return ret
+}
+
+// Map of types of binary operation sides to
+// the result type.
+// The unsupported operations between types are
+// marked as -1 following this table:
+//
+//[
+//   // i  f  s  b  o
+//     [i, f, -, -, -], //i
+//     [f, f, -, -, -], //f
+//     [-, -, -, -, -], //s
+//     [-, -, -, -, -], //o
+//     [-, -, -, -, -], //b
+// ]
+var binaryOpEvaluationMap = [5][5]ExpressionKind{
+	{ExpressionKindNumLitInt, ExpressionKindNumLitFloat, -1, -1, -1},
+	{ExpressionKindNumLitFloat, ExpressionKindNumLitFloat, -1, -1, -1},
+	{-1, -1, -1, -1, -1},
+	{-1, -1, -1, -1, -1},
+	{-1, -1, -1, -1, -1},
+}
+
+// Map an ExpressionKind to a TypeRepresentation.
+var exprKindToTypeReprMap = map[ExpressionKind]coppervm.TypeRepresentation{
+	ExpressionKindNumLitInt:   coppervm.TypeI64,
+	ExpressionKindNumLitFloat: coppervm.TypeF64,
+	ExpressionKindStringLit:   coppervm.TypeU64,
+}
+
+// Evaluate a binary op expression to extract an eval result.
+func (casm *Casm) evaluateBinaryOp(binop Expression, location FileLocation) (ret EvalResult) {
+	lhs_result := casm.evaluateExpression(*binop.AsBinaryOp.Lhs, location)
+	rhs_result := casm.evaluateExpression(*binop.AsBinaryOp.Rhs, location)
+
+	opType := binaryOpEvaluationMap[lhs_result.Type][rhs_result.Type]
+	if opType == -1 {
+		panic(fmt.Sprintf("unsupported binary operation between types '%s' and '%s'", lhs_result.Type, rhs_result.Type))
+	}
+
+	typeRep := exprKindToTypeReprMap[opType]
+	switch binop.AsBinaryOp.Kind {
+	case BinaryOpKindPlus:
+		ret = EvalResult{coppervm.AddWord(lhs_result.Word, rhs_result.Word, typeRep), opType}
+	case BinaryOpKindMinus:
+		ret = EvalResult{coppervm.SubWord(lhs_result.Word, rhs_result.Word, typeRep), opType}
+	case BinaryOpKindTimes:
+		ret = EvalResult{coppervm.MulWord(lhs_result.Word, rhs_result.Word, typeRep), opType}
+	}
+	return ret
 }
 
 // Push a string to casm memory and return the base address.
@@ -379,36 +466,4 @@ func (casm *Casm) pushStringToMemory(str string) int {
 	byteStr = append(byteStr, 0)
 	casm.Memory = append(casm.Memory, byteStr...)
 	return strBase
-}
-
-// Evaluate an expression to extract a word.
-func (casm *Casm) evaluateExpression(expr Expression, location FileLocation) (ret coppervm.Word) {
-	switch expr.Kind {
-	case ExpressionKindBinding:
-		exist, binding := casm.getBindingByName(expr.AsBinding)
-		if !exist {
-			panic(fmt.Sprintf("%s: cannot find binding '%s'", location, expr.AsBinding))
-		}
-		ret = casm.evaluateBinding(&binding, location)
-	case ExpressionKindNumLitInt:
-		ret = coppervm.WordI64(expr.AsNumLitInt)
-	case ExpressionKindNumLitFloat:
-		ret = coppervm.WordF64(expr.AsNumLitFloat)
-	case ExpressionKindStringLit:
-		strBase := casm.pushStringToMemory(expr.AsStringLit)
-		ret = coppervm.WordU64(uint64(strBase))
-	case ExpressionKindBinaryOp:
-		lhs := casm.evaluateExpression(*expr.AsBinaryOp.Lhs, location)
-		rhs := casm.evaluateExpression(*expr.AsBinaryOp.Rhs, location)
-		switch expr.AsBinaryOp.Kind {
-		// TODO(#59): Fix compile time binary operations with different types
-		case BinaryOpKindPlus:
-			ret = coppervm.AddWord(lhs, rhs, coppervm.TypeI64)
-		case BinaryOpKindMinus:
-			ret = coppervm.SubWord(lhs, rhs, coppervm.TypeI64)
-		case BinaryOpKindTimes:
-			ret = coppervm.MulWord(lhs, rhs, coppervm.TypeI64)
-		}
-	}
-	return ret
 }

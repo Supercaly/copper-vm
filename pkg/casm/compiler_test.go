@@ -301,15 +301,15 @@ func TestEvaluateExpression(t *testing.T) {
 					AsNumLitInt: 2,
 				},
 				Rhs: &Expression{
-					Kind:        ExpressionKindNumLitInt,
-					AsNumLitInt: 5,
+					Kind:          ExpressionKindNumLitFloat,
+					AsNumLitFloat: 5.3,
 				},
 			},
-		}, coppervm.WordU64(10)},
+		}, coppervm.WordF64(10.6)},
 	}
 
 	for _, test := range tests {
-		assert.Equal(t, test.res, casm.evaluateExpression(test.expr, FileLocation{}))
+		assert.Equal(t, test.res, casm.evaluateExpression(test.expr, FileLocation{}).Word)
 	}
 
 	casm.Bindings = append(casm.Bindings, Binding{
@@ -319,7 +319,7 @@ func TestEvaluateExpression(t *testing.T) {
 	w := casm.evaluateExpression(Expression{
 		Kind:      ExpressionKindBinding,
 		AsBinding: "a_bind",
-	}, FileLocation{})
+	}, FileLocation{}).Word
 	assert.Equal(t, coppervm.WordI64(3), w)
 
 	func() {
@@ -359,7 +359,7 @@ func TestEvaluateBinding(t *testing.T) {
 		},
 	}
 
-	w := casm.evaluateBinding(&casm.Bindings[0], FileLocation{})
+	w := casm.evaluateBinding(&casm.Bindings[0], FileLocation{}).Word
 	assert.Equal(t, coppervm.WordU64(5), w)
 
 	// w2 := casm.evaluateBinding(&casm.Bindings[1], FileLocation{})
