@@ -296,9 +296,43 @@ func (vm *Coppervm) ExecuteInstruction() *CoppervmError {
 		a := vm.Stack[vm.StackSize-2]
 		b := vm.Stack[vm.StackSize-1]
 		var res Word
+		if a.AsU64 == b.AsU64 {
+			res = WordI64(0)
+		} else if a.AsU64 > b.AsU64 {
+			res = WordI64(1)
+		} else {
+			res = WordI64(-1)
+		}
+		vm.Stack[vm.StackSize-2] = res
+		vm.StackSize--
+		vm.Ip++
+	case InstCmpSigned:
+		if vm.StackSize < 2 {
+			return ErrorStackUnderflow(vm)
+		}
+		a := vm.Stack[vm.StackSize-2]
+		b := vm.Stack[vm.StackSize-1]
+		var res Word
 		if a.AsI64 == b.AsI64 {
 			res = WordI64(0)
 		} else if a.AsI64 > b.AsI64 {
+			res = WordI64(1)
+		} else {
+			res = WordI64(-1)
+		}
+		vm.Stack[vm.StackSize-2] = res
+		vm.StackSize--
+		vm.Ip++
+	case InstCmpFloat:
+		if vm.StackSize < 2 {
+			return ErrorStackUnderflow(vm)
+		}
+		a := vm.Stack[vm.StackSize-2]
+		b := vm.Stack[vm.StackSize-1]
+		var res Word
+		if a.AsF64 == b.AsF64 {
+			res = WordI64(0)
+		} else if a.AsF64 > b.AsF64 {
 			res = WordI64(1)
 		} else {
 			res = WordI64(-1)
