@@ -128,6 +128,16 @@ var InstDefs = [InstCount]InstDef{
 		Name:       "cmp",
 	},
 	{
+		Kind:       InstCmpSigned,
+		HasOperand: false,
+		Name:       "icmp",
+	},
+	{
+		Kind:       InstCmpFloat,
+		HasOperand: false,
+		Name:       "fcmp",
+	},
+	{
 		Kind:       InstJmp,
 		HasOperand: true,
 		Name:       "jmp",
@@ -258,6 +268,8 @@ const (
 
 	// Flow control
 	InstCmp
+	InstCmpSigned
+	InstCmpFloat
 	InstJmp
 	InstJmpZero
 	InstJmpNotZero

@@ -36,7 +36,9 @@
 ## Flow control
 | Mnemonic | Operand | Description |
 | --- | :---: | --- |
-| cmp | - | compares first to elements on the stack, consumes them and push on stack top: 0 if a = b, 1 if a > b, -1 if b > a | 
+| cmp | - | compares first to elements on the stack as unsigned integers, consumes them and push on stack top: 0 if a = b, 1 if a > b, -1 if b > a | 
+| icmp | - | compares first to elements on the stack as signed integers, consumes them and push on stack top: 0 if a = b, 1 if a > b, -1 if b > a | 
+| fcmp | - | compares first to elements on the stack as floating point, consumes them and push on stack top: 0 if a = b, 1 if a > b, -1 if b > a | 
 | jmp | location | jump unconditionally to location | 
 | jz | location | jump to location if stack top is zero, the top is consumed | 
 | jnz | location | jump to location if stack top is not zero, the top is consumed | 

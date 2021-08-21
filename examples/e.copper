@@ -1,5 +1,5 @@
 ; TODO(#55): setting this too high cause integer divide by zero exception on vm
-%const N        50 ; number of iterations
+%const N        100 ; number of iterations
 %memory n       0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 ; store n in memory
 %memory n_fat   0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 ; store n! in memory
 %memory sum     0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 ; store sum in memory
@@ -8,10 +8,10 @@
 main:
     push 1 ; n
     push n
-    iwrite
+    fwrite
     push 1 ; n!
     push n_fat
-    iwrite
+    fwrite
     push 2.0 ; sum
     push sum
     fwrite
@@ -29,20 +29,20 @@ main:
 compute_e:
     ; n++
     push n
-    iread
+    fread
     push 1
-    add
+    fadd
     dup
     push n
-    iwrite
+    fwrite
 
     ; n! = n+1!
     push n_fat
-    iread
-    mul
+    fread
+    fmul
     dup
     push n_fat
-    iwrite
+    fwrite
 
     ; 1/n!
     push 1
@@ -58,9 +58,9 @@ compute_e:
 
     ; if n < N compute_e
     push n
-    iread
+    fread
     push N
-    cmp
+    fcmp
     jg base_case
 
     call compute_e

@@ -401,12 +401,13 @@ func (casm *Casm) evaluateExpression(expr Expression, location FileLocation) (re
 		lhs := casm.evaluateExpression(*expr.AsBinaryOp.Lhs, location)
 		rhs := casm.evaluateExpression(*expr.AsBinaryOp.Rhs, location)
 		switch expr.AsBinaryOp.Kind {
+		// TODO(#59): Fix compile time binary operations with different types
 		case BinaryOpKindPlus:
-			ret = coppervm.AddWord(lhs, rhs)
+			ret = coppervm.AddWord(lhs, rhs, coppervm.TypeI64)
 		case BinaryOpKindMinus:
-			ret = coppervm.SubWord(lhs, rhs)
+			ret = coppervm.SubWord(lhs, rhs, coppervm.TypeI64)
 		case BinaryOpKindTimes:
-			ret = coppervm.MulWord(lhs, rhs)
+			ret = coppervm.MulWord(lhs, rhs, coppervm.TypeI64)
 		}
 	}
 	return ret
