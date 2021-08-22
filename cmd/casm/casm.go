@@ -10,6 +10,7 @@ import (
 
 	au "github.com/Supercaly/coppervm/internal"
 	c "github.com/Supercaly/coppervm/pkg/casm"
+	"github.com/Supercaly/coppervm/pkg/coppervm"
 )
 
 func usage(stream io.Writer, program string) {
@@ -70,7 +71,7 @@ func main() {
 	if casm.OutputFile == "" {
 		fileName := filepath.Base(casm.InputFile)
 		fileDir := filepath.Dir(casm.InputFile)
-		fileName = strings.TrimSuffix(fileName, filepath.Ext(fileName)) + ".vm"
+		fileName = strings.TrimSuffix(fileName, filepath.Ext(fileName)) + coppervm.CoppervmFileExtention
 		casm.OutputFile = filepath.Join(fileDir, fileName)
 	}
 
