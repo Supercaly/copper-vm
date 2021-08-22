@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/Supercaly/coppervm/pkg/copperdb"
-	"github.com/Supercaly/coppervm/pkg/coppervm"
 )
 
 func usage(stream io.Writer, program string) {
@@ -20,18 +19,8 @@ func main() {
 		log.Fatalf("[ERROR]: input was not provided\n")
 	}
 
-	inputFilePath := os.Args[1]
-
-	vm := coppervm.Coppervm{}
-	meta, err := vm.LoadProgramFromFile(inputFilePath)
-	if err != nil {
+	db := copperdb.NewCopperdb(os.Args[1])
+	if err := db.StartDebugSession(); err != nil {
 		log.Fatalf("[ERROR]: %s", err)
 	}
-	vm.Halt = true
-	db := copperdb.Copperdb{
-		InputFile:    inputFilePath,
-		Vm:           &vm,
-		DebugSymbols: meta.DebugSymbols,
-	}
-	db.StartProgramDebug()
 }

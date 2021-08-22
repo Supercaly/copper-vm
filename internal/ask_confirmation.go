@@ -1,4 +1,4 @@
-package copperdb
+package internal
 
 import (
 	"bufio"
