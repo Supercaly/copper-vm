@@ -3,7 +3,6 @@ package copperdb
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"os"
 	"sort"
 	"strconv"
@@ -14,34 +13,55 @@ import (
 )
 
 type Copperdb struct {
-	InputFile         string
-	Vm                *coppervm.Coppervm
-	Breakpoints       Breakpoints
-	BreakpointCount   uint
-	DebugSymbols      coppervm.DebugSymbols
-	CurrentBreakpoint Breakpoint
+	InputFile string
+
+	vm *coppervm.Coppervm
+
+	breakpoints       Breakpoints
+	breakpointCount   uint
+	currentBreakpoint Breakpoint
+
+	debugSymbols coppervm.DebugSymbols
+
+	sessionHalt bool
+}
+
+func NewCopperdb(inputFile string) Copperdb {
+	return Copperdb{
+		InputFile: inputFile,
+		vm:        &coppervm.Coppervm{},
+	}
 }
 
 // Start the debugger session.
 // In this method the debugger will promp the user for commands
 // and execute them.
-func (db *Copperdb) StartProgramDebug() {
+func (db *Copperdb) StartDebugSession() error {
+	meta, err := db.vm.LoadProgramFromFile(db.InputFile)
+	if err != nil {
+		return err
+	}
+	db.vm.Halt = true
+	db.debugSymbols = meta.DebugSymbols
+
+	// Start db session
 	reader := bufio.NewReader(os.Stdin)
-	for {
+	for !db.sessionHalt {
 		fmt.Print("(coppervm) ")
 		str, err := reader.ReadString('\n')
 		str = strings.TrimSuffix(str, "\n")
 		str = strings.TrimSpace(str)
-
 		if err != nil {
-			log.Fatalf("Something went wrong with the debugger: %s", err)
+			return fmt.Errorf("something went wrong with the debugger: %s", err)
 		}
-		db.ExecuteCommand(str)
+		db.executeCommand(str)
 	}
+
+	return nil
 }
 
 // Execute a command in input.
-func (db *Copperdb) ExecuteCommand(input string) {
+func (db *Copperdb) executeCommand(input string) {
 	cmd, args := internal.SplitByDelim(input, ' ')
 	cmd = strings.TrimSpace(cmd)
 	args = strings.TrimSpace(args)
@@ -53,48 +73,48 @@ func (db *Copperdb) ExecuteCommand(input string) {
 
 	switch cmd {
 	case "r":
-		db.RunProgram()
+		db.runProgram()
 	case "c":
-		db.ContinueProgram()
+		db.continueProgram()
 	case "s":
-		db.StepProgram()
+		db.stepProgram()
 	case "b":
-		addr, err := db.StringToBrAddress(args)
+		addr, err := db.stringToBrAddress(args)
 		if err != nil {
 			fmt.Println(err)
 		} else {
-			db.AddBreakpoint(coppervm.InstAddr(addr))
+			db.addBreakpoint(coppervm.InstAddr(addr))
 		}
 	case "d":
-		num, err := db.StringToBrNum(args)
+		num, err := db.stringToBrNum(args)
 		if err != nil {
 			fmt.Printf("Invalid breakpoint number '%s'\n", args)
 		} else {
-			db.RemoveBreakpoint(num)
+			db.removeBreakpoint(num)
 		}
 	case "l":
-		db.ListBreakpoints()
+		db.listBreakpoints()
 	case "p":
-		db.Vm.DumpStack()
+		db.vm.DumpStack()
 		fmt.Println()
 	case "m":
-		db.Vm.DumpMemory()
+		db.vm.DumpMemory()
 		fmt.Println()
 	case "x":
-		if !db.Vm.Halt {
-			fmt.Printf("[%d] -> %s\n", db.Vm.Ip, db.Vm.Program[db.Vm.Ip])
+		if !db.vm.Halt {
+			fmt.Printf("[%d] -> %s\n", db.vm.Ip, db.vm.Program[db.vm.Ip])
 		} else {
 			fmt.Println("The program is not being run. Use 'r' to run it first.")
 		}
 	case "q":
-		if !db.Vm.Halt {
+		if !db.vm.Halt {
 			fmt.Println("A debugging session is still active")
-			if !AskConfirmation("Quit anyway?") {
+			if !internal.AskConfirmation("Quit anyway?") {
 				return
 			}
 		}
 		fmt.Println("Bye!")
-		os.Exit(0)
+		db.sessionHalt = true
 	case "h":
 		db.PrintHelp()
 	default:
@@ -104,87 +124,87 @@ func (db *Copperdb) ExecuteCommand(input string) {
 
 // Reset the debugger status.
 func (db *Copperdb) Reset() {
-	db.CurrentBreakpoint = EmptyBreakpoint()
-	db.Vm.Reset()
+	db.currentBreakpoint = EmptyBreakpoint()
+	db.vm.Reset()
 }
 
 // Executes count instructions of the debugged program.
-func (db *Copperdb) ExecuteInstructions(count int) {
-	for count != 0 && !db.Vm.Halt {
-		if db.BrakeAtAddr(db.Vm.Ip) {
+func (db *Copperdb) executeInstructions(count int) {
+	for count != 0 && !db.vm.Halt {
+		if db.brakeAtAddr(db.vm.Ip) {
 			// Reached a breakpoint
-			db.CurrentBreakpoint = db.Breakpoints[db.Breakpoints.GetIndexByAddress(db.Vm.Ip)]
+			db.currentBreakpoint = db.breakpoints[db.breakpoints.GetIndexByAddress(db.vm.Ip)]
 			fmt.Printf("\nBreakpoint %d, %d\n",
-				db.CurrentBreakpoint.Number,
-				db.CurrentBreakpoint.Addr)
+				db.currentBreakpoint.Number,
+				db.currentBreakpoint.Addr)
 			return
 		} else {
-			db.CurrentBreakpoint = EmptyBreakpoint()
+			db.currentBreakpoint = EmptyBreakpoint()
 			// Execute current instruction
-			err := db.Vm.ExecuteInstruction()
+			err := db.vm.ExecuteInstruction()
 			if err.Kind != coppervm.ErrorKindOk {
 				fmt.Println("Error", err)
-				db.Vm.Halt = true
+				db.vm.Halt = true
 				return
 			}
 		}
 		count--
 	}
-	if db.Vm.Halt {
-		fmt.Printf("Program executed with exit code '%d'\n", db.Vm.ExitCode)
+	if db.vm.Halt {
+		fmt.Printf("Program executed with exit code '%d'\n", db.vm.ExitCode)
 	}
 }
 
 // Returns true if the current address is a brakepoint not reached,
 // false otherwise.
-func (db *Copperdb) BrakeAtAddr(addr coppervm.InstAddr) bool {
-	brIdx := db.Breakpoints.GetIndexByAddress(addr)
+func (db *Copperdb) brakeAtAddr(addr coppervm.InstAddr) bool {
+	brIdx := db.breakpoints.GetIndexByAddress(addr)
 	if brIdx == -1 {
 		return false
 	}
-	return db.Breakpoints[brIdx] != db.CurrentBreakpoint
+	return db.breakpoints[brIdx] != db.currentBreakpoint
 }
 
 // Run the debugged program if it's not already running.
-func (db *Copperdb) RunProgram() {
-	if !db.Vm.Halt {
+func (db *Copperdb) runProgram() {
+	if !db.vm.Halt {
 		fmt.Println("The program has been started already.")
-		if AskConfirmation("Start it from the beginning?") {
-			db.Vm.Halt = true
-			db.RunProgram()
+		if internal.AskConfirmation("Start it from the beginning?") {
+			db.vm.Halt = true
+			db.runProgram()
 		}
 	} else {
 		fmt.Printf("Starting program '%s'\n", db.InputFile)
 		db.Reset()
-		db.ExecuteInstructions(-1)
+		db.executeInstructions(-1)
 	}
 }
 
 // Continue the execution of the program if it's running.
-func (db *Copperdb) ContinueProgram() {
-	if db.Vm.Halt {
+func (db *Copperdb) continueProgram() {
+	if db.vm.Halt {
 		fmt.Println("The program is not being run. Use 'r' to run it first.")
 	} else {
 		fmt.Println("Continuing.")
-		db.ExecuteInstructions(-1)
+		db.executeInstructions(-1)
 	}
 }
 
 // Execute a single instruction of the program.
-func (db *Copperdb) StepProgram() {
-	if db.Vm.Halt {
+func (db *Copperdb) stepProgram() {
+	if db.vm.Halt {
 		fmt.Println("The program is not being run. Use 'r' to run it first.")
 	} else {
 		fmt.Println("Stepping.")
-		db.ExecuteInstructions(1)
+		db.executeInstructions(1)
 	}
 }
 
 // Print all set breakpoints.
-func (db *Copperdb) ListBreakpoints() {
-	if len(db.Breakpoints) > 0 {
+func (db *Copperdb) listBreakpoints() {
+	if len(db.breakpoints) > 0 {
 		fmt.Println("Num\tAddress")
-		for _, br := range db.Breakpoints {
+		for _, br := range db.breakpoints {
 			fmt.Printf("%d\t%d\n", br.Number, br.Addr)
 		}
 	} else {
@@ -193,26 +213,26 @@ func (db *Copperdb) ListBreakpoints() {
 }
 
 // Add a new breakpoint at given address.
-func (db *Copperdb) AddBreakpoint(addr coppervm.InstAddr) {
-	db.BreakpointCount++
+func (db *Copperdb) addBreakpoint(addr coppervm.InstAddr) {
+	db.breakpointCount++
 	newBr := Breakpoint{
-		Number: db.BreakpointCount,
+		Number: db.breakpointCount,
 		Addr:   addr,
 	}
-	db.Breakpoints = append(db.Breakpoints, newBr)
+	db.breakpoints = append(db.breakpoints, newBr)
 	fmt.Println("Breakpoint", newBr.Number, "at", newBr.Addr)
 }
 
 // Remove breakpoint withgiven number.
-func (db *Copperdb) RemoveBreakpoint(brNum uint) {
-	brIdx := db.Breakpoints.GetIndexByNumber(brNum)
+func (db *Copperdb) removeBreakpoint(brNum uint) {
+	brIdx := db.breakpoints.GetIndexByNumber(brNum)
 	if brIdx == -1 {
 		fmt.Println("No breakpoint number", brNum)
 	} else {
-		removedBr := db.Breakpoints[brIdx]
-		db.Breakpoints[brIdx] = db.Breakpoints[len(db.Breakpoints)-1]
-		db.Breakpoints = db.Breakpoints[:len(db.Breakpoints)-1]
-		sort.Sort(db.Breakpoints)
+		removedBr := db.breakpoints[brIdx]
+		db.breakpoints[brIdx] = db.breakpoints[len(db.breakpoints)-1]
+		db.breakpoints = db.breakpoints[:len(db.breakpoints)-1]
+		sort.Sort(db.breakpoints)
 		fmt.Println("Delete breakpoint", removedBr.Number, "at", removedBr.Addr)
 	}
 }
@@ -233,22 +253,22 @@ func (db *Copperdb) PrintHelp() {
 }
 
 // Parse a string to an breakpoint number.
-func (db *Copperdb) StringToBrNum(str string) (uint, error) {
+func (db *Copperdb) stringToBrNum(str string) (uint, error) {
 	out64, err := strconv.ParseUint(str, 10, 64)
 	return uint(out64), err
 }
 
 // Parse a string to an address.
-func (db *Copperdb) StringToBrAddress(str string) (out int, err error) {
+func (db *Copperdb) stringToBrAddress(str string) (out int, err error) {
 	// Try parse as address
 	out, err = strconv.Atoi(str)
 	if err != nil {
 		// Try parse as symbol name
-		idx := db.DebugSymbols.GetIndexByName(str)
+		idx := db.debugSymbols.GetIndexByName(str)
 		if idx == -1 {
 			return out, fmt.Errorf("no debug symbol or address '%s'", str)
 		}
-		out = int(db.DebugSymbols[idx].Address)
+		out = int(db.debugSymbols[idx].Address)
 	}
 	return out, nil
 }
