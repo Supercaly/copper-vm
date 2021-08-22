@@ -88,14 +88,38 @@ func TestGetBindingByName(t *testing.T) {
 
 	e, b := casm.getBindingByName("a_label")
 	assert.True(t, e)
-	assert.Equal(t, b, casm.Bindings[0])
+	assert.Equal(t, casm.Bindings[0], b)
 
 	e, b = casm.getBindingByName("a_const")
 	assert.True(t, e)
-	assert.Equal(t, b, casm.Bindings[1])
+	assert.Equal(t, casm.Bindings[1], b)
 
 	e, b = casm.getBindingByName("test")
 	assert.False(t, e)
+}
+
+func TestGetBindingIndexByName(t *testing.T) {
+	casm := Casm{
+		Bindings: []Binding{
+			{Name: "a_label",
+				Value:    Expression{Kind: ExpressionKindNumLitInt, AsNumLitInt: 1},
+				Location: FileLocation{},
+				IsLabel:  true},
+			{Name: "a_const",
+				Value:    Expression{Kind: ExpressionKindNumLitFloat, AsNumLitFloat: 2.3},
+				Location: FileLocation{},
+				IsLabel:  false},
+		},
+	}
+
+	i := casm.getBindingIndexByName("a_label")
+	assert.Equal(t, 0, i)
+
+	i = casm.getBindingIndexByName("a_const")
+	assert.Equal(t, 1, i)
+
+	i = casm.getBindingIndexByName("test")
+	assert.Equal(t, -1, i)
 }
 
 func TestBindLabel(t *testing.T) {
@@ -119,15 +143,13 @@ func TestBindLabel(t *testing.T) {
 	assert.True(t, e)
 
 	lab := Binding{
-		Name: "new_label",
-		Value: Expression{
-			Kind:        ExpressionKindNumLitInt,
-			AsNumLitInt: 2,
-		},
-		Location: FileLocation{},
-		IsLabel:  true,
+		Name:          "new_label",
+		EvaluatedWord: coppervm.WordU64(2),
+		Location:      FileLocation{},
+		IsLabel:       true,
+		Status:        BindingEvaluated,
 	}
-	assert.Equal(t, b, lab)
+	assert.Equal(t, lab, b)
 }
 
 func TestBindConst(t *testing.T) {
@@ -161,7 +183,7 @@ func TestBindConst(t *testing.T) {
 		Location: FileLocation{},
 		IsLabel:  false,
 	}
-	assert.Equal(t, b, c)
+	assert.Equal(t, c, b)
 
 	func() {
 		defer func() {
@@ -176,13 +198,15 @@ func TestBindConst(t *testing.T) {
 	e, b = casm.getBindingByName("str_const")
 	assert.True(t, e)
 	assert.Equal(t, Binding{
-		Name: "str_const",
+		Status: BindingEvaluated,
+		Name:   "str_const",
 		Value: Expression{
-			Kind:        ExpressionKindNumLitInt,
-			AsNumLitInt: 0,
+			Kind:        ExpressionKindStringLit,
+			AsStringLit: "test_str",
 		},
-		Location: FileLocation{},
-		IsLabel:  false,
+		EvaluatedWord: coppervm.WordU64(0),
+		Location:      FileLocation{},
+		IsLabel:       false,
 	}, b)
 	assert.Equal(t, 9, len(casm.Memory))
 }
@@ -226,15 +250,13 @@ func TestBindMemory(t *testing.T) {
 	assert.True(t, e)
 
 	c := Binding{
-		Name: "new_mem",
-		Value: Expression{
-			Kind:        ExpressionKindNumLitInt,
-			AsNumLitInt: 0,
-		},
-		Location: FileLocation{},
-		IsLabel:  false,
+		Status:        BindingEvaluated,
+		Name:          "new_mem",
+		EvaluatedWord: coppervm.WordU64(0),
+		Location:      FileLocation{},
+		IsLabel:       false,
 	}
-	assert.Equal(t, b, c)
+	assert.Equal(t, c, b)
 
 	func() {
 		defer func() {
@@ -359,15 +381,15 @@ func TestEvaluateBinding(t *testing.T) {
 		},
 	}
 
-	w := casm.evaluateBinding(&casm.Bindings[0], FileLocation{}).Word
+	w := casm.evaluateBinding(casm.Bindings[0], FileLocation{}).Word
 	assert.Equal(t, coppervm.WordU64(5), w)
 
-	w2 := casm.evaluateBinding(&casm.Bindings[0], FileLocation{}).Word
+	w2 := casm.evaluateBinding(casm.Bindings[0], FileLocation{}).Word
 	assert.Equal(t, coppervm.WordU64(5), w2)
 
 	func() {
 		defer func() { recover() }()
-		w3 := casm.evaluateBinding(&casm.Bindings[1], FileLocation{}).Word
+		w3 := casm.evaluateBinding(casm.Bindings[1], FileLocation{}).Word
 		if w3 != coppervm.WordU64(5) {
 			t.Errorf("expecting %#v but got %#v", coppervm.WordU64(5), w3)
 		}
@@ -377,9 +399,10 @@ func TestEvaluateBinding(t *testing.T) {
 
 func TestStrings(t *testing.T) {
 	casm := Casm{}
-	casm.translateSource("%const str \"a string\"\npush str\npush str\npush \"a new string\"", "")
+	casm.translateSource("%const str \"a string\"\npush str\npush str\npush \"a new string\"\npush \"a\"+str", "")
 	assert.Equal(t, uint64(0), casm.Program[0].Operand.AsU64)
 	assert.Equal(t, uint64(0), casm.Program[1].Operand.AsU64)
 	assert.Equal(t, uint64(9), casm.Program[2].Operand.AsU64)
-	assert.Equal(t, 22, len(casm.Memory))
+	assert.Equal(t, uint64(24), casm.Program[3].Operand.AsU64)
+	assert.Equal(t, 34, len(casm.Memory))
 }

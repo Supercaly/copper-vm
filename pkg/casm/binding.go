@@ -1,6 +1,10 @@
 package casm
 
-import "github.com/Supercaly/coppervm/pkg/coppervm"
+import (
+	"fmt"
+
+	"github.com/Supercaly/coppervm/pkg/coppervm"
+)
 
 type Binding struct {
 	Status        BindingStatus
@@ -11,6 +15,16 @@ type Binding struct {
 	IsLabel       bool
 }
 
+func (b Binding) String() string {
+	return fmt.Sprintf("%s %s (%s) %s %s %t",
+		b.Name,
+		b.Value,
+		b.EvaluatedWord,
+		b.Status,
+		b.Location,
+		b.IsLabel)
+}
+
 type BindingStatus int
 
 const (
@@ -18,6 +32,14 @@ const (
 	BindingEvaluating
 	BindingEvaluated
 )
+
+func (state BindingStatus) String() string {
+	return [...]string{
+		"BindingUnevaluated",
+		"BindingEvaluating",
+		"BindingEvaluated",
+	}[state]
+}
 
 type DeferredOperand struct {
 	Name     string

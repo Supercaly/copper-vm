@@ -37,6 +37,8 @@ type Casm struct {
 
 	IncludeLevel int
 	IncludePaths []string
+
+	StringLengths map[int]int
 }
 
 // Save a copper vm program to binary file.
@@ -127,7 +129,7 @@ func (casm *Casm) translateSource(source string, filePath string) {
 				}
 				if operand.Kind == ExpressionKindBinding {
 					if CasmDebug {
-						fmt.Println("[INFO]: push deferred operand" + operand.AsBinding)
+						fmt.Println("[INFO]: push deferred operand " + operand.AsBinding)
 					}
 					casm.DeferredOperands = append(casm.DeferredOperands,
 						DeferredOperand{
@@ -159,7 +161,9 @@ func (casm *Casm) translateSource(source string, filePath string) {
 	// Second Pass
 	for _, deferredOp := range casm.DeferredOperands {
 		if CasmDebug {
-			fmt.Printf("[INFO]: resolve deferred operand '%s' at '%d'\n", deferredOp.Name, deferredOp.Address)
+			fmt.Printf("[INFO]: resolve deferred operand '%s' at '%s'\n",
+				deferredOp.Name,
+				deferredOp.Location)
 		}
 
 		exist, binding := casm.getBindingByName(deferredOp.Name)
@@ -168,18 +172,14 @@ func (casm *Casm) translateSource(source string, filePath string) {
 				deferredOp.Location,
 				deferredOp.Name))
 		}
-		casm.Program[deferredOp.Address].Operand = casm.evaluateBinding(&binding, deferredOp.Location).Word
+		casm.Program[deferredOp.Address].Operand = casm.evaluateBinding(binding,
+			deferredOp.Location).Word
 	}
 
 	// Print all the bindings
 	if CasmDebug {
 		for _, b := range casm.Bindings {
-			fmt.Printf("[INFO]: binding: %s (%d %d %s) %s\n",
-				b.Name,
-				b.Value.Kind,
-				b.Value.AsNumLitInt,
-				b.Value.AsBinding,
-				b.Location)
+			fmt.Printf("[INFO]: binding: %s \n", b)
 		}
 	}
 
@@ -196,7 +196,7 @@ func (casm *Casm) translateSource(source string, filePath string) {
 			panic(fmt.Sprintf("%s: only label names can be set as entry point",
 				casm.EntryLocation))
 		}
-		entry := casm.evaluateBinding(&binding, casm.EntryLocation).Word
+		entry := casm.evaluateBinding(binding, casm.EntryLocation).Word
 		casm.Entry = int(entry.AsI64)
 	}
 
@@ -227,6 +227,17 @@ func (casm *Casm) getBindingByName(name string) (bool, Binding) {
 	return false, Binding{}
 }
 
+// Returns the index of a binding by it's name.
+// If the binding doesn't exist -1 is returned.
+func (casm *Casm) getBindingIndexByName(name string) int {
+	for idx, b := range casm.Bindings {
+		if b.Name == name {
+			return idx
+		}
+	}
+	return -1
+}
+
 // Binds a label.
 func (casm *Casm) bindLabel(name string, address int, location FileLocation) {
 	exist, binding := casm.getBindingByName(name)
@@ -238,13 +249,11 @@ func (casm *Casm) bindLabel(name string, address int, location FileLocation) {
 	}
 
 	casm.Bindings = append(casm.Bindings, Binding{
-		Name: name,
-		Value: Expression{
-			Kind:        ExpressionKindNumLitInt,
-			AsNumLitInt: int64(address),
-		},
-		Location: location,
-		IsLabel:  true,
+		Status:        BindingEvaluated,
+		Name:          name,
+		EvaluatedWord: coppervm.WordU64(uint64(address)),
+		Location:      location,
+		IsLabel:       true,
 	})
 }
 
@@ -267,21 +276,22 @@ func (casm *Casm) bindConst(directive DirectiveLine, location FileLocation) {
 		panic(fmt.Sprintf("%s: %s", location, err))
 	}
 
-	// If it's a const string push it in memory and bind his base address
-	if value.Kind == ExpressionKindStringLit {
-		baseAddr := casm.pushStringToMemory(value.AsStringLit)
-		value = Expression{
-			Kind:        ExpressionKindNumLitInt,
-			AsNumLitInt: int64(baseAddr),
-		}
-	}
-
-	casm.Bindings = append(casm.Bindings, Binding{
+	newBinding := Binding{
+		Status:   BindingUnevaluated,
 		Name:     name,
 		Value:    value,
 		Location: location,
 		IsLabel:  false,
-	})
+	}
+
+	// If it's a const string push it in memory and bind his base address
+	if value.Kind == ExpressionKindStringLit {
+		baseAddr := casm.pushStringToMemory(value.AsStringLit)
+		newBinding.EvaluatedWord = coppervm.WordU64(uint64(baseAddr))
+		newBinding.Status = BindingEvaluated
+	}
+
+	casm.Bindings = append(casm.Bindings, newBinding)
 }
 
 // Binds an entry point.
@@ -319,13 +329,11 @@ func (casm *Casm) bindMemory(directive DirectiveLine, location FileLocation) {
 	casm.Memory = append(casm.Memory, chunk...)
 
 	casm.Bindings = append(casm.Bindings, Binding{
-		Name: name,
-		Value: Expression{
-			Kind:        ExpressionKindNumLitInt,
-			AsNumLitInt: int64(memAddr),
-		},
-		Location: location,
-		IsLabel:  false,
+		Status:        BindingEvaluated,
+		Name:          name,
+		EvaluatedWord: coppervm.WordU64(uint64(memAddr)),
+		Location:      location,
+		IsLabel:       false,
 	})
 }
 
@@ -373,15 +381,19 @@ type EvalResult struct {
 }
 
 // Evaluate a binding to extract am eval result.
-func (casm *Casm) evaluateBinding(binding *Binding, location FileLocation) (ret EvalResult) {
+func (casm *Casm) evaluateBinding(binding Binding, location FileLocation) (ret EvalResult) {
 	switch binding.Status {
 	case BindingUnevaluated:
-		binding.Status = BindingEvaluating
+		idx := casm.getBindingIndexByName(binding.Name)
+		if idx == -1 {
+			panic(fmt.Sprintf("%s: cannot find index binding %s", location, binding.Name))
+		}
+		casm.Bindings[idx].Status = BindingEvaluating
 		ret = casm.evaluateExpression(binding.Value, location)
-		binding.Status = BindingEvaluated
-		binding.EvaluatedWord = ret.Word
+		casm.Bindings[idx].Status = BindingEvaluated
+		casm.Bindings[idx].EvaluatedWord = ret.Word
 	case BindingEvaluating:
-		panic("cycling binding definition detected")
+		panic(fmt.Sprintf("%s: cycling binding definition detected", location))
 	case BindingEvaluated:
 		ret = EvalResult{
 			binding.EvaluatedWord,
@@ -399,7 +411,7 @@ func (casm *Casm) evaluateExpression(expr Expression, location FileLocation) (re
 		if !exist {
 			panic(fmt.Sprintf("%s: cannot find binding '%s'", location, expr.AsBinding))
 		}
-		ret = casm.evaluateBinding(&binding, location)
+		ret = casm.evaluateBinding(binding, location)
 	case ExpressionKindNumLitInt:
 		ret = EvalResult{
 			coppervm.WordI64(expr.AsNumLitInt),
@@ -431,20 +443,20 @@ func (casm *Casm) evaluateExpression(expr Expression, location FileLocation) (re
 //   // i  f  s  b  o
 //     [i, f, -, -, -], //i
 //     [f, f, -, -, -], //f
-//     [-, -, -, -, -], //s
+//     [-, -, s, -, -], //s
 //     [-, -, -, -, -], //o
 //     [-, -, -, -, -], //b
 // ]
 var binaryOpEvaluationMap = [5][5]ExpressionKind{
 	{ExpressionKindNumLitInt, ExpressionKindNumLitFloat, -1, -1, -1},
 	{ExpressionKindNumLitFloat, ExpressionKindNumLitFloat, -1, -1, -1},
-	{-1, -1, -1, -1, -1},
+	{-1, -1, ExpressionKindStringLit, -1, -1},
 	{-1, -1, -1, -1, -1},
 	{-1, -1, -1, -1, -1},
 }
 
 // Map an ExpressionKind to a TypeRepresentation.
-var exprKindToTypeReprMap = map[ExpressionKind]coppervm.TypeRepresentation{
+var exprKindToTypeRepMap = map[ExpressionKind]coppervm.TypeRepresentation{
 	ExpressionKindNumLitInt:   coppervm.TypeI64,
 	ExpressionKindNumLitFloat: coppervm.TypeF64,
 	ExpressionKindStringLit:   coppervm.TypeU64,
@@ -457,17 +469,34 @@ func (casm *Casm) evaluateBinaryOp(binop Expression, location FileLocation) (ret
 
 	opType := binaryOpEvaluationMap[lhs_result.Type][rhs_result.Type]
 	if opType == -1 {
-		panic(fmt.Sprintf("unsupported binary operation between types '%s' and '%s'", lhs_result.Type, rhs_result.Type))
+		panic(fmt.Sprintf("%s: unsupported binary operation between types '%s' and '%s'",
+			location,
+			lhs_result.Type,
+			rhs_result.Type))
 	}
+	typeRep := exprKindToTypeRepMap[opType]
 
-	typeRep := exprKindToTypeReprMap[opType]
-	switch binop.AsBinaryOp.Kind {
-	case BinaryOpKindPlus:
-		ret = EvalResult{coppervm.AddWord(lhs_result.Word, rhs_result.Word, typeRep), opType}
-	case BinaryOpKindMinus:
-		ret = EvalResult{coppervm.SubWord(lhs_result.Word, rhs_result.Word, typeRep), opType}
-	case BinaryOpKindTimes:
-		ret = EvalResult{coppervm.MulWord(lhs_result.Word, rhs_result.Word, typeRep), opType}
+	if opType == ExpressionKindStringLit {
+		if binop.AsBinaryOp.Kind == BinaryOpKindMinus ||
+			binop.AsBinaryOp.Kind == BinaryOpKindTimes {
+			panic(fmt.Sprintf("%s: unsupported operations ['-', '*'] between string literals",
+				location))
+		}
+		leftStr := casm.getStringByAddress(int(lhs_result.Word.AsU64))
+		rightStr := casm.getStringByAddress(int(rhs_result.Word.AsU64))
+		ret = EvalResult{
+			coppervm.WordU64(uint64(casm.pushStringToMemory(leftStr + rightStr))),
+			ExpressionKindStringLit,
+		}
+	} else {
+		switch binop.AsBinaryOp.Kind {
+		case BinaryOpKindPlus:
+			ret = EvalResult{coppervm.AddWord(lhs_result.Word, rhs_result.Word, typeRep), opType}
+		case BinaryOpKindMinus:
+			ret = EvalResult{coppervm.SubWord(lhs_result.Word, rhs_result.Word, typeRep), opType}
+		case BinaryOpKindTimes:
+			ret = EvalResult{coppervm.MulWord(lhs_result.Word, rhs_result.Word, typeRep), opType}
+		}
 	}
 	return ret
 }
@@ -478,5 +507,22 @@ func (casm *Casm) pushStringToMemory(str string) int {
 	byteStr := []byte(str)
 	byteStr = append(byteStr, 0)
 	casm.Memory = append(casm.Memory, byteStr...)
+
+	if casm.StringLengths == nil {
+		casm.StringLengths = make(map[int]int)
+	}
+	casm.StringLengths[strBase] = len(byteStr)
 	return strBase
+}
+
+// Returns a string from memory at given address without
+// null termination.
+// If the string doesn't exist an empty string is returned.
+func (casm *Casm) getStringByAddress(addr int) string {
+	strLen := casm.StringLengths[addr]
+	if strLen == 0 {
+		return ""
+	}
+	strBytes := casm.Memory[addr : addr+strLen-1]
+	return string(strBytes[:])
 }

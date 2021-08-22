@@ -1,16 +1,25 @@
 %const N 1 + 2
 %const M 3.2 + N
+%const hi "hi"
 
 push 1 + 2
 print
+
 push 1.2 + 3.2
 print
+
+push hi + "you"
+print
+
 push "first" + "second"
 print
+
 push 1.2 + 3
 print
+
 push N + 3
 print
+
 push M
 print
 
