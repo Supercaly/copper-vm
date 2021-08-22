@@ -1,4 +1,4 @@
-%include lib/std.copper
+%include dump.copper
 %entry main
 
 main:

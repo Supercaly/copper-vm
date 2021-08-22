@@ -1,4 +1,4 @@
-%include lib/std.copper
+%include dump.copper
 %entry main
 
 ; This program pushes 1,2,3 on the stack

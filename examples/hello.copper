@@ -1,4 +1,4 @@
-%include lib/std.copper
+%include string.copper
 %const hello "Hello World\n"
 %entry main
 

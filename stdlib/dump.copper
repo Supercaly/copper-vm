@@ -1,18 +1,18 @@
-; allocate 20 bytes in memory used for printing
+; Standard input, output, error.
+%const stdin 0
+%const stdout 1
+%const stderr 3
+
+; Memory allocated for printing operations.
 %memory std_print_memory 0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,
 %const std_print_memory_size 20
-
-; standard input, output, error
-%const STDIN 0
-%const STDOUT 1
-%const STDERR 3
 
 ; constants used inside the library
 %const std_print_base 10
 %const std_ascii_0 0x30
 %const std_minus_sign 0x2D
 
-; cleans the memory reserved for print operations
+; Cleans the memory reserved for print operations.
 std_clean_print_memory:
     push std_print_memory
     dup
@@ -41,7 +41,7 @@ std_clean_print_memory:
     drop
     ret
 
-; prints a positive number in base 10
+; Prints a positive number in base 10
 ; character by character.
 std_print_positive:
     swap 1 ; swap return address
@@ -85,7 +85,7 @@ std_print_positive:
     drop
 
     ; print the memory
-    push STDOUT
+    push stdout
     push std_print_memory
     push std_print_memory_size
     syscall 1
@@ -93,58 +93,39 @@ std_print_positive:
 
     ret
 
-; print an unsigned integer.
+; Print an unsigned integer.
 dump_u64:
     swap 1
     call std_clean_print_memory
     call std_print_positive
     ret
 
-; print a signed integer.
+; Print a signed integer.
 dump_i64:
     swap 1
     call std_clean_print_memory
     dup
     jge dump_i64_skip_negative
 
-    ; print minus sign
-    push std_minus_sign
-    push std_print_memory
-    write
-    push STDOUT
-    push std_print_memory
-    push 1
-    syscall 1
-    drop
-    push 0
-    push std_print_memory
-    write
+        ; print minus sign
+        push std_minus_sign
+        push std_print_memory
+        write
+        push stdout
+        push std_print_memory
+        push 1
+        syscall 1
+        drop
+        push 0
+        push std_print_memory
+        write
 
-    push -1
-    imul
+        push -1
+        imul
 
     dump_i64_skip_negative:
         ; print the positive part
         call std_print_positive
-        ret 
+    ret 
 
-; returns the length of a given null-terminated string.
-strlen:
-    swap 1
-    dup
-    dup
-    read
-    jz std_strlen_exit
-
-    std_strlen_loop:
-        push 1
-        add
-        dup
-        read
-        jnz std_strlen_loop
-
-    std_strlen_exit:
-        swap 1
-        sub
-        swap 1
-        ret   
+; TODO: Add dump_f64 method
