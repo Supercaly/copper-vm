@@ -13,8 +13,9 @@ import (
 )
 
 const (
-	CasmDebug           bool = false
-	CasmMaxIncludeLevel int  = 10
+	CasmDebug           bool   = false
+	CasmMaxIncludeLevel int    = 10
+	CasmFileExtention   string = ".copper"
 )
 
 type Casm struct {
@@ -62,6 +63,9 @@ func (casm *Casm) SaveProgramToFile() error {
 		return fmt.Errorf("error writign program to file %s", err)
 	}
 
+	if filepath.Ext(casm.OutputFile) != coppervm.CoppervmFileExtention {
+		return fmt.Errorf("file '%s' is not a valid %s file", casm.OutputFile, coppervm.CoppervmFileExtention)
+	}
 	fileErr := ioutil.WriteFile(casm.OutputFile, []byte(metaJson), os.ModePerm)
 	if fileErr != nil {
 		return fmt.Errorf("error saving file '%s': %s", casm.OutputFile, fileErr)
@@ -83,6 +87,9 @@ func (casm *Casm) TranslateSourceFile(filePath string) (err error) {
 		}
 	}()
 
+	if filepath.Ext(filePath) != CasmFileExtention {
+		panic(fmt.Sprintf("file '%s' is not a valid %s file", filePath, CasmFileExtention))
+	}
 	bytes, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		panic(fmt.Sprintf("error reading file '%s': %s", filePath, err))

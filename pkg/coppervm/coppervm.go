@@ -8,12 +8,14 @@ import (
 	"log"
 	"math"
 	"os"
+	"path/filepath"
 )
 
 const (
-	CoppervmDebug          bool  = false
-	CoppervmStackCapacity  int64 = 1024
-	CoppervmMemoryCapacity int64 = 1024
+	CoppervmDebug          bool   = false
+	CoppervmStackCapacity  int64  = 1024
+	CoppervmMemoryCapacity int64  = 1024
+	CoppervmFileExtention  string = ".vm"
 )
 
 type InstAddr uint64
@@ -48,6 +50,9 @@ func (vm *Coppervm) LoadProgramFromFile(filePath string) (meta CoppervmFileMeta,
 		}
 	}()
 
+	if filepath.Ext(filePath) != CoppervmFileExtention {
+		panic(fmt.Sprintf("file '%s' is not a valid %s file", filePath, CoppervmFileExtention))
+	}
 	content, fileErr := ioutil.ReadFile(filePath)
 	if fileErr != nil {
 		panic(fmt.Sprintf("error reading file '%s': %s",

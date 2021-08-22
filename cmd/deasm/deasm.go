@@ -53,7 +53,9 @@ func main() {
 	}
 
 	vm := coppervm.Coppervm{}
-	vm.LoadProgramFromFile(inputFilePath)
+	if _, err := vm.LoadProgramFromFile(inputFilePath); err != nil {
+		log.Fatalf("[ERROR]: %s", err)
+	}
 
 	// Dump memory to stdout
 	if printMemory {
