@@ -1,0 +1,128 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "Copper",
+	"patterns": [
+		{
+			"include": "#comments"
+		},
+		{
+			"include": "#directives"
+		},
+		{
+			"include": "#labels"
+		},
+		{
+			"include": "#mnemonics"
+		},
+		{
+			"include": "#numbers"
+		},
+		{
+			"include": "#bindings"
+		},
+		{
+			"include": "#operators"
+		},
+		{
+			"include": "#strings"
+		}
+	],
+	"repository": {
+		"comments": {
+			"patterns": [
+				{
+					"name": "comment.line.copper",
+					"begin": ";",
+					"end": "$"
+				}
+			]
+		},
+		"directives": {
+			"patterns": [
+				{
+					"name": "keyword.control.directive.copper",
+					"match": "%\\b(entry|const|include|memory)\\b"
+				}
+			]
+		},
+		"mnemonics": {
+			"patterns": [
+				{
+					"name": "keyword.mnemonic.copper",
+					"match": "\\b(noop|push|swap|dup|drop|add|sub|mul|imul|div|idiv|mod|imod|fadd|fsub|fmul|fdiv|and|or|xor|shl|shr|not|cmp|icmp|fcmp|jmp|jz|jnz|jg|jl|jge|jle|call|ret|read|iread|fread|write|iwrite|fwrite|syscall|print|halt)\\b"
+				}
+			]
+		},
+		"labels": {
+			"patterns": [
+				{
+					"name": "entity.name.function.copper",
+					"match": "[a-zA-Z_][a-z0-9A-Z_]*:"
+				}
+			]
+		},
+		"numbers": {
+			"patterns": [
+				{
+					"name": "constant.numeric.integer.hexadecimal.asm",
+					"match": "(0[xX][0-9a-fA-F]+)\\b"
+				},
+				{
+					"name": "constant.numeric.integer.binary.asm",
+					"match": "0[bB][01]+"
+				},
+				{
+					"name": "constant.numeric.integer.decimal.asm",
+					"match": "\\d+"
+				},
+				{
+					"name": "constant.numeric.integer.decimal.asm",
+					"match": "\\d*\\.\\d+"
+				}
+			]
+		},
+		"bindings": {
+			"patterns": [
+				{
+					"name": "variable.parameter.copper",
+					"match": "[a-zA-Z_][a-zA-Z0-9_]*"
+				}
+			]
+		},
+		"strings": {
+			"patterns": [
+				{
+					"name": "string.quoted.double.copper",
+					"begin": "\"",
+					"end": "\"",
+					"patterns": [
+						{
+							"name": "constant.character.escape.copper",
+							"match": "\\\\."
+						}
+					]
+				},
+				{
+					"name": "string.quoted.single.copper",
+					"begin": "'",
+					"end": "'",
+					"patterns": [
+						{
+							"name": "constant.character.escape.copper",
+							"match": "\\\\."
+						}
+					]
+				}
+			]
+		},
+		"operators": {
+			"patterns": [
+				{
+					"name": "keyword.operator.copper",
+					"match": "\\+|\\-|\\*|/"
+				}
+			]
+		}
+	},
+	"scopeName": "source.copper"
+}
