@@ -1,4 +1,4 @@
-%include dump.copper
+%include dump.casm
 %entry main
 
 ; This program pushes 1,2,3 on the stack

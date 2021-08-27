@@ -15,7 +15,7 @@ import (
 const (
 	CasmDebug           bool   = false
 	CasmMaxIncludeLevel int    = 10
-	CasmFileExtention   string = ".copper"
+	CasmFileExtention   string = ".casm"
 )
 
 type Casm struct {

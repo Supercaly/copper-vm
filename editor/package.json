@@ -15,15 +15,15 @@
     ],
     "contributes": {
         "languages": [{
-            "id": "copper",
-            "aliases": ["Copper", "copper"],
-            "extensions": [".copper"],
+            "id": "casm",
+            "aliases": ["Casm", "casm"],
+            "extensions": [".casm"],
             "configuration": "./language-configuration.json"
         }],
         "grammars": [{
-            "language": "copper",
-            "scopeName": "source.copper",
-            "path": "./syntaxes/copper.tmLanguage.json"
+            "language": "casm",
+            "scopeName": "source.casm",
+            "path": "./syntaxes/casm.tmLanguage.json"
         }]
     }
 }
