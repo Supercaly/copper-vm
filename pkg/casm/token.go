@@ -119,7 +119,7 @@ func isNumber(r rune) bool {
 }
 
 func isHex(r rune) bool {
-	return unicode.In(r, unicode.Hex_Digit) || r == 'x'
+	return unicode.In(r, unicode.Hex_Digit) || r == 'x' || r == 'X'
 }
 
 func isAlpha(r rune) bool {

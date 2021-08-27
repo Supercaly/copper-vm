@@ -235,25 +235,34 @@ func parseExprPrimary(tokens *[]Token) (result Expression) {
 
 	switch (*tokens)[0].Kind {
 	case TokenKindNumLit:
-		// Try hexadecimal
-		if strings.HasPrefix((*tokens)[0].Text, "0x") {
-			number := (*tokens)[0].Text[2:]
-			hexNumber, err := strconv.ParseUint(number, 16, 64)
+		numberStr := (*tokens)[0].Text
+		if strings.HasPrefix(numberStr, "0x") || strings.HasPrefix(numberStr, "0X") {
+			// Try hexadecimal
+			hexNumber, err := strconv.ParseUint(numberStr[2:], 16, 64)
 			if err != nil {
 				panic(fmt.Sprintf("error parsing hex number literal '%s'",
-					(*tokens)[0].Text))
+					numberStr))
 			}
 			result.Kind = ExpressionKindNumLitInt
 			result.AsNumLitInt = int64(hexNumber)
+		} else if strings.HasPrefix(numberStr, "0b") || strings.HasPrefix(numberStr, "0B") {
+			// Try binary
+			binNumber, err := strconv.ParseUint(numberStr[2:], 2, 64)
+			if err != nil {
+				panic(fmt.Sprintf("error parsing binary number literal '%s'",
+					numberStr))
+			}
+			result.Kind = ExpressionKindNumLitInt
+			result.AsNumLitInt = int64(binNumber)
 		} else {
 			// Try integer
-			intNumber, err := strconv.ParseInt((*tokens)[0].Text, 10, 64)
+			intNumber, err := strconv.ParseInt(numberStr, 10, 64)
 			if err != nil {
 				// Try floating point
-				floatNumber, err := strconv.ParseFloat((*tokens)[0].Text, 64)
+				floatNumber, err := strconv.ParseFloat(numberStr, 64)
 				if err != nil {
 					panic(fmt.Sprintf("error parsing number literal '%s'",
-						(*tokens)[0].Text))
+						numberStr))
 				}
 				result.Kind = ExpressionKindNumLitFloat
 				result.AsNumLitFloat = floatNumber

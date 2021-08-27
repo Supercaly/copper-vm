@@ -8,4 +8,6 @@ push -3.2
 print
 push 0xFF
 print
+push 0b01001
+print
 halt
