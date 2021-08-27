@@ -11,7 +11,7 @@ Before using this extension make sure to follow this steps:
 
 ## Features
 
-This extension provides Syntax Highlighting for the `copper` assembly language.
+This extension provides Syntax Highlighting for the `casm` assembly language.
 
 ![Sample code](asset/sample.png)
 
