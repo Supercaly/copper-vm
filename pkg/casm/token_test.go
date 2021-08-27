@@ -56,6 +56,15 @@ func TestTokenize(t *testing.T) {
 		{"0x5CFF", []Token{
 			{Kind: TokenKindNumLit, Text: "0x5CFF"},
 		}, false},
+		{"0X5CFF", []Token{
+			{Kind: TokenKindNumLit, Text: "0X5CFF"},
+		}, false},
+		{"0b110011", []Token{
+			{Kind: TokenKindNumLit, Text: "0b110011"},
+		}, false},
+		{"0B110011", []Token{
+			{Kind: TokenKindNumLit, Text: "0B110011"},
+		}, false},
 		{"+-*", []Token{
 			{Kind: TokenKindPlus, Text: "+"},
 			{Kind: TokenKindMinus, Text: "-"},
@@ -209,6 +218,7 @@ func (s *AsciiTestSuite) TestIsHex() {
 	s.result[100] = true
 	s.result[101] = true
 	s.result[102] = true
+	s.result[88] = true
 	s.result[120] = true
 
 	for i := 0; i < len(s.runes); i++ {
@@ -240,6 +250,7 @@ func (s *AsciiTestSuite) TestIsNumber() {
 	s.result[100] = true
 	s.result[101] = true
 	s.result[102] = true
+	s.result[88] = true
 	s.result[120] = true
 
 	for i := 0; i < len(s.runes); i++ {

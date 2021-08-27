@@ -336,6 +336,18 @@ func TestParseExprFromString(t *testing.T) {
 			Kind:        ExpressionKindNumLitInt,
 			AsNumLitInt: 255,
 		}, false},
+		{"0XFF", Expression{
+			Kind:        ExpressionKindNumLitInt,
+			AsNumLitInt: 255,
+		}, false},
+		{"0b0101", Expression{
+			Kind:        ExpressionKindNumLitInt,
+			AsNumLitInt: 5,
+		}, false},
+		{"0B0101", Expression{
+			Kind:        ExpressionKindNumLitInt,
+			AsNumLitInt: 5,
+		}, false},
 		{"2+3*4+5", Expression{
 			Kind:        ExpressionKindNumLitInt,
 			AsNumLitInt: 19,
@@ -421,6 +433,8 @@ func TestParseExprFromString(t *testing.T) {
 			AsNumLitInt: 9,
 		}, false},
 		{"0xG", Expression{}, true},
+		{"0x", Expression{}, true},
+		{"0b", Expression{}, true},
 		{"1.2.3", Expression{}, true},
 		{"1$", Expression{}, true},
 		{"(1", Expression{}, true},
