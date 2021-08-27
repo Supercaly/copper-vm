@@ -1,4 +1,4 @@
-%include dump.copper
+%include dump.casm
 %entry main
 
 main:

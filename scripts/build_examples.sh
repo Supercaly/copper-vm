@@ -4,9 +4,9 @@ set -e
 
 mkdir -p examples/bin
 
-examples=$(find examples/ -maxdepth 1 -name "*.copper" -type f)
+examples=$(find examples/ -maxdepth 1 -name "*.casm" -type f)
 for e in $examples; do
     name=$(basename $e)
-    name=${name%.copper}
-    ./build/casm -o "examples/bin/$name.vm" $e -I stdlib/
+    name=${name%.casm}
+    ./build/casm -o "examples/bin/$name.copper" $e -I stdlib/
 done
