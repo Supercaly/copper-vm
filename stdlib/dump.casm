@@ -9,8 +9,6 @@
 
 ; constants used inside the library
 %const std_print_base 10
-%const std_ascii_0 0x30
-%const std_minus_sign 0x2D
 
 ; Cleans the memory reserved for print operations.
 std_clean_print_memory:
@@ -54,7 +52,7 @@ std_print_positive:
         ; (val % base) + '0'
         push std_print_base
         mod
-        push std_ascii_0
+        push '0'
         add
 
         ; push char to memory    
@@ -108,7 +106,7 @@ dump_i64:
     jge dump_i64_skip_negative
 
         ; print minus sign
-        push std_minus_sign
+        push '-'
         push std_print_memory
         write
         push stdout

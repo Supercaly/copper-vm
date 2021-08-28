@@ -14,6 +14,7 @@ type TokenKind int
 const (
 	TokenKindNumLit TokenKind = iota
 	TokenKindStringLit
+	TokenKindCharLit
 	TokenKindSymbol
 	TokenKindPlus
 	TokenKindMinus
@@ -75,6 +76,18 @@ func Tokenize(source string) (out []Token, err error) {
 				})
 			} else {
 				return []Token{}, fmt.Errorf("could not find closing \"")
+			}
+		case '\'':
+			source = source[1:]
+			if strings.Contains(source, "'") {
+				char, rest := internal.SplitByDelim(source, '\'')
+				source = rest[1:]
+				out = append(out, Token{
+					Kind: TokenKindCharLit,
+					Text: char,
+				})
+			} else {
+				return []Token{}, fmt.Errorf("could not find closing '")
 			}
 		case '(':
 			source = source[1:]

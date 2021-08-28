@@ -276,6 +276,17 @@ func parseExprPrimary(tokens *[]Token) (result Expression) {
 		result.Kind = ExpressionKindStringLit
 		result.AsStringLit = (*tokens)[0].Text
 		*tokens = (*tokens)[1:]
+	case TokenKindCharLit:
+		charStr := (*tokens)[0].Text
+		char, _, t, err := strconv.UnquoteChar(charStr+`\'`, '\'')
+		if err != nil {
+			panic(fmt.Sprintf("error parsing character literal '%s'", charStr))
+		}
+		if t != "\\'" {
+			panic("unsupported multi-character character literals")
+		}
+		result.Kind = ExpressionKindNumLitInt
+		result.AsNumLitInt = int64(char)
 	case TokenKindSymbol:
 		result.Kind = ExpressionKindBinding
 		result.AsBinding = (*tokens)[0].Text
