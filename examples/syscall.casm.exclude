@@ -1,5 +1,5 @@
-%include dump.copper
-%include string.copper
+%include dump.casm
+%include string.casm
 %entry main
 
 %const name_str "What's your name? "

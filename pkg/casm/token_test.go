@@ -53,6 +53,9 @@ func TestTokenize(t *testing.T) {
 			{Kind: TokenKindStringLit, Text: "string"},
 		}, false},
 		{"\"string", []Token{}, true},
+		{"'a'", []Token{
+			{Kind: TokenKindCharLit, Text: "a"},
+		}, false},
 		{"0x5CFF", []Token{
 			{Kind: TokenKindNumLit, Text: "0x5CFF"},
 		}, false},

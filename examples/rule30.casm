@@ -63,7 +63,7 @@ next_state:
         push i
         iread
         
-        push bits +bits_len-1
+        push bits + bits_len - 1
         cmp
         jle next_state_loop
 
@@ -109,7 +109,7 @@ print:
             dup
             push print_mem
             add
-            push 0x20
+            push ' '
             swap 1
             write
             jmp print_loop_if_end
@@ -118,7 +118,7 @@ print:
             dup
             push print_mem
             add
-            push 0x2E
+            push '.'
             swap 1
             write
 
@@ -131,7 +131,7 @@ print:
             jle print_loop
     drop
 
-    push 0x0A
+    push '\n'
     push print_mem + mem_len-1
     write
 

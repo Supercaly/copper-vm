@@ -332,6 +332,15 @@ func TestParseExprFromString(t *testing.T) {
 			Kind:        ExpressionKindStringLit,
 			AsStringLit: "an escaped\nstring",
 		}, false},
+		{"'a'", Expression{
+			Kind:        ExpressionKindNumLitInt,
+			AsNumLitInt: 97,
+		}, false},
+		{"'\r'", Expression{
+			Kind:        ExpressionKindNumLitInt,
+			AsNumLitInt: 13,
+		}, false},
+		{"'abc'", Expression{}, true},
 		{"0xFF", Expression{
 			Kind:        ExpressionKindNumLitInt,
 			AsNumLitInt: 255,
