@@ -7,45 +7,45 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestTranslateSource(t *testing.T) {
-	tests := []struct {
-		in       string
-		out      []coppervm.InstDef
-		hasError bool
-	}{
-		{"main:\n", []coppervm.InstDef{}, false},
-		{"push 1\n", []coppervm.InstDef{
-			{
-				Kind:       coppervm.InstPush,
-				HasOperand: true,
-				Name:       "push",
-				Operand:    coppervm.WordU64(1),
-			},
-		}, false},
-		{"%const N 1\n", []coppervm.InstDef{}, false},
-		{":", []coppervm.InstDef{}, true},
-		{"wrong\n", []coppervm.InstDef{}, true},
-		{"push \n", []coppervm.InstDef{}, true},
-		{"%dir 0\n", []coppervm.InstDef{}, true},
-		{"push N\n", []coppervm.InstDef{
-			{
-				Kind:       coppervm.InstPush,
-				HasOperand: true,
-				Name:       "push",
-				Operand:    coppervm.WordU64(0),
-			},
-		}, true},
-		{"%entry main\n%const main 2.0", []coppervm.InstDef{}, true},
-		{"%entry main\n%entry main2", []coppervm.InstDef{}, true},
-		{"%include abc", []coppervm.InstDef{}, true},
-	}
+var testSources = []struct {
+	in       string
+	out      []coppervm.InstDef
+	hasError bool
+}{
+	{"main:\n", []coppervm.InstDef{}, false},
+	{"push 1\n", []coppervm.InstDef{
+		{
+			Kind:       coppervm.InstPush,
+			HasOperand: true,
+			Name:       "push",
+			Operand:    coppervm.WordU64(1),
+		},
+	}, false},
+	{"%const N 1\n", []coppervm.InstDef{}, false},
+	{":", []coppervm.InstDef{}, true},
+	{"wrong\n", []coppervm.InstDef{}, true},
+	{"push \n", []coppervm.InstDef{}, true},
+	{"%dir 0\n", []coppervm.InstDef{}, true},
+	{"push N\n", []coppervm.InstDef{
+		{
+			Kind:       coppervm.InstPush,
+			HasOperand: true,
+			Name:       "push",
+			Operand:    coppervm.WordU64(0),
+		},
+	}, true},
+	{"%entry main\n%const main 2.0", []coppervm.InstDef{}, true},
+	{"%entry main\n%entry main2", []coppervm.InstDef{}, true},
+	{"%include abc", []coppervm.InstDef{}, true},
+}
 
-	for _, test := range tests {
+func TestTranslateSource(t *testing.T) {
+	for _, test := range testSources {
 		func() {
 			defer func() {
 				r := recover()
 				if r != nil && !test.hasError {
-					t.Error(r)
+					assert.Fail(t, "unexpected error", test)
 				}
 			}()
 
@@ -53,13 +53,14 @@ func TestTranslateSource(t *testing.T) {
 			ctx.translateSource(test.in, "test_file")
 
 			if test.hasError {
-				t.Error("expecting an error")
+				assert.Fail(t, "expecting an error", test)
 			}
-			assert.Condition(t, func() (success bool) { return instArrayEquals(test.out, ctx.Program) })
+			assert.Condition(t, func() (success bool) { return instArrayEquals(test.out, ctx.Program) }, test)
 		}()
 	}
 }
 
+// Compares two arrays of InstDef.
 func instArrayEquals(a []coppervm.InstDef, b []coppervm.InstDef) bool {
 	if len(a) != len(b) {
 		return false
@@ -76,57 +77,57 @@ func TestGetBindingByName(t *testing.T) {
 	casm := Casm{
 		Bindings: []Binding{
 			{Name: "a_label",
-				Value:    Expression{Kind: ExpressionKindNumLitInt, AsNumLitInt: 1},
+				Value:    expression(ExpressionKindNumLitInt, int64(1)),
 				Location: FileLocation{},
 				IsLabel:  true},
 			{Name: "a_const",
-				Value:    Expression{Kind: ExpressionKindNumLitFloat, AsNumLitFloat: 2.3},
+				Value:    expression(ExpressionKindNumLitFloat, 2.3),
 				Location: FileLocation{},
 				IsLabel:  false},
 		},
 	}
 
-	e, b := casm.getBindingByName("a_label")
-	assert.True(t, e)
-	assert.Equal(t, casm.Bindings[0], b)
+	exist, binding := casm.getBindingByName("a_label")
+	assert.True(t, exist)
+	assert.Equal(t, casm.Bindings[0], binding)
 
-	e, b = casm.getBindingByName("a_const")
-	assert.True(t, e)
-	assert.Equal(t, casm.Bindings[1], b)
+	exist, binding = casm.getBindingByName("a_const")
+	assert.True(t, exist)
+	assert.Equal(t, casm.Bindings[1], binding)
 
-	e, b = casm.getBindingByName("test")
-	assert.False(t, e)
+	exist, binding = casm.getBindingByName("test")
+	assert.False(t, exist)
 }
 
 func TestGetBindingIndexByName(t *testing.T) {
 	casm := Casm{
 		Bindings: []Binding{
 			{Name: "a_label",
-				Value:    Expression{Kind: ExpressionKindNumLitInt, AsNumLitInt: 1},
+				Value:    expression(ExpressionKindNumLitInt, int64(1)),
 				Location: FileLocation{},
 				IsLabel:  true},
 			{Name: "a_const",
-				Value:    Expression{Kind: ExpressionKindNumLitFloat, AsNumLitFloat: 2.3},
+				Value:    expression(ExpressionKindNumLitFloat, 2.3),
 				Location: FileLocation{},
 				IsLabel:  false},
 		},
 	}
 
-	i := casm.getBindingIndexByName("a_label")
-	assert.Equal(t, 0, i)
+	index := casm.getBindingIndexByName("a_label")
+	assert.Equal(t, 0, index)
 
-	i = casm.getBindingIndexByName("a_const")
-	assert.Equal(t, 1, i)
+	index = casm.getBindingIndexByName("a_const")
+	assert.Equal(t, 1, index)
 
-	i = casm.getBindingIndexByName("test")
-	assert.Equal(t, -1, i)
+	index = casm.getBindingIndexByName("test")
+	assert.Equal(t, -1, index)
 }
 
 func TestBindLabel(t *testing.T) {
 	casm := Casm{
 		Bindings: []Binding{
 			{Name: "a_label",
-				Value:    Expression{Kind: ExpressionKindNumLitInt, AsNumLitInt: 1},
+				Value:    expression(ExpressionKindNumLitInt, int64(1)),
 				Location: FileLocation{},
 				IsLabel:  true},
 		},
@@ -135,80 +136,79 @@ func TestBindLabel(t *testing.T) {
 	func() {
 		defer func() { recover() }()
 		casm.bindLabel("a_label", 1, FileLocation{})
-		t.Error("Expecting an error")
+		assert.Fail(t, "expecting an error")
 	}()
 
 	casm.bindLabel("new_label", 2, FileLocation{})
-	e, b := casm.getBindingByName("new_label")
-	assert.True(t, e)
+	exist, binding := casm.getBindingByName("new_label")
+	assert.True(t, exist)
 
-	lab := Binding{
+	label := Binding{
 		Name:          "new_label",
 		EvaluatedWord: coppervm.WordU64(2),
 		Location:      FileLocation{},
 		IsLabel:       true,
 		Status:        BindingEvaluated,
 	}
-	assert.Equal(t, lab, b)
+	assert.Equal(t, label, binding)
 }
 
 func TestBindConst(t *testing.T) {
-	casm := Casm{
-		Bindings: []Binding{
-			{Name: "a_const",
-				Value:    Expression{Kind: ExpressionKindNumLitInt, AsNumLitInt: 1},
-				Location: FileLocation{},
-				IsLabel:  false},
+	tests := []struct {
+		name         string
+		value        string
+		binding      Binding
+		memoryLength int
+		hasError     bool
+	}{
+		{name: "a_const", value: "1", hasError: true},
+		{name: "new_const", value: "2", hasError: false, binding: Binding{
+			Name:     "new_const",
+			Value:    expression(ExpressionKindNumLitInt, int64(2)),
+			Location: FileLocation{},
+			IsLabel:  false},
+		},
+		{name: "new_const2", hasError: true},
+		{name: "str_const", value: `"test_str"`, hasError: false, binding: Binding{
+			Status:        BindingEvaluated,
+			Name:          "str_const",
+			Value:         expression(ExpressionKindStringLit, "test_str"),
+			EvaluatedWord: coppervm.WordU64(0),
+			Location:      FileLocation{},
+			IsLabel:       false},
+			memoryLength: 9,
 		},
 	}
 
-	func() {
-		defer func() { recover() }()
-		casm.bindConst(DirectiveLine{Name: "const", Block: "a_const 1"},
-			FileLocation{})
-		t.Error("Expecting an error")
-	}()
+	for _, test := range tests {
+		func() {
+			defer func() {
+				r := recover()
+				if r != nil && !test.hasError {
+					assert.Fail(t, "unexpected error", test)
+				}
+			}()
 
-	casm.bindConst(DirectiveLine{Name: "const", Block: "new_const 2"},
-		FileLocation{})
-	e, b := casm.getBindingByName("new_const")
-	assert.True(t, e)
+			casm := Casm{
+				Bindings: []Binding{
+					{Name: "a_const",
+						Value:    Expression{Kind: ExpressionKindNumLitInt, AsNumLitInt: 1},
+						Location: FileLocation{},
+						IsLabel:  false},
+				},
+			}
+			casm.bindConst(DirectiveLine{Name: "const", Block: test.name + " " + test.value}, FileLocation{})
 
-	c := Binding{
-		Name: "new_const",
-		Value: Expression{
-			Kind:        ExpressionKindNumLitInt,
-			AsNumLitInt: 2,
-		},
-		Location: FileLocation{},
-		IsLabel:  false,
-	}
-	assert.Equal(t, c, b)
-
-	func() {
-		defer func() {
-			recover()
+			if test.hasError {
+				assert.Fail(t, "expecting an error", test)
+			} else {
+				exist, binding := casm.getBindingByName(test.name)
+				assert.True(t, exist, test)
+				assert.Equal(t, test.binding, binding, test)
+				assert.Equal(t, test.memoryLength, len(casm.Memory), test)
+			}
 		}()
-		casm.bindConst(DirectiveLine{Name: "const", Block: "new_const2"},
-			FileLocation{})
-		t.Error("Expecting an error")
-	}()
-
-	casm.bindConst(DirectiveLine{Name: "const", Block: "str_const \"test_str\""}, FileLocation{})
-	e, b = casm.getBindingByName("str_const")
-	assert.True(t, e)
-	assert.Equal(t, Binding{
-		Status: BindingEvaluated,
-		Name:   "str_const",
-		Value: Expression{
-			Kind:        ExpressionKindStringLit,
-			AsStringLit: "test_str",
-		},
-		EvaluatedWord: coppervm.WordU64(0),
-		Location:      FileLocation{},
-		IsLabel:       false,
-	}, b)
-	assert.Equal(t, 9, len(casm.Memory))
+	}
 }
 
 func TestBindEntry(t *testing.T) {
@@ -217,7 +217,7 @@ func TestBindEntry(t *testing.T) {
 		defer func() { recover() }()
 		casm.HasEntry = true
 		casm.bindEntry("main", FileLocation{})
-		t.Error("expecting an error")
+		assert.Fail(t, "expecting an error")
 	}()
 
 	casm := Casm{}
@@ -231,7 +231,7 @@ func TestBindMemory(t *testing.T) {
 	casm := Casm{
 		Bindings: []Binding{
 			{Name: "mem",
-				Value:    Expression{Kind: ExpressionKindNumLitInt, AsNumLitInt: 0},
+				Value:    expression(ExpressionKindNumLitInt, int64(0)),
 				Location: FileLocation{},
 				IsLabel:  false},
 		},
@@ -239,161 +239,268 @@ func TestBindMemory(t *testing.T) {
 
 	func() {
 		defer func() { recover() }()
-		casm.bindMemory(DirectiveLine{Name: "memory", Block: "mem 1"},
-			FileLocation{})
-		t.Error("Expecting an error")
+		casm.bindMemory(DirectiveLine{Name: "memory", Block: "mem 1"}, FileLocation{})
+		assert.Fail(t, "expecting an error")
 	}()
 
-	casm.bindMemory(DirectiveLine{Name: "memory", Block: "new_mem 2,3"},
-		FileLocation{})
-	e, b := casm.getBindingByName("new_mem")
-	assert.True(t, e)
+	casm.bindMemory(DirectiveLine{Name: "memory", Block: "new_mem 2,3"}, FileLocation{})
+	exist, binding := casm.getBindingByName("new_mem")
+	assert.True(t, exist)
 
-	c := Binding{
+	want := Binding{
 		Status:        BindingEvaluated,
 		Name:          "new_mem",
 		EvaluatedWord: coppervm.WordU64(0),
 		Location:      FileLocation{},
 		IsLabel:       false,
 	}
-	assert.Equal(t, c, b)
+	assert.Equal(t, want, binding)
 
 	func() {
 		defer func() {
 			recover()
 		}()
-		casm.bindMemory(DirectiveLine{Name: "memory", Block: "new_mem2 ,"},
-			FileLocation{})
-		t.Error("Expecting an error")
+		casm.bindMemory(DirectiveLine{Name: "memory", Block: "new_mem2 ,"}, FileLocation{})
+		assert.Fail(t, "expecting an error")
 	}()
+}
+
+var evaluateExpressionsTests = []struct {
+	expr     Expression
+	res      coppervm.Word
+	hasError bool
+}{
+	{expr: expression(ExpressionKindNumLitInt, int64(10)), res: coppervm.WordU64(10)},
+	{expr: expression(ExpressionKindNumLitFloat, 2.3), res: coppervm.WordF64(2.3)},
+	{expr: expression(ExpressionKindStringLit, "str"), res: coppervm.WordI64(0)},
+	{expr: expression(ExpressionKindBinding, "a_bind"), res: coppervm.WordI64(3)},
+	{expr: expression(ExpressionKindBinding, "different_bind"), res: coppervm.WordI64(3), hasError: true},
 }
 
 func TestEvaluateExpression(t *testing.T) {
 	casm := Casm{}
-	tests := []struct {
-		expr Expression
-		res  coppervm.Word
-	}{
-		{Expression{
-			Kind:        ExpressionKindNumLitInt,
-			AsNumLitInt: 10,
-		}, coppervm.WordU64(10)},
-		{Expression{
-			Kind:          ExpressionKindNumLitFloat,
-			AsNumLitFloat: 2.3,
-		}, coppervm.WordF64(2.3)},
-		{Expression{
-			Kind:        ExpressionKindStringLit,
-			AsStringLit: "str",
-		}, coppervm.WordI64(0)},
-		{Expression{
-			Kind: ExpressionKindBinaryOp,
-			AsBinaryOp: BinaryOp{
-				Kind: BinaryOpKindPlus,
-				Lhs: &Expression{
-					Kind:        ExpressionKindNumLitInt,
-					AsNumLitInt: 2,
-				},
-				Rhs: &Expression{
-					Kind:        ExpressionKindNumLitInt,
-					AsNumLitInt: 5,
-				},
-			},
-		}, coppervm.WordI64(7)},
-		{Expression{
-			Kind: ExpressionKindBinaryOp,
-			AsBinaryOp: BinaryOp{
-				Kind: BinaryOpKindMinus,
-				Lhs: &Expression{
-					Kind:        ExpressionKindNumLitInt,
-					AsNumLitInt: 2,
-				},
-				Rhs: &Expression{
-					Kind:        ExpressionKindNumLitInt,
-					AsNumLitInt: 5,
-				},
-			},
-		}, coppervm.WordI64(-3)},
-		{Expression{
-			Kind: ExpressionKindBinaryOp,
-			AsBinaryOp: BinaryOp{
-				Kind: BinaryOpKindTimes,
-				Lhs: &Expression{
-					Kind:        ExpressionKindNumLitInt,
-					AsNumLitInt: 2,
-				},
-				Rhs: &Expression{
-					Kind:          ExpressionKindNumLitFloat,
-					AsNumLitFloat: 5.3,
-				},
-			},
-		}, coppervm.WordF64(10.6)},
-	}
-
-	for _, test := range tests {
-		assert.Equal(t, test.res, casm.evaluateExpression(test.expr, FileLocation{}).Word)
-	}
-
 	casm.Bindings = append(casm.Bindings, Binding{
 		Name:  "a_bind",
-		Value: Expression{Kind: ExpressionKindNumLitInt, AsNumLitInt: 3},
+		Value: expression(ExpressionKindNumLitInt, int64(3)),
 	})
-	w := casm.evaluateExpression(Expression{
-		Kind:      ExpressionKindBinding,
-		AsBinding: "a_bind",
-	}, FileLocation{}).Word
-	assert.Equal(t, coppervm.WordI64(3), w)
 
-	func() {
-		defer func() { recover() }()
-		casm.evaluateExpression(Expression{
-			Kind:      ExpressionKindBinding,
-			AsBinding: "bind",
-		}, FileLocation{})
-		t.Error("expecting an error")
-	}()
+	for _, test := range evaluateExpressionsTests {
+		func() {
+			defer func() {
+				r := recover()
+				if r != nil && !test.hasError {
+					assert.Fail(t, "unexpected error", test)
+				}
+			}()
+
+			result := casm.evaluateExpression(test.expr, FileLocation{}).Word
+
+			if test.hasError {
+				assert.Fail(t, "expecting an error", test)
+			} else {
+				assert.Equal(t, test.res, result, test)
+			}
+		}()
+	}
+}
+
+var binaryOpTests = []struct {
+	expr     Expression
+	res      coppervm.Word
+	hasError bool
+}{
+	// invalid binary op between types and float
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindPlus,
+		Lhs:  expressionP(ExpressionKindStringLit, "str"),
+		Rhs:  expressionP(ExpressionKindNumLitInt, int64(2)),
+	}), hasError: true},
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindPlus,
+		Lhs:  expressionP(ExpressionKindBinding, "bind"),
+		Rhs:  expressionP(ExpressionKindNumLitInt, int64(2)),
+	}), hasError: true},
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindPlus,
+		Lhs:  expressionP(ExpressionKindBinaryOp, BinaryOp{}),
+		Rhs:  expressionP(ExpressionKindNumLitInt, int64(2)),
+	}), hasError: true},
+
+	// invalid binary op between types and float
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindPlus,
+		Lhs:  expressionP(ExpressionKindStringLit, "str"),
+		Rhs:  expressionP(ExpressionKindNumLitFloat, 2.1),
+	}), hasError: true},
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindPlus,
+		Lhs:  expressionP(ExpressionKindBinding, "bind"),
+		Rhs:  expressionP(ExpressionKindNumLitFloat, 2.1),
+	}), hasError: true},
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindPlus,
+		Lhs:  expressionP(ExpressionKindBinaryOp, BinaryOp{}),
+		Rhs:  expressionP(ExpressionKindNumLitFloat, 2.1),
+	}), hasError: true},
+
+	// invalid binary op between types and string
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindPlus,
+		Lhs:  expressionP(ExpressionKindNumLitInt, int64(2)),
+		Rhs:  expressionP(ExpressionKindStringLit, "str"),
+	}), hasError: true},
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindPlus,
+		Lhs:  expressionP(ExpressionKindNumLitFloat, 2.1),
+		Rhs:  expressionP(ExpressionKindStringLit, "str"),
+	}), hasError: true},
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindPlus,
+		Lhs:  expressionP(ExpressionKindBinding, "bind"),
+		Rhs:  expressionP(ExpressionKindStringLit, "str"),
+	}), hasError: true},
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindPlus,
+		Lhs:  expressionP(ExpressionKindBinaryOp, BinaryOp{}),
+		Rhs:  expressionP(ExpressionKindStringLit, "str"),
+	}), hasError: true},
+
+	// invalid binary op between types and binding
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindPlus,
+		Lhs:  expressionP(ExpressionKindNumLitInt, int64(2)),
+		Rhs:  expressionP(ExpressionKindBinding, "bind"),
+	}), hasError: true},
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindPlus,
+		Lhs:  expressionP(ExpressionKindNumLitFloat, 2.1),
+		Rhs:  expressionP(ExpressionKindBinding, "bind"),
+	}), hasError: true},
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindPlus,
+		Lhs:  expressionP(ExpressionKindStringLit, "str"),
+		Rhs:  expressionP(ExpressionKindBinding, "bind"),
+	}), hasError: true},
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindPlus,
+		Lhs:  expressionP(ExpressionKindBinding, "bind"),
+		Rhs:  expressionP(ExpressionKindBinding, "bind"),
+	}), hasError: true},
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindPlus,
+		Lhs:  expressionP(ExpressionKindBinaryOp, BinaryOp{}),
+		Rhs:  expressionP(ExpressionKindBinding, "bind"),
+	}), hasError: true},
+
+	// invalid binary op between types and binop
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindPlus,
+		Lhs:  expressionP(ExpressionKindNumLitInt, int64(2)),
+		Rhs:  expressionP(ExpressionKindBinaryOp, BinaryOp{}),
+	}), hasError: true},
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindPlus,
+		Lhs:  expressionP(ExpressionKindNumLitFloat, 2.1),
+		Rhs:  expressionP(ExpressionKindBinaryOp, BinaryOp{}),
+	}), hasError: true},
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindPlus,
+		Lhs:  expressionP(ExpressionKindStringLit, "str"),
+		Rhs:  expressionP(ExpressionKindBinaryOp, BinaryOp{}),
+	}), hasError: true},
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindPlus,
+		Lhs:  expressionP(ExpressionKindBinding, "bind"),
+		Rhs:  expressionP(ExpressionKindBinaryOp, BinaryOp{}),
+	}), hasError: true},
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindPlus,
+		Lhs:  expressionP(ExpressionKindBinaryOp, BinaryOp{}),
+		Rhs:  expressionP(ExpressionKindBinaryOp, BinaryOp{}),
+	}), hasError: true},
+
+	// invalid binary op between strings
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindMinus,
+		Lhs:  expressionP(ExpressionKindStringLit, "str1"),
+		Rhs:  expressionP(ExpressionKindStringLit, "str1"),
+	}), hasError: true},
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindTimes,
+		Lhs:  expressionP(ExpressionKindStringLit, "str1"),
+		Rhs:  expressionP(ExpressionKindStringLit, "str1"),
+	}), hasError: true},
+
+	// valid binary op
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindPlus,
+		Lhs:  expressionP(ExpressionKindStringLit, "str1"),
+		Rhs:  expressionP(ExpressionKindStringLit, "str2"),
+	}), res: coppervm.WordI64(54)},
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindPlus,
+		Lhs:  expressionP(ExpressionKindNumLitInt, int64(2)),
+		Rhs:  expressionP(ExpressionKindNumLitFloat, 5.2),
+	}), res: coppervm.WordF64(7.2)},
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindMinus,
+		Lhs:  expressionP(ExpressionKindNumLitInt, int64(2)),
+		Rhs:  expressionP(ExpressionKindNumLitFloat, 5.2),
+	}), res: coppervm.WordF64(-3.2)},
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindTimes,
+		Lhs:  expressionP(ExpressionKindNumLitInt, int64(2)),
+		Rhs:  expressionP(ExpressionKindNumLitFloat, 5.3),
+	}), res: coppervm.WordF64(10.6)},
+}
+
+func TestEvaluateBinaryOp(t *testing.T) {
+	casm := Casm{}
+	for _, test := range binaryOpTests {
+		func() {
+			defer func() {
+				r := recover()
+				if r != nil && !test.hasError {
+					assert.Fail(t, "unexpected error", test)
+				}
+			}()
+
+			word := casm.evaluateBinaryOp(test.expr, FileLocation{}).Word
+
+			if test.hasError {
+				assert.Fail(t, "expecting an error", test)
+			} else {
+				assert.Equal(t, test.res, word, test)
+			}
+		}()
+	}
 }
 
 func TestEvaluateBinding(t *testing.T) {
 	casm := Casm{
 		Bindings: []Binding{
-			{
-				Name: "a_bind",
-				Value: Expression{
-					Kind:        ExpressionKindNumLitInt,
-					AsNumLitInt: 5,
-				},
-			},
-			{
-				Name: "cycl1",
-				Value: Expression{
-					Kind:      ExpressionKindBinding,
-					AsBinding: "cycl2",
-				},
-			},
-			{
-				Name: "cycl2",
-				Value: Expression{
-					Kind:      ExpressionKindBinding,
-					AsBinding: "cycl1",
-				},
-			},
+			{Name: "a_bind", Value: expression(ExpressionKindNumLitInt, int64(5))},
+			{Name: "cycl1", Value: expression(ExpressionKindBinding, "cycl2")},
+			{Name: "cycl2", Value: expression(ExpressionKindBinding, "cycl1")},
 		},
 	}
 
-	w := casm.evaluateBinding(casm.Bindings[0], FileLocation{}).Word
-	assert.Equal(t, coppervm.WordU64(5), w)
+	word := casm.evaluateBinding(casm.Bindings[0], FileLocation{}).Word
+	assert.Equal(t, coppervm.WordU64(5), word)
 
-	w2 := casm.evaluateBinding(casm.Bindings[0], FileLocation{}).Word
-	assert.Equal(t, coppervm.WordU64(5), w2)
+	word = casm.evaluateBinding(casm.Bindings[0], FileLocation{}).Word
+	assert.Equal(t, coppervm.WordU64(5), word)
 
 	func() {
 		defer func() { recover() }()
-		w3 := casm.evaluateBinding(casm.Bindings[1], FileLocation{}).Word
-		if w3 != coppervm.WordU64(5) {
-			t.Errorf("expecting %#v but got %#v", coppervm.WordU64(5), w3)
-		}
-		t.Error("expecting an error")
+		casm.evaluateBinding(casm.Bindings[1], FileLocation{})
+		assert.Fail(t, "expecting an error")
+	}()
+
+	func() {
+		defer func() { recover() }()
+		casm.evaluateBinding(Binding{Name: "bind"}, FileLocation{})
+		assert.Fail(t, "expecting an error")
 	}()
 }
 
@@ -405,4 +512,28 @@ func TestStrings(t *testing.T) {
 	assert.Equal(t, uint64(9), casm.Program[2].Operand.AsU64)
 	assert.Equal(t, uint64(24), casm.Program[3].Operand.AsU64)
 	assert.Equal(t, 34, len(casm.Memory))
+}
+
+func TestPushStringToMemory(t *testing.T) {
+	casm := Casm{}
+
+	strAddr := casm.pushStringToMemory("string1")
+	assert.Equal(t, 0, strAddr)
+	assert.Equal(t, 8, casm.StringLengths[0])
+
+	strAddr = casm.pushStringToMemory("a different string")
+	assert.Equal(t, 8, strAddr)
+	assert.Equal(t, 19, casm.StringLengths[8])
+}
+
+func TestGetStringByAddress(t *testing.T) {
+	casm := Casm{}
+	l1 := casm.pushStringToMemory("string1")
+	s1 := casm.getStringByAddress(l1)
+	assert.NotEmpty(t, s1)
+	assert.Equal(t, "string1", s1)
+	assert.Len(t, casm.Memory, 8)
+
+	s2 := casm.getStringByAddress(1)
+	assert.Empty(t, s2)
 }

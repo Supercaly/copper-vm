@@ -7,87 +7,67 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-func TestTokenize(t *testing.T) {
-	tests := []struct {
-		in       string
-		out      []Token
-		hasError bool
-	}{
-		{"1", []Token{
-			{Kind: TokenKindNumLit, Text: "1"},
-		}, false},
-		{"1.2", []Token{
-			{Kind: TokenKindNumLit, Text: "1.2"},
-		}, false},
-		{".2", []Token{
-			{Kind: TokenKindNumLit, Text: ".2"},
-		}, false},
-		{"test", []Token{
-			{Kind: TokenKindSymbol, Text: "test"},
-		}, false},
-		{"-5", []Token{
-			{Kind: TokenKindMinus, Text: "-"},
-			{Kind: TokenKindNumLit, Text: "5"},
-		}, false},
-		{"test12", []Token{
-			{Kind: TokenKindSymbol, Text: "test12"},
-		}, false},
-		{"12test", []Token{
-			{Kind: TokenKindNumLit, Text: "12"},
-			{Kind: TokenKindSymbol, Text: "test"},
-		}, false},
-		{"test_case", []Token{
-			{Kind: TokenKindSymbol, Text: "test_case"},
-		}, false},
-		{"_test", []Token{
-			{Kind: TokenKindSymbol, Text: "_test"},
-		}, false},
-		{"1,2,3", []Token{
-			{Kind: TokenKindNumLit, Text: "1"},
-			{Kind: TokenKindComma, Text: ","},
-			{Kind: TokenKindNumLit, Text: "2"},
-			{Kind: TokenKindComma, Text: ","},
-			{Kind: TokenKindNumLit, Text: "3"},
-		}, false},
-		{"\"string\"", []Token{
-			{Kind: TokenKindStringLit, Text: "string"},
-		}, false},
-		{"\"string", []Token{}, true},
-		{"'a'", []Token{
-			{Kind: TokenKindCharLit, Text: "a"},
-		}, false},
-		{"0x5CFF", []Token{
-			{Kind: TokenKindNumLit, Text: "0x5CFF"},
-		}, false},
-		{"0X5CFF", []Token{
-			{Kind: TokenKindNumLit, Text: "0X5CFF"},
-		}, false},
-		{"0b110011", []Token{
-			{Kind: TokenKindNumLit, Text: "0b110011"},
-		}, false},
-		{"0B110011", []Token{
-			{Kind: TokenKindNumLit, Text: "0B110011"},
-		}, false},
-		{"+-*", []Token{
-			{Kind: TokenKindPlus, Text: "+"},
-			{Kind: TokenKindMinus, Text: "-"},
-			{Kind: TokenKindAsterisk, Text: "*"},
-		}, false},
-		{"()", []Token{
-			{Kind: TokenKindOpenParen, Text: "("},
-			{Kind: TokenKindCloseParen, Text: ")"},
-		}, false},
-		{"$", []Token{}, true},
-	}
+// Wrapper function to create a Token.
+func token(kind TokenKind, text string) Token {
+	return Token{Kind: kind, Text: text}
+}
 
-	for _, test := range tests {
+var testTokens = []struct {
+	in       string
+	out      []Token
+	hasError bool
+}{
+	{"1", []Token{token(TokenKindNumLit, "1")}, false},
+	{"1.2", []Token{token(TokenKindNumLit, "1.2")}, false},
+	{".2", []Token{token(TokenKindNumLit, ".2")}, false},
+	{"test", []Token{token(TokenKindSymbol, "test")}, false},
+	{"-5", []Token{
+		token(TokenKindMinus, "-"),
+		token(TokenKindNumLit, "5"),
+	}, false},
+	{"test12", []Token{token(TokenKindSymbol, "test12")}, false},
+	{"12test", []Token{
+		token(TokenKindNumLit, "12"),
+		token(TokenKindSymbol, "test"),
+	}, false},
+	{"test_case", []Token{token(TokenKindSymbol, "test_case")}, false},
+	{"_test", []Token{token(TokenKindSymbol, "_test")}, false},
+	{"1,2,3", []Token{
+		token(TokenKindNumLit, "1"),
+		token(TokenKindComma, ","),
+		token(TokenKindNumLit, "2"),
+		token(TokenKindComma, ","),
+		token(TokenKindNumLit, "3"),
+	}, false},
+	{`"string"`, []Token{token(TokenKindStringLit, "string")}, false},
+	{`"string`, []Token{}, true},
+	{`'a'`, []Token{token(TokenKindCharLit, "a")}, false},
+	{`'a`, []Token{}, true},
+	{"0x5CFF", []Token{token(TokenKindNumLit, "0x5CFF")}, false},
+	{"0X5CFF", []Token{token(TokenKindNumLit, "0X5CFF")}, false},
+	{"0b110011", []Token{token(TokenKindNumLit, "0b110011")}, false},
+	{"0B110011", []Token{token(TokenKindNumLit, "0B110011")}, false},
+	{"+-*", []Token{
+		token(TokenKindPlus, "+"),
+		token(TokenKindMinus, "-"),
+		token(TokenKindAsterisk, "*"),
+	}, false},
+	{"()", []Token{
+		token(TokenKindOpenParen, "("),
+		token(TokenKindCloseParen, ")"),
+	}, false},
+	{"$", []Token{}, true},
+}
+
+func TestTokenize(t *testing.T) {
+	for _, test := range testTokens {
 		tok, err := Tokenize(test.in)
 
 		if test.hasError {
-			assert.Error(t, err)
+			assert.Error(t, err, test)
 		} else {
-			assert.NoError(t, err)
-			assert.Equal(t, test.out, tok)
+			assert.NoError(t, err, test)
+			assert.Equal(t, test.out, tok, test)
 		}
 	}
 }
@@ -111,153 +91,153 @@ func (s *AsciiTestSuite) SetupTest() {
 }
 
 func (s *AsciiTestSuite) TestIsDigit() {
-	s.result[46] = true
-	s.result[48] = true
-	s.result[49] = true
-	s.result[50] = true
-	s.result[51] = true
-	s.result[52] = true
-	s.result[53] = true
-	s.result[54] = true
-	s.result[55] = true
-	s.result[56] = true
-	s.result[57] = true
+	s.result['0'] = true
+	s.result['1'] = true
+	s.result['2'] = true
+	s.result['3'] = true
+	s.result['4'] = true
+	s.result['5'] = true
+	s.result['6'] = true
+	s.result['7'] = true
+	s.result['8'] = true
+	s.result['9'] = true
+	s.result['.'] = true
 
 	for i := 0; i < len(s.runes); i++ {
-		assert.Equal(s.T(), s.result[i], isDigit(s.runes[i]))
+		assert.Equal(s.T(), s.result[i], isDigit(s.runes[i]), "rune: "+string(s.runes[i]))
 	}
 }
 
 func (s *AsciiTestSuite) TestIsAlpha() {
-	s.result[48] = true
-	s.result[49] = true
-	s.result[50] = true
-	s.result[51] = true
-	s.result[52] = true
-	s.result[53] = true
-	s.result[54] = true
-	s.result[55] = true
-	s.result[56] = true
-	s.result[57] = true
-	s.result[65] = true
-	s.result[66] = true
-	s.result[67] = true
-	s.result[68] = true
-	s.result[69] = true
-	s.result[70] = true
-	s.result[71] = true
-	s.result[72] = true
-	s.result[73] = true
-	s.result[74] = true
-	s.result[75] = true
-	s.result[76] = true
-	s.result[77] = true
-	s.result[78] = true
-	s.result[79] = true
-	s.result[80] = true
-	s.result[81] = true
-	s.result[82] = true
-	s.result[83] = true
-	s.result[84] = true
-	s.result[85] = true
-	s.result[86] = true
-	s.result[87] = true
-	s.result[88] = true
-	s.result[89] = true
-	s.result[90] = true
-	s.result[95] = true
-	s.result[97] = true
-	s.result[98] = true
-	s.result[99] = true
-	s.result[100] = true
-	s.result[101] = true
-	s.result[102] = true
-	s.result[103] = true
-	s.result[104] = true
-	s.result[105] = true
-	s.result[106] = true
-	s.result[107] = true
-	s.result[108] = true
-	s.result[109] = true
-	s.result[110] = true
-	s.result[111] = true
-	s.result[112] = true
-	s.result[113] = true
-	s.result[114] = true
-	s.result[115] = true
-	s.result[116] = true
-	s.result[117] = true
-	s.result[118] = true
-	s.result[119] = true
-	s.result[120] = true
-	s.result[121] = true
-	s.result[122] = true
+	s.result['_'] = true
+	s.result['0'] = true
+	s.result['1'] = true
+	s.result['2'] = true
+	s.result['3'] = true
+	s.result['4'] = true
+	s.result['5'] = true
+	s.result['6'] = true
+	s.result['7'] = true
+	s.result['8'] = true
+	s.result['9'] = true
+	s.result['A'] = true
+	s.result['B'] = true
+	s.result['C'] = true
+	s.result['D'] = true
+	s.result['E'] = true
+	s.result['F'] = true
+	s.result['G'] = true
+	s.result['H'] = true
+	s.result['I'] = true
+	s.result['J'] = true
+	s.result['K'] = true
+	s.result['L'] = true
+	s.result['M'] = true
+	s.result['N'] = true
+	s.result['O'] = true
+	s.result['P'] = true
+	s.result['Q'] = true
+	s.result['R'] = true
+	s.result['S'] = true
+	s.result['T'] = true
+	s.result['U'] = true
+	s.result['V'] = true
+	s.result['W'] = true
+	s.result['X'] = true
+	s.result['Y'] = true
+	s.result['Z'] = true
+	s.result['a'] = true
+	s.result['b'] = true
+	s.result['c'] = true
+	s.result['d'] = true
+	s.result['e'] = true
+	s.result['f'] = true
+	s.result['g'] = true
+	s.result['h'] = true
+	s.result['i'] = true
+	s.result['j'] = true
+	s.result['k'] = true
+	s.result['l'] = true
+	s.result['m'] = true
+	s.result['n'] = true
+	s.result['o'] = true
+	s.result['p'] = true
+	s.result['q'] = true
+	s.result['r'] = true
+	s.result['s'] = true
+	s.result['t'] = true
+	s.result['u'] = true
+	s.result['v'] = true
+	s.result['w'] = true
+	s.result['x'] = true
+	s.result['y'] = true
+	s.result['z'] = true
 
 	for i := 0; i < len(s.runes); i++ {
-		assert.Equal(s.T(), s.result[i], isAlpha(s.runes[i]))
+		assert.Equal(s.T(), s.result[i], isAlpha(s.runes[i]), "rune: "+string(s.runes[i]))
 	}
 }
 
 func (s *AsciiTestSuite) TestIsHex() {
-	s.result[48] = true
-	s.result[49] = true
-	s.result[50] = true
-	s.result[51] = true
-	s.result[52] = true
-	s.result[53] = true
-	s.result[54] = true
-	s.result[55] = true
-	s.result[56] = true
-	s.result[57] = true
-	s.result[65] = true
-	s.result[66] = true
-	s.result[67] = true
-	s.result[68] = true
-	s.result[69] = true
-	s.result[70] = true
-	s.result[97] = true
-	s.result[98] = true
-	s.result[99] = true
-	s.result[100] = true
-	s.result[101] = true
-	s.result[102] = true
-	s.result[88] = true
-	s.result[120] = true
+	s.result['0'] = true
+	s.result['1'] = true
+	s.result['2'] = true
+	s.result['3'] = true
+	s.result['4'] = true
+	s.result['5'] = true
+	s.result['6'] = true
+	s.result['7'] = true
+	s.result['8'] = true
+	s.result['9'] = true
+	s.result['A'] = true
+	s.result['B'] = true
+	s.result['C'] = true
+	s.result['D'] = true
+	s.result['E'] = true
+	s.result['F'] = true
+	s.result['a'] = true
+	s.result['b'] = true
+	s.result['c'] = true
+	s.result['d'] = true
+	s.result['e'] = true
+	s.result['f'] = true
+	s.result['X'] = true
+	s.result['x'] = true
 
 	for i := 0; i < len(s.runes); i++ {
-		assert.Equal(s.T(), s.result[i], isHex(s.runes[i]))
+		assert.Equal(s.T(), s.result[i], isHex(s.runes[i]), "rune: "+string(s.runes[i]))
 	}
 }
 
 func (s *AsciiTestSuite) TestIsNumber() {
-	s.result[46] = true
-	s.result[48] = true
-	s.result[49] = true
-	s.result[50] = true
-	s.result[51] = true
-	s.result[52] = true
-	s.result[53] = true
-	s.result[54] = true
-	s.result[55] = true
-	s.result[56] = true
-	s.result[57] = true
-	s.result[65] = true
-	s.result[66] = true
-	s.result[67] = true
-	s.result[68] = true
-	s.result[69] = true
-	s.result[70] = true
-	s.result[97] = true
-	s.result[98] = true
-	s.result[99] = true
-	s.result[100] = true
-	s.result[101] = true
-	s.result[102] = true
-	s.result[88] = true
-	s.result[120] = true
+	s.result['.'] = true
+	s.result['0'] = true
+	s.result['1'] = true
+	s.result['2'] = true
+	s.result['3'] = true
+	s.result['4'] = true
+	s.result['5'] = true
+	s.result['6'] = true
+	s.result['7'] = true
+	s.result['8'] = true
+	s.result['9'] = true
+	s.result['A'] = true
+	s.result['B'] = true
+	s.result['C'] = true
+	s.result['D'] = true
+	s.result['E'] = true
+	s.result['F'] = true
+	s.result['a'] = true
+	s.result['b'] = true
+	s.result['c'] = true
+	s.result['d'] = true
+	s.result['e'] = true
+	s.result['f'] = true
+	s.result['X'] = true
+	s.result['x'] = true
 
 	for i := 0; i < len(s.runes); i++ {
-		assert.Equal(s.T(), s.result[i], isNumber(s.runes[i]))
+		assert.Equal(s.T(), s.result[i], isNumber(s.runes[i]), "rune: "+string(s.runes[i]))
 	}
 }
 
