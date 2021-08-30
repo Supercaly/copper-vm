@@ -19,6 +19,8 @@ const (
 	TokenKindPlus
 	TokenKindMinus
 	TokenKindAsterisk
+	TokenKindSlash
+	TokenKindPercent
 	TokenKindComma
 	TokenKindOpenParen
 	TokenKindCloseParen
@@ -53,6 +55,18 @@ func Tokenize(source string) (out []Token, err error) {
 			out = append(out, Token{
 				Kind: TokenKindAsterisk,
 				Text: "*",
+			})
+		case '/':
+			source = source[1:]
+			out = append(out, Token{
+				Kind: TokenKindSlash,
+				Text: "/",
+			})
+		case '%':
+			source = source[1:]
+			out = append(out, Token{
+				Kind: TokenKindPercent,
+				Text: "%",
 			})
 		case ',':
 			source = source[1:]

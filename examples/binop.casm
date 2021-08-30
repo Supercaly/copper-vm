@@ -23,4 +23,13 @@ print
 push M
 print
 
+push 4/2
+print
+
+push 4.2/2
+print
+
+push 5%2
+print
+
 halt
