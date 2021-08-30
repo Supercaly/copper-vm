@@ -60,6 +60,8 @@ const (
 	BinaryOpKindPlus BinaryOpKind = iota
 	BinaryOpKindMinus
 	BinaryOpKindTimes
+	BinaryOpKindDivide
+	BinaryOpKindModulo
 )
 
 func (kind BinaryOpKind) String() string {
@@ -67,6 +69,8 @@ func (kind BinaryOpKind) String() string {
 		"BinaryOpKindPlus",
 		"BinaryOpKindMinus",
 		"BinaryOpKindTimes",
+		"BinaryOpKindDivide",
+		"BinaryOpKindModulo",
 	}[kind]
 }
 
@@ -100,11 +104,11 @@ var binOpPrecedenceMap = map[BinaryOpKind]int{
 // false otherwise.
 func tokenIsOperator(token Token) (out bool) {
 	switch token.Kind {
-	case TokenKindPlus:
-		out = true
-	case TokenKindMinus:
-		out = true
-	case TokenKindAsterisk:
+	case TokenKindPlus,
+		TokenKindMinus,
+		TokenKindAsterisk,
+		TokenKindSlash,
+		TokenKindPercent:
 		out = true
 	default:
 		out = false
@@ -123,6 +127,10 @@ func tokenAsBinaryOpKind(token Token) (out BinaryOpKind) {
 		out = BinaryOpKindMinus
 	case TokenKindAsterisk:
 		out = BinaryOpKindTimes
+	case TokenKindSlash:
+		out = BinaryOpKindDivide
+	case TokenKindPercent:
+		out = BinaryOpKindModulo
 	default:
 		panic(fmt.Sprintf("token %#v is not a binary operatator", token))
 	}
@@ -147,6 +155,13 @@ func computeOpWithSameType(lhs Expression, rhs Expression, op BinaryOpKind) (out
 			out.AsNumLitInt = lhs.AsNumLitInt - rhs.AsNumLitInt
 		case BinaryOpKindTimes:
 			out.AsNumLitInt = lhs.AsNumLitInt * rhs.AsNumLitInt
+		case BinaryOpKindDivide:
+			if rhs.AsNumLitInt == 0 {
+				panic("divide by zero")
+			}
+			out.AsNumLitInt = lhs.AsNumLitInt / rhs.AsNumLitInt
+		case BinaryOpKindModulo:
+			out.AsNumLitInt = lhs.AsNumLitInt % rhs.AsNumLitInt
 		}
 	case ExpressionKindNumLitFloat:
 		switch op {
@@ -156,6 +171,13 @@ func computeOpWithSameType(lhs Expression, rhs Expression, op BinaryOpKind) (out
 			out.AsNumLitFloat = lhs.AsNumLitFloat - rhs.AsNumLitFloat
 		case BinaryOpKindTimes:
 			out.AsNumLitFloat = lhs.AsNumLitFloat * rhs.AsNumLitFloat
+		case BinaryOpKindDivide:
+			if rhs.AsNumLitFloat == 0 {
+				panic("divide by zero")
+			}
+			out.AsNumLitFloat = lhs.AsNumLitFloat / rhs.AsNumLitFloat
+		case BinaryOpKindModulo:
+			panic("unsupported operation '%' between floating point literals")
 		}
 	case ExpressionKindStringLit:
 		switch op {
@@ -165,6 +187,10 @@ func computeOpWithSameType(lhs Expression, rhs Expression, op BinaryOpKind) (out
 			panic("unsupported operation '-' between string literals")
 		case BinaryOpKindTimes:
 			panic("unsupported operation '*' between string literals")
+		case BinaryOpKindDivide:
+			panic("unsupported operation '/' between string literals")
+		case BinaryOpKindModulo:
+			panic("unsupported operation '%' between string literals")
 		}
 	case ExpressionKindBinaryOp:
 		panic("at this point binary op is unreachable! Something really went wrong WTF")

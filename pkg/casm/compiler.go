@@ -470,42 +470,57 @@ var exprKindToTypeRepMap = map[ExpressionKind]coppervm.TypeRepresentation{
 }
 
 // Evaluate a binary op expression to extract an eval result.
-func (casm *Casm) evaluateBinaryOp(binop Expression, location FileLocation) (ret EvalResult) {
+func (casm *Casm) evaluateBinaryOp(binop Expression, location FileLocation) (result EvalResult) {
 	lhs_result := casm.evaluateExpression(*binop.AsBinaryOp.Lhs, location)
 	rhs_result := casm.evaluateExpression(*binop.AsBinaryOp.Rhs, location)
 
-	opType := binaryOpEvaluationMap[lhs_result.Type][rhs_result.Type]
-	if opType == -1 {
+	resultType := binaryOpEvaluationMap[lhs_result.Type][rhs_result.Type]
+	if resultType == -1 {
 		panic(fmt.Sprintf("%s: unsupported binary operation between types '%s' and '%s'",
 			location,
 			lhs_result.Type,
 			rhs_result.Type))
 	}
-	typeRep := exprKindToTypeRepMap[opType]
 
-	if opType == ExpressionKindStringLit {
-		if binop.AsBinaryOp.Kind == BinaryOpKindMinus ||
-			binop.AsBinaryOp.Kind == BinaryOpKindTimes {
-			panic(fmt.Sprintf("%s: unsupported operations ['-', '*'] between string literals",
+	// At this point the only permitted operations are between
+	// int-int int-float float-int float-float string-string
+	// so we can reduce the next checks.
+
+	if resultType == ExpressionKindStringLit {
+		// The op is string-string
+		if binop.AsBinaryOp.Kind != BinaryOpKindPlus {
+			panic(fmt.Sprintf("%s: unsupported operations ['-', '*', '/', '%%'] between string literals",
 				location))
 		}
 		leftStr := casm.getStringByAddress(int(lhs_result.Word.AsU64))
 		rightStr := casm.getStringByAddress(int(rhs_result.Word.AsU64))
-		ret = EvalResult{
+		result = EvalResult{
 			coppervm.WordU64(uint64(casm.pushStringToMemory(leftStr + rightStr))),
 			ExpressionKindStringLit,
 		}
 	} else {
+		// The only ops at this point are int-float float-int.
+		// int-int and float-float are removed because in Expression we precompute
+		// the operations with same type
+		resultTypeRep := exprKindToTypeRepMap[resultType]
 		switch binop.AsBinaryOp.Kind {
 		case BinaryOpKindPlus:
-			ret = EvalResult{coppervm.AddWord(lhs_result.Word, rhs_result.Word, typeRep), opType}
+			result = EvalResult{coppervm.AddWord(lhs_result.Word, rhs_result.Word, resultTypeRep), resultType}
 		case BinaryOpKindMinus:
-			ret = EvalResult{coppervm.SubWord(lhs_result.Word, rhs_result.Word, typeRep), opType}
+			result = EvalResult{coppervm.SubWord(lhs_result.Word, rhs_result.Word, resultTypeRep), resultType}
 		case BinaryOpKindTimes:
-			ret = EvalResult{coppervm.MulWord(lhs_result.Word, rhs_result.Word, typeRep), opType}
+			result = EvalResult{coppervm.MulWord(lhs_result.Word, rhs_result.Word, resultTypeRep), resultType}
+		case BinaryOpKindDivide:
+			if rhs_result.Word.AsI64 == 0 || rhs_result.Word.AsF64 == 0.0 {
+				panic(fmt.Sprintf("%s: divide by zero", location))
+			}
+			result = EvalResult{coppervm.DivWord(lhs_result.Word, rhs_result.Word, resultTypeRep), resultType}
+		case BinaryOpKindModulo:
+			// Since the only pos are int-float and float-int allways panic
+			panic(fmt.Sprintf("%s: unsupported '%%' operation between floating point literals", location))
 		}
 	}
-	return ret
+	return result
 }
 
 // Push a string to casm memory and return the base address.

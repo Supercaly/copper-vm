@@ -472,13 +472,23 @@ var binaryOpTests = []struct {
 		Lhs:  expressionP(ExpressionKindStringLit, "str1"),
 		Rhs:  expressionP(ExpressionKindStringLit, "str1"),
 	}), hasError: true},
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindDivide,
+		Lhs:  expressionP(ExpressionKindStringLit, "str1"),
+		Rhs:  expressionP(ExpressionKindStringLit, "str1"),
+	}), hasError: true},
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindModulo,
+		Lhs:  expressionP(ExpressionKindStringLit, "str1"),
+		Rhs:  expressionP(ExpressionKindStringLit, "str1"),
+	}), hasError: true},
 
 	// valid binary op
 	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
 		Kind: BinaryOpKindPlus,
 		Lhs:  expressionP(ExpressionKindStringLit, "str1"),
 		Rhs:  expressionP(ExpressionKindStringLit, "str2"),
-	}), res: coppervm.WordI64(54)},
+	}), res: coppervm.WordI64(74)},
 	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
 		Kind: BinaryOpKindPlus,
 		Lhs:  expressionP(ExpressionKindNumLitInt, int64(2)),
@@ -494,6 +504,21 @@ var binaryOpTests = []struct {
 		Lhs:  expressionP(ExpressionKindNumLitInt, int64(2)),
 		Rhs:  expressionP(ExpressionKindNumLitFloat, 5.3),
 	}), res: coppervm.WordF64(10.6)},
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindDivide,
+		Lhs:  expressionP(ExpressionKindNumLitFloat, 5.0),
+		Rhs:  expressionP(ExpressionKindNumLitInt, int64(2)),
+	}), res: coppervm.WordF64(2.5)},
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindDivide,
+		Lhs:  expressionP(ExpressionKindNumLitFloat, 5.0),
+		Rhs:  expressionP(ExpressionKindNumLitFloat, 0.0),
+	}), hasError: true},
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindModulo,
+		Rhs:  expressionP(ExpressionKindNumLitFloat, 5.0),
+		Lhs:  expressionP(ExpressionKindNumLitInt, int64(2)),
+	}), hasError: true},
 }
 
 func TestEvaluateBinaryOp(t *testing.T) {

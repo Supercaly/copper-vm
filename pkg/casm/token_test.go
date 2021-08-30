@@ -47,10 +47,12 @@ var testTokens = []struct {
 	{"0X5CFF", []Token{token(TokenKindNumLit, "0X5CFF")}, false},
 	{"0b110011", []Token{token(TokenKindNumLit, "0b110011")}, false},
 	{"0B110011", []Token{token(TokenKindNumLit, "0B110011")}, false},
-	{"+-*", []Token{
+	{"+-*/%", []Token{
 		token(TokenKindPlus, "+"),
 		token(TokenKindMinus, "-"),
 		token(TokenKindAsterisk, "*"),
+		token(TokenKindSlash, "/"),
+		token(TokenKindPercent, "%"),
 	}, false},
 	{"()", []Token{
 		token(TokenKindOpenParen, "("),

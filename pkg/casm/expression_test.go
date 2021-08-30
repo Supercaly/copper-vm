@@ -17,6 +17,8 @@ func TestTokenIsOperator(t *testing.T) {
 		{token(TokenKindPlus, "+"), true},
 		{token(TokenKindMinus, "-"), true},
 		{token(TokenKindAsterisk, "*"), true},
+		{token(TokenKindSlash, "/"), true},
+		{token(TokenKindPercent, "%"), true},
 		{token(TokenKindComma, ","), false},
 		{token(TokenKindOpenParen, "("), false},
 		{token(TokenKindCloseParen, ")"), false},
@@ -39,6 +41,8 @@ func TestTokenAsBinaryOpKind(t *testing.T) {
 		{token(TokenKindPlus, "+"), BinaryOpKindPlus, false},
 		{token(TokenKindMinus, "-"), BinaryOpKindMinus, false},
 		{token(TokenKindAsterisk, "*"), BinaryOpKindTimes, false},
+		{token(TokenKindSlash, "/"), BinaryOpKindDivide, false},
+		{token(TokenKindPercent, "%"), BinaryOpKindModulo, false},
 		{token(TokenKindComma, ","), 0, true},
 		{token(TokenKindOpenParen, "("), 0, true},
 		{token(TokenKindCloseParen, ")"), 0, true},
@@ -106,6 +110,7 @@ var testOpWithSameType = []struct {
 	out      Expression
 	hasError bool
 }{
+	// integer ops
 	{
 		left:     expression(ExpressionKindNumLitInt, int64(1)),
 		right:    expression(ExpressionKindNumLitInt, int64(1)),
@@ -128,6 +133,27 @@ var testOpWithSameType = []struct {
 		hasError: false,
 	},
 	{
+		left:     expression(ExpressionKindNumLitInt, int64(4)),
+		right:    expression(ExpressionKindNumLitInt, int64(2)),
+		op:       BinaryOpKindDivide,
+		out:      expression(ExpressionKindNumLitInt, int64(2)),
+		hasError: false,
+	},
+	{
+		left:     expression(ExpressionKindNumLitInt, int64(4)),
+		right:    expression(ExpressionKindNumLitInt, int64(0)),
+		op:       BinaryOpKindDivide,
+		hasError: true,
+	},
+	{
+		left:     expression(ExpressionKindNumLitInt, int64(5)),
+		right:    expression(ExpressionKindNumLitInt, int64(2)),
+		op:       BinaryOpKindModulo,
+		out:      expression(ExpressionKindNumLitInt, int64(1)),
+		hasError: false,
+	},
+	// float ops
+	{
 		left:     expression(ExpressionKindNumLitFloat, float64(1.0)),
 		right:    expression(ExpressionKindNumLitFloat, float64(1.0)),
 		op:       BinaryOpKindPlus,
@@ -149,6 +175,26 @@ var testOpWithSameType = []struct {
 		hasError: false,
 	},
 	{
+		left:     expression(ExpressionKindNumLitFloat, float64(1.0)),
+		right:    expression(ExpressionKindNumLitFloat, float64(2.0)),
+		op:       BinaryOpKindDivide,
+		out:      expression(ExpressionKindNumLitFloat, float64(0.5)),
+		hasError: false,
+	},
+	{
+		left:     expression(ExpressionKindNumLitFloat, float64(1.0)),
+		right:    expression(ExpressionKindNumLitFloat, float64(0.0)),
+		op:       BinaryOpKindDivide,
+		hasError: true,
+	},
+	{
+		left:     expression(ExpressionKindNumLitFloat, float64(1.0)),
+		right:    expression(ExpressionKindNumLitFloat, float64(2.0)),
+		op:       BinaryOpKindModulo,
+		hasError: true,
+	},
+	// string ops
+	{
 		left:     expression(ExpressionKindStringLit, "first"),
 		right:    expression(ExpressionKindStringLit, "second"),
 		op:       BinaryOpKindPlus,
@@ -159,56 +205,86 @@ var testOpWithSameType = []struct {
 		left:     expression(ExpressionKindStringLit, "first"),
 		right:    expression(ExpressionKindStringLit, "second"),
 		op:       BinaryOpKindMinus,
-		out:      Expression{},
 		hasError: true,
 	},
 	{
 		left:     expression(ExpressionKindStringLit, "first"),
 		right:    expression(ExpressionKindStringLit, "second"),
 		op:       BinaryOpKindTimes,
-		out:      Expression{},
 		hasError: true,
 	},
+	{
+		left:     expression(ExpressionKindStringLit, "first"),
+		right:    expression(ExpressionKindStringLit, "second"),
+		op:       BinaryOpKindDivide,
+		hasError: true,
+	},
+	{
+		left:     expression(ExpressionKindStringLit, "first"),
+		right:    expression(ExpressionKindStringLit, "second"),
+		op:       BinaryOpKindModulo,
+		hasError: true,
+	},
+	// binop ops
 	{
 		left:     Expression{Kind: ExpressionKindBinaryOp},
 		right:    Expression{Kind: ExpressionKindBinaryOp},
 		op:       BinaryOpKindPlus,
-		out:      Expression{},
 		hasError: true,
 	},
 	{
 		left:     Expression{Kind: ExpressionKindBinaryOp},
 		right:    Expression{Kind: ExpressionKindBinaryOp},
 		op:       BinaryOpKindMinus,
-		out:      Expression{},
 		hasError: true,
 	},
 	{
 		left:     Expression{Kind: ExpressionKindBinaryOp},
 		right:    Expression{Kind: ExpressionKindBinaryOp},
 		op:       BinaryOpKindTimes,
-		out:      Expression{},
 		hasError: true,
 	},
+	{
+		left:     Expression{Kind: ExpressionKindBinaryOp},
+		right:    Expression{Kind: ExpressionKindBinaryOp},
+		op:       BinaryOpKindDivide,
+		hasError: true,
+	},
+	{
+		left:     Expression{Kind: ExpressionKindBinaryOp},
+		right:    Expression{Kind: ExpressionKindBinaryOp},
+		op:       BinaryOpKindModulo,
+		hasError: true,
+	},
+	// bindings ops
 	{
 		left:     Expression{Kind: ExpressionKindBinding},
 		right:    Expression{Kind: ExpressionKindBinding},
 		op:       BinaryOpKindPlus,
-		out:      Expression{},
 		hasError: true,
 	},
 	{
 		left:     Expression{Kind: ExpressionKindBinding},
 		right:    Expression{Kind: ExpressionKindBinding},
 		op:       BinaryOpKindMinus,
-		out:      Expression{},
 		hasError: true,
 	},
 	{
 		left:     Expression{Kind: ExpressionKindBinding},
 		right:    Expression{Kind: ExpressionKindBinding},
 		op:       BinaryOpKindTimes,
-		out:      Expression{},
+		hasError: true,
+	},
+	{
+		left:     Expression{Kind: ExpressionKindBinding},
+		right:    Expression{Kind: ExpressionKindBinding},
+		op:       BinaryOpKindDivide,
+		hasError: true,
+	},
+	{
+		left:     Expression{Kind: ExpressionKindBinding},
+		right:    Expression{Kind: ExpressionKindBinding},
+		op:       BinaryOpKindModulo,
 		hasError: true,
 	},
 }
@@ -282,6 +358,16 @@ var testExpressions = []struct {
 	}), false},
 	{"-2*3", expression(ExpressionKindNumLitInt, int64(-6)), false},
 	{"(1+2)*(1+2)", expression(ExpressionKindNumLitInt, int64(9)), false},
+	{"1.0/2", expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindDivide,
+		Lhs:  expressionP(ExpressionKindNumLitFloat, 1.0),
+		Rhs:  expressionP(ExpressionKindNumLitInt, int64(2)),
+	}), false},
+	{"5.2%2", expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindModulo,
+		Lhs:  expressionP(ExpressionKindNumLitFloat, 5.2),
+		Rhs:  expressionP(ExpressionKindNumLitInt, int64(2)),
+	}), false},
 	{"0xG", Expression{}, true},
 	{"0x", Expression{}, true},
 	{"0b", Expression{}, true},
