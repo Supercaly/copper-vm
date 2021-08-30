@@ -60,7 +60,7 @@ func (casm *Casm) SaveProgramToFile() error {
 	meta := coppervm.FileMeta(casm.Entry, casm.Program, casm.Memory, dbSymbols)
 	metaJson, err := json.Marshal(meta)
 	if err != nil {
-		return fmt.Errorf("error writign program to file %s", err)
+		return fmt.Errorf("error writing program to file %s", err)
 	}
 
 	if filepath.Ext(casm.OutputFile) != coppervm.CoppervmFileExtention {

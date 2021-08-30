@@ -7,6 +7,48 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestSaveProgramToFile(t *testing.T) {
+	tests := []struct {
+		casm     Casm
+		hasError bool
+	}{
+		{Casm{OutputFile: "testdata/test.notcopper"}, true},
+		{Casm{OutputFile: "testdata/test.copper"}, false},
+	}
+
+	for _, test := range tests {
+		err := test.casm.SaveProgramToFile()
+
+		if test.hasError {
+			assert.Error(t, err, test)
+		} else {
+			assert.NoError(t, err, test)
+		}
+	}
+}
+
+func TestTranslateSourceFile(t *testing.T) {
+	tests := []struct {
+		path     string
+		hasError bool
+	}{
+		{"testdata/test.notcasm", true},
+		{"testdata/test1.casm", true},
+		{"testdata/test.casm", false},
+	}
+	casm := Casm{}
+
+	for _, test := range tests {
+		err := casm.TranslateSourceFile(test.path)
+
+		if test.hasError {
+			assert.Error(t, err, test)
+		} else {
+			assert.NoError(t, err, test)
+		}
+	}
+}
+
 var testSources = []struct {
 	in       string
 	out      []coppervm.InstDef

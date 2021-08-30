@@ -41,11 +41,11 @@ func TestAddWord(t *testing.T) {
 
 	for _, test := range tests {
 		result := AddWord(test.a, test.b, test.t)
-		assert.Equal(t, test.res.AsU64, result.AsU64)
-		assert.Equal(t, test.res.AsI64, result.AsI64)
+		assert.Equal(t, test.res.AsU64, result.AsU64, test)
+		assert.Equal(t, test.res.AsI64, result.AsI64, test)
 		assert.Condition(t, func() (success bool) {
 			return test.res.AsF64-result.AsF64 < 0.01
-		})
+		}, test)
 	}
 }
 
@@ -63,11 +63,11 @@ func TestSubWord(t *testing.T) {
 
 	for _, test := range tests {
 		result := SubWord(test.a, test.b, test.t)
-		assert.Equal(t, test.res.AsU64, result.AsU64)
-		assert.Equal(t, test.res.AsI64, result.AsI64)
+		assert.Equal(t, test.res.AsU64, result.AsU64, test)
+		assert.Equal(t, test.res.AsI64, result.AsI64, test)
 		assert.Condition(t, func() (success bool) {
 			return test.res.AsF64-result.AsF64 < 0.01
-		})
+		}, test)
 	}
 }
 
@@ -85,11 +85,11 @@ func TestMulWord(t *testing.T) {
 
 	for _, test := range tests {
 		result := MulWord(test.a, test.b, test.t)
-		assert.Equal(t, test.res.AsU64, result.AsU64)
-		assert.Equal(t, test.res.AsI64, result.AsI64)
+		assert.Equal(t, test.res.AsU64, result.AsU64, test)
+		assert.Equal(t, test.res.AsI64, result.AsI64, test)
 		assert.Condition(t, func() (success bool) {
 			return test.res.AsF64-result.AsF64 < 0.01
-		})
+		}, test)
 	}
 }
 
@@ -107,36 +107,45 @@ func TestDivWord(t *testing.T) {
 
 	for _, test := range tests {
 		result := DivWord(test.a, test.b, test.t)
-		assert.Equal(t, test.res.AsU64, result.AsU64)
-		assert.Equal(t, test.res.AsI64, result.AsI64)
+		assert.Equal(t, test.res.AsU64, result.AsU64, test)
+		assert.Equal(t, test.res.AsI64, result.AsI64, test)
 		assert.Condition(t, func() (success bool) {
 			return test.res.AsF64-result.AsF64 < 0.01
-		})
+		}, test)
 	}
 }
 func TestModWord(t *testing.T) {
 	tests := []struct {
-		a   Word
-		b   Word
-		t   TypeRepresentation
-		res Word
+		a        Word
+		b        Word
+		t        TypeRepresentation
+		res      Word
+		hasError bool
 	}{
-		{WordU64(15), WordU64(2), TypeU64, WordU64(1)},
-		{WordI64(-6), WordI64(3), TypeI64, WordI64(0)},
+		{a: WordU64(15), b: WordU64(2), t: TypeU64, res: WordU64(1)},
+		{a: WordI64(-6), b: WordI64(3), t: TypeI64, res: WordI64(0)},
+		{a: WordF64(8.2), b: WordF64(3.1), t: TypeF64, hasError: true},
 	}
 
 	for _, test := range tests {
-		result := ModWord(test.a, test.b, test.t)
-		assert.Equal(t, test.res.AsU64, result.AsU64)
-		assert.Equal(t, test.res.AsI64, result.AsI64)
-		assert.Condition(t, func() (success bool) {
-			return test.res.AsF64-result.AsF64 < 0.01
-		})
-	}
+		func() {
+			defer func() {
+				r := recover()
+				if r != nil && !test.hasError {
+					assert.Fail(t, "unexpected error", test)
+				}
+			}()
+			result := ModWord(test.a, test.b, test.t)
 
-	func() {
-		defer func() { recover() }()
-		ModWord(WordF64(8.2), WordF64(3.1), TypeF64)
-		t.Error("expecting an error")
-	}()
+			if test.hasError {
+				assert.Fail(t, "expecting an error", test)
+			} else {
+				assert.Equal(t, test.res.AsU64, result.AsU64, test)
+				assert.Equal(t, test.res.AsI64, result.AsI64, test)
+				assert.Condition(t, func() (success bool) {
+					return test.res.AsF64-result.AsF64 < 0.01
+				}, test)
+			}
+		}()
+	}
 }
