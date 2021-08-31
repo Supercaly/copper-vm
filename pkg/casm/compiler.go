@@ -13,7 +13,6 @@ import (
 )
 
 const (
-	CasmDebug           bool   = false
 	CasmMaxIncludeLevel int    = 10
 	CasmFileExtention   string = ".casm"
 )
@@ -95,7 +94,9 @@ func (casm *Casm) TranslateSourceFile(filePath string) (err error) {
 		panic(fmt.Sprintf("error reading file '%s': %s", filePath, err))
 	}
 
+	internal.DebugPrint("[INFO]: Building program '%s'\n", filePath)
 	casm.translateSource(string(bytes), filePath)
+	internal.DebugPrint("[INFO]: Built program '%s'\n", filePath)
 	return err
 }
 
@@ -135,9 +136,6 @@ func (casm *Casm) translateSource(source string, filePath string) {
 					panic(fmt.Sprintf("%s: %s", line.Location, err))
 				}
 				if operand.Kind == ExpressionKindBinding {
-					if CasmDebug {
-						fmt.Println("[INFO]: push deferred operand " + operand.AsBinding)
-					}
 					casm.DeferredOperands = append(casm.DeferredOperands,
 						DeferredOperand{
 							Name:     operand.AsBinding,
@@ -167,12 +165,6 @@ func (casm *Casm) translateSource(source string, filePath string) {
 
 	// Second Pass
 	for _, deferredOp := range casm.DeferredOperands {
-		if CasmDebug {
-			fmt.Printf("[INFO]: resolve deferred operand '%s' at '%s'\n",
-				deferredOp.Name,
-				deferredOp.Location)
-		}
-
 		exist, binding := casm.getBindingByName(deferredOp.Name)
 		if !exist {
 			panic(fmt.Sprintf("%s: unknown binding '%s'",
@@ -184,9 +176,10 @@ func (casm *Casm) translateSource(source string, filePath string) {
 	}
 
 	// Print all the bindings
-	if CasmDebug {
+	if internal.DebugPrintEnabled() {
+		internal.DebugPrint("[INFO]: bindings:\n")
 		for _, b := range casm.Bindings {
-			fmt.Printf("[INFO]: binding: %s \n", b)
+			internal.DebugPrint("  %s\n", b)
 		}
 	}
 
@@ -369,6 +362,7 @@ func (casm *Casm) translateInclude(directive DirectiveLine, location FileLocatio
 // Resolve an include path from the list of includes.
 func (casm *Casm) resolveIncludePath(path string) (exist bool, resolved string) {
 	// Check the path itself
+	internal.DebugPrint("[INFO]: search for '%s' in .\n", path)
 	_, err := os.Stat(path)
 	if err == nil {
 		return true, path
@@ -377,6 +371,7 @@ func (casm *Casm) resolveIncludePath(path string) (exist bool, resolved string) 
 	// Check the include paths
 	for _, includePath := range casm.IncludePaths {
 		resolved = filepath.Join(includePath, path)
+		internal.DebugPrint("[INFO]: search for '%s' in %s\n", path, includePath)
 		_, err := os.Stat(resolved)
 		if err == nil {
 			return true, resolved
@@ -411,6 +406,7 @@ func (casm *Casm) evaluateBinding(binding Binding, location FileLocation) (ret E
 			binding.Value.Kind,
 		}
 	}
+	internal.DebugPrint("[INFO]: evaluated binding with result %s\n", ret)
 	return ret
 }
 
@@ -444,6 +440,7 @@ func (casm *Casm) evaluateExpression(expr Expression, location FileLocation) (re
 	case ExpressionKindByteList:
 		panic(fmt.Sprintf("%s: cannot use byte lists as operands, only supported use is in memory directives", location))
 	}
+	internal.DebugPrint("[INFO]: evaluated expression with result %s\n", ret)
 	return ret
 }
 

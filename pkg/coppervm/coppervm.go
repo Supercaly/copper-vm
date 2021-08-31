@@ -9,10 +9,11 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+
+	"github.com/Supercaly/coppervm/internal"
 )
 
 const (
-	CoppervmDebug          bool   = false
 	CoppervmStackCapacity  int64  = 1024
 	CoppervmMemoryCapacity int64  = 1024
 	CoppervmFileExtention  string = ".copper"
@@ -67,6 +68,8 @@ func (vm *Coppervm) LoadProgramFromFile(filePath string) (meta CoppervmFileMeta,
 	}
 
 	vm.loadProgramFromMeta(meta)
+
+	internal.DebugPrint("[INFO]: load program form '%s'\n", filePath)
 	return meta, nil
 }
 
@@ -114,6 +117,7 @@ func (vm *Coppervm) ExecuteInstruction() *CoppervmError {
 	}
 
 	currentInst := vm.Program[vm.Ip]
+	internal.DebugPrint("[INFO]: execute instruction %s\n", currentInst)
 	switch currentInst.Kind {
 	// Basic instructions
 	case InstNoop:
@@ -656,7 +660,7 @@ func (vm *Coppervm) ExecuteInstruction() *CoppervmError {
 	}
 
 	// Print stack on debug
-	if CoppervmDebug {
+	if internal.DebugPrintEnabled() {
 		vm.DumpStack()
 	}
 

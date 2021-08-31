@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	au "github.com/Supercaly/coppervm/internal"
+	"github.com/Supercaly/coppervm/internal"
 	c "github.com/Supercaly/coppervm/pkg/casm"
 	"github.com/Supercaly/coppervm/pkg/coppervm"
 )
@@ -19,6 +19,7 @@ func usage(stream io.Writer, program string) {
 	fmt.Fprintf(stream, "    -I <include/path>    Add include path.\n")
 	fmt.Fprintf(stream, "    -o <out.vm>          Specify the output path.\n")
 	fmt.Fprintf(stream, "    -d                   Add debug symbols to use with copperdb.\n")
+	fmt.Fprintf(stream, "    -v                   Print verbose output.\n")
 	fmt.Fprintf(stream, "    -h                   Print this help message.\n")
 }
 
@@ -26,11 +27,11 @@ func main() {
 	casm := c.Casm{}
 	args := os.Args
 	var program string
-	program, args = au.Shift(args)
+	program, args = internal.Shift(args)
 
 	for len(args) > 0 {
 		var flag string
-		flag, args = au.Shift(args)
+		flag, args = internal.Shift(args)
 
 		if flag == "-h" {
 			usage(os.Stdout, program)
@@ -41,7 +42,7 @@ func main() {
 				log.Fatalf("[ERROR]: No argument provided for flag `%s`\n", flag)
 			}
 
-			casm.OutputFile, args = au.Shift(args)
+			casm.OutputFile, args = internal.Shift(args)
 		} else if flag == "-d" {
 			casm.AddDebugSymbols = true
 		} else if flag == "-I" {
@@ -51,8 +52,10 @@ func main() {
 			}
 
 			var includePath string
-			includePath, args = au.Shift(args)
+			includePath, args = internal.Shift(args)
 			casm.IncludePaths = append(casm.IncludePaths, includePath)
+		} else if flag == "-v" {
+			internal.EnableDebugPrint()
 		} else {
 			if casm.InputFile != "" {
 				usage(os.Stderr, program)

@@ -7,7 +7,7 @@ import (
 	"os"
 	"strconv"
 
-	au "github.com/Supercaly/coppervm/internal"
+	"github.com/Supercaly/coppervm/internal"
 	"github.com/Supercaly/coppervm/pkg/coppervm"
 )
 
@@ -16,19 +16,20 @@ func usage(stream io.Writer, program string) {
 	fmt.Fprintf(stream, "OPTIONS:\n")
 	fmt.Fprintf(stream, "    -l <limit>      Limit the steps of the emulation.\n")
 	fmt.Fprintf(stream, "                    If negative no limit will be set.\n")
+	fmt.Fprintf(stream, "    -v              Print verbose messages.\n")
 	fmt.Fprintf(stream, "    -h              Print this help message.\n")
 }
 
 func main() {
 	args := os.Args
 	var program string
-	program, args = au.Shift(args)
+	program, args = internal.Shift(args)
 	var inputFilePath string
 	var limit int = -1
 
 	for len(args) > 0 {
 		var flag string
-		flag, args = au.Shift(args)
+		flag, args = internal.Shift(args)
 
 		if flag == "-h" {
 			usage(os.Stdout, program)
@@ -41,11 +42,13 @@ func main() {
 
 			var limitStr string
 			var err error
-			limitStr, args = au.Shift(args)
+			limitStr, args = internal.Shift(args)
 			limit, err = strconv.Atoi(limitStr)
 			if err != nil {
 				log.Fatalf("[ERROR]: limit argument must be a number!")
 			}
+		} else if flag == "-v" {
+			internal.EnableDebugPrint()
 		} else {
 			if inputFilePath != "" {
 				usage(os.Stderr, program)
