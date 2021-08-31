@@ -13,7 +13,6 @@ import (
 )
 
 const (
-	CasmDebug           bool   = false
 	CasmMaxIncludeLevel int    = 10
 	CasmFileExtention   string = ".casm"
 )

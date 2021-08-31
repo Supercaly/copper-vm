@@ -12,7 +12,6 @@ import (
 )
 
 const (
-	CoppervmDebug          bool   = false
 	CoppervmStackCapacity  int64  = 1024
 	CoppervmMemoryCapacity int64  = 1024
 	CoppervmFileExtention  string = ".copper"
