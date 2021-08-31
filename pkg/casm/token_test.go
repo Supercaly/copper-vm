@@ -58,6 +58,10 @@ var testTokens = []struct {
 		token(TokenKindOpenParen, "("),
 		token(TokenKindCloseParen, ")"),
 	}, false},
+	{"[]", []Token{
+		token(TokenKindOpenBracket, "["),
+		token(TokenKindCloseBracket, "]"),
+	}, false},
 	{"$", []Token{}, true},
 }
 

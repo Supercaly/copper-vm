@@ -1,4 +1,4 @@
-%memory _ 0x48, 0x65
+%memory _ [0x48, 0x65]
 %entry main
 
 main:

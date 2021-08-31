@@ -1,6 +1,7 @@
 package casm
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -22,6 +23,8 @@ func TestTokenIsOperator(t *testing.T) {
 		{token(TokenKindComma, ","), false},
 		{token(TokenKindOpenParen, "("), false},
 		{token(TokenKindCloseParen, ")"), false},
+		{token(TokenKindOpenBracket, "["), false},
+		{token(TokenKindCloseBracket, "]"), false},
 	}
 
 	for _, test := range tests {
@@ -46,6 +49,8 @@ func TestTokenAsBinaryOpKind(t *testing.T) {
 		{token(TokenKindComma, ","), 0, true},
 		{token(TokenKindOpenParen, "("), 0, true},
 		{token(TokenKindCloseParen, ")"), 0, true},
+		{token(TokenKindOpenBracket, "["), 0, true},
+		{token(TokenKindCloseBracket, "]"), 0, true},
 	}
 
 	for _, test := range tests {
@@ -80,6 +85,8 @@ func expression(kind ExpressionKind, value interface{}) (expr Expression) {
 		expr.AsBinaryOp = value.(BinaryOp)
 	case ExpressionKindBinding:
 		expr.AsBinding = value.(string)
+	case ExpressionKindByteList:
+		expr.AsByteList = value.([]byte)
 	}
 	return expr
 }
@@ -99,6 +106,8 @@ func expressionP(kind ExpressionKind, value interface{}) *Expression {
 		(*expr).AsBinaryOp = value.(BinaryOp)
 	case ExpressionKindBinding:
 		(*expr).AsBinding = value.(string)
+	case ExpressionKindByteList:
+		(*expr).AsByteList = value.([]byte)
 	}
 	return expr
 }
@@ -287,6 +296,37 @@ var testOpWithSameType = []struct {
 		op:       BinaryOpKindModulo,
 		hasError: true,
 	},
+	// byte list ops
+	{
+		left:     Expression{Kind: ExpressionKindByteList},
+		right:    Expression{Kind: ExpressionKindByteList},
+		op:       BinaryOpKindPlus,
+		hasError: true,
+	},
+	{
+		left:     Expression{Kind: ExpressionKindByteList},
+		right:    Expression{Kind: ExpressionKindByteList},
+		op:       BinaryOpKindMinus,
+		hasError: true,
+	},
+	{
+		left:     Expression{Kind: ExpressionKindByteList},
+		right:    Expression{Kind: ExpressionKindByteList},
+		op:       BinaryOpKindTimes,
+		hasError: true,
+	},
+	{
+		left:     Expression{Kind: ExpressionKindByteList},
+		right:    Expression{Kind: ExpressionKindByteList},
+		op:       BinaryOpKindDivide,
+		hasError: true,
+	},
+	{
+		left:     Expression{Kind: ExpressionKindByteList},
+		right:    Expression{Kind: ExpressionKindByteList},
+		op:       BinaryOpKindModulo,
+		hasError: true,
+	},
 }
 
 func TestComputeOpWithSameType(t *testing.T) {
@@ -368,6 +408,18 @@ var testExpressions = []struct {
 		Lhs:  expressionP(ExpressionKindNumLitFloat, 5.2),
 		Rhs:  expressionP(ExpressionKindNumLitInt, int64(2)),
 	}), false},
+	{"[1, 2, 3, 4]", expression(ExpressionKindByteList, []byte{1, 2, 3, 4}), false},
+	{"[1, 2, 3, 4,]", expression(ExpressionKindByteList, []byte{1, 2, 3, 4}), false},
+	{"[1]", expression(ExpressionKindByteList, []byte{1}), false},
+	{"[1,]", expression(ExpressionKindByteList, []byte{1}), false},
+	{"[]", expression(ExpressionKindByteList, []byte{}), false},
+	{"[1,\"test\"]", expression(ExpressionKindByteList, []byte{1, 't', 'e', 's', 't'}), false},
+	{"[1, 0xf]", expression(ExpressionKindByteList, []byte{1, 0xf}), false},
+	{"[1 2 3]", Expression{}, true},
+	{"[1,,2]", Expression{}, true},
+	{"[,1]", Expression{}, true},
+	{"[,]", Expression{}, true},
+	{"[1.2,test]", Expression{}, true},
 	{"0xG", Expression{}, true},
 	{"0x", Expression{}, true},
 	{"0b", Expression{}, true},
@@ -389,38 +441,6 @@ func TestParseExprFromString(t *testing.T) {
 	}
 }
 
-func TestParseByteArrayFromString(t *testing.T) {
-	tests := []struct {
-		in       string
-		out      []byte
-		hasError bool
-	}{
-		{"1, 2, 3, 4", []byte{1, 2, 3, 4}, false},
-		{"1, 2, 3, 4,", []byte{1, 2, 3, 4}, false},
-		{"1", []byte{1}, false},
-		{"1,", []byte{1}, false},
-		{"", []byte{}, false},
-		{"1,\"test\"", []byte{1, 't', 'e', 's', 't'}, false},
-		{"1, 0xf", []byte{1, 0xf}, false},
-		{"1 2 3", []byte{}, true},
-		{"1,,2", []byte{}, true},
-		{",1", []byte{}, true},
-		{",", []byte{}, true},
-		{"1.2,test", []byte{}, true},
-	}
-
-	for _, test := range tests {
-		expr, err := ParseByteArrayFromString(test.in)
-
-		if test.hasError {
-			assert.Error(t, err, test)
-		} else {
-			assert.NoError(t, err, test)
-			assert.Equal(t, test.out, expr, test)
-		}
-	}
-}
-
 // Compares two Expressions.
 func expressionEquals(a Expression, b Expression) bool {
 	if a.Kind != b.Kind {
@@ -431,5 +451,9 @@ func expressionEquals(a Expression, b Expression) bool {
 			expressionEquals(*a.AsBinaryOp.Lhs, *b.AsBinaryOp.Lhs) &&
 			expressionEquals(*a.AsBinaryOp.Rhs, *b.AsBinaryOp.Rhs)
 	}
-	return a == b
+	return a.AsNumLitInt == b.AsNumLitInt &&
+		a.AsNumLitFloat == b.AsNumLitFloat &&
+		a.AsStringLit == b.AsStringLit &&
+		a.AsBinding == b.AsBinding &&
+		bytes.Equal(a.AsByteList, b.AsByteList)
 }

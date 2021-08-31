@@ -281,11 +281,11 @@ func TestBindMemory(t *testing.T) {
 
 	func() {
 		defer func() { recover() }()
-		casm.bindMemory(DirectiveLine{Name: "memory", Block: "mem 1"}, FileLocation{})
+		casm.bindMemory(DirectiveLine{Name: "memory", Block: "mem [1]"}, FileLocation{})
 		assert.Fail(t, "expecting an error")
 	}()
 
-	casm.bindMemory(DirectiveLine{Name: "memory", Block: "new_mem 2,3"}, FileLocation{})
+	casm.bindMemory(DirectiveLine{Name: "memory", Block: "new_mem [2,3]"}, FileLocation{})
 	exist, binding := casm.getBindingByName("new_mem")
 	assert.True(t, exist)
 
@@ -302,7 +302,7 @@ func TestBindMemory(t *testing.T) {
 		defer func() {
 			recover()
 		}()
-		casm.bindMemory(DirectiveLine{Name: "memory", Block: "new_mem2 ,"}, FileLocation{})
+		casm.bindMemory(DirectiveLine{Name: "memory", Block: "new_mem2 [,]"}, FileLocation{})
 		assert.Fail(t, "expecting an error")
 	}()
 }
@@ -317,6 +317,7 @@ var evaluateExpressionsTests = []struct {
 	{expr: expression(ExpressionKindStringLit, "str"), res: coppervm.WordI64(0)},
 	{expr: expression(ExpressionKindBinding, "a_bind"), res: coppervm.WordI64(3)},
 	{expr: expression(ExpressionKindBinding, "different_bind"), res: coppervm.WordI64(3), hasError: true},
+	{expr: expression(ExpressionKindByteList, []byte{1, 2, 3}), hasError: true},
 }
 
 func TestEvaluateExpression(t *testing.T) {
@@ -367,6 +368,11 @@ var binaryOpTests = []struct {
 		Lhs:  expressionP(ExpressionKindBinaryOp, BinaryOp{}),
 		Rhs:  expressionP(ExpressionKindNumLitInt, int64(2)),
 	}), hasError: true},
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindPlus,
+		Lhs:  expressionP(ExpressionKindByteList, []byte{}),
+		Rhs:  expressionP(ExpressionKindNumLitInt, int64(2)),
+	}), hasError: true},
 
 	// invalid binary op between types and float
 	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
@@ -383,6 +389,11 @@ var binaryOpTests = []struct {
 		Kind: BinaryOpKindPlus,
 		Lhs:  expressionP(ExpressionKindBinaryOp, BinaryOp{}),
 		Rhs:  expressionP(ExpressionKindNumLitFloat, 2.1),
+	}), hasError: true},
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindPlus,
+		Lhs:  expressionP(ExpressionKindByteList, []byte{}),
+		Rhs:  expressionP(ExpressionKindNumLitFloat, 2.0),
 	}), hasError: true},
 
 	// invalid binary op between types and string
@@ -404,6 +415,11 @@ var binaryOpTests = []struct {
 	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
 		Kind: BinaryOpKindPlus,
 		Lhs:  expressionP(ExpressionKindBinaryOp, BinaryOp{}),
+		Rhs:  expressionP(ExpressionKindStringLit, "str"),
+	}), hasError: true},
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindPlus,
+		Lhs:  expressionP(ExpressionKindByteList, []byte{}),
 		Rhs:  expressionP(ExpressionKindStringLit, "str"),
 	}), hasError: true},
 
@@ -433,6 +449,11 @@ var binaryOpTests = []struct {
 		Lhs:  expressionP(ExpressionKindBinaryOp, BinaryOp{}),
 		Rhs:  expressionP(ExpressionKindBinding, "bind"),
 	}), hasError: true},
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindPlus,
+		Lhs:  expressionP(ExpressionKindByteList, []byte{}),
+		Rhs:  expressionP(ExpressionKindBinding, "bind"),
+	}), hasError: true},
 
 	// invalid binary op between types and binop
 	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
@@ -459,6 +480,42 @@ var binaryOpTests = []struct {
 		Kind: BinaryOpKindPlus,
 		Lhs:  expressionP(ExpressionKindBinaryOp, BinaryOp{}),
 		Rhs:  expressionP(ExpressionKindBinaryOp, BinaryOp{}),
+	}), hasError: true},
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindPlus,
+		Lhs:  expressionP(ExpressionKindByteList, []byte{}),
+		Rhs:  expressionP(ExpressionKindBinaryOp, BinaryOp{}),
+	}), hasError: true},
+	// invalid binary op between types and byte list
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindPlus,
+		Lhs:  expressionP(ExpressionKindNumLitInt, int64(2)),
+		Rhs:  expressionP(ExpressionKindByteList, []byte{}),
+	}), hasError: true},
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindPlus,
+		Lhs:  expressionP(ExpressionKindNumLitFloat, 2.1),
+		Rhs:  expressionP(ExpressionKindByteList, []byte{}),
+	}), hasError: true},
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindPlus,
+		Lhs:  expressionP(ExpressionKindStringLit, "str"),
+		Rhs:  expressionP(ExpressionKindByteList, []byte{}),
+	}), hasError: true},
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindPlus,
+		Lhs:  expressionP(ExpressionKindBinding, "bind"),
+		Rhs:  expressionP(ExpressionKindByteList, []byte{}),
+	}), hasError: true},
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindPlus,
+		Lhs:  expressionP(ExpressionKindByteList, []byte{}),
+		Rhs:  expressionP(ExpressionKindByteList, []byte{}),
+	}), hasError: true},
+	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
+		Kind: BinaryOpKindPlus,
+		Lhs:  expressionP(ExpressionKindByteList, []byte{}),
+		Rhs:  expressionP(ExpressionKindByteList, []byte{}),
 	}), hasError: true},
 
 	// invalid binary op between strings
@@ -488,7 +545,7 @@ var binaryOpTests = []struct {
 		Kind: BinaryOpKindPlus,
 		Lhs:  expressionP(ExpressionKindStringLit, "str1"),
 		Rhs:  expressionP(ExpressionKindStringLit, "str2"),
-	}), res: coppervm.WordI64(74)},
+	}), res: coppervm.WordI64(10)},
 	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
 		Kind: BinaryOpKindPlus,
 		Lhs:  expressionP(ExpressionKindNumLitInt, int64(2)),
@@ -522,8 +579,8 @@ var binaryOpTests = []struct {
 }
 
 func TestEvaluateBinaryOp(t *testing.T) {
-	casm := Casm{}
 	for _, test := range binaryOpTests {
+		casm := Casm{}
 		func() {
 			defer func() {
 				r := recover()
