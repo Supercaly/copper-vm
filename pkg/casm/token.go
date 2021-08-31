@@ -24,6 +24,8 @@ const (
 	TokenKindComma
 	TokenKindOpenParen
 	TokenKindCloseParen
+	TokenKindOpenBracket
+	TokenKindCloseBracket
 )
 
 type Token struct {
@@ -114,6 +116,18 @@ func Tokenize(source string) (out []Token, err error) {
 			out = append(out, Token{
 				Kind: TokenKindCloseParen,
 				Text: ")",
+			})
+		case '[':
+			source = source[1:]
+			out = append(out, Token{
+				Kind: TokenKindOpenBracket,
+				Text: "[",
+			})
+		case ']':
+			source = source[1:]
+			out = append(out, Token{
+				Kind: TokenKindCloseBracket,
+				Text: "]",
 			})
 		default:
 			if isDigit(rune(source[0])) {

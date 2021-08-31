@@ -14,6 +14,7 @@ const (
 	ExpressionKindStringLit
 	ExpressionKindBinaryOp
 	ExpressionKindBinding
+	ExpressionKindByteList
 )
 
 func (kind ExpressionKind) String() string {
@@ -23,6 +24,7 @@ func (kind ExpressionKind) String() string {
 		"ExpressionKindStringLit",
 		"ExpressionKindBinaryOp",
 		"ExpressionKindBinding",
+		"ExpressionKindByteList",
 	}[kind]
 }
 
@@ -33,6 +35,7 @@ type Expression struct {
 	AsStringLit   string
 	AsBinaryOp    BinaryOp
 	AsBinding     string
+	AsByteList    []byte
 }
 
 func (expr Expression) String() (out string) {
@@ -49,6 +52,8 @@ func (expr Expression) String() (out string) {
 		out += fmt.Sprintf("AsBinaryOp: %s", expr.AsBinaryOp)
 	case ExpressionKindBinding:
 		out += fmt.Sprintf("AsBinding: %s", expr.AsBinding)
+	case ExpressionKindByteList:
+		out += fmt.Sprintf("AsByteList: %s", expr.AsByteList)
 	}
 	out += "}"
 	return out
@@ -196,6 +201,8 @@ func computeOpWithSameType(lhs Expression, rhs Expression, op BinaryOpKind) (out
 		panic("at this point binary op is unreachable! Something really went wrong WTF")
 	case ExpressionKindBinding:
 		panic("at this point binding is unreachable! Something really went wrong WTF")
+	case ExpressionKindByteList:
+		panic("at this point byte list is unreachable! Something really went wrong WTF")
 	}
 
 	return out
@@ -235,7 +242,9 @@ func parseExprBinaryOp(tokens *[]Token, precedence int) (result Expression) {
 
 		// left and right have the same type and are not bindings
 		// so we can already compute the operation ad return the result.
-		if result.Kind == rhs.Kind && result.Kind != ExpressionKindBinding {
+		if result.Kind == rhs.Kind &&
+			result.Kind != ExpressionKindBinding &&
+			result.Kind != ExpressionKindByteList {
 			result = computeOpWithSameType(result, rhs, op)
 		} else {
 			// we can't compute the operation yet, so we return an expression
@@ -329,61 +338,41 @@ func parseExprPrimary(tokens *[]Token) (result Expression) {
 		*tokens = (*tokens)[1:]
 		result = parseExprBinaryOp(tokens, 0)
 		if len(*tokens) == 0 || (*tokens)[0].Kind != TokenKindCloseParen {
-			panic("cannot find matching closing parenthesis")
+			panic("cannot find matching closing parenthesis ')'")
 		}
 		*tokens = (*tokens)[1:]
+	case TokenKindOpenBracket:
+		*tokens = (*tokens)[1:]
+
+		var byteResult []byte
+		for len(*tokens) != 0 && (*tokens)[0].Kind != TokenKindCloseBracket {
+			expr := parseExprBinaryOp(tokens, 0)
+			if expr.Kind == ExpressionKindNumLitInt {
+				byteResult = append(byteResult, byte(expr.AsNumLitInt))
+			} else if expr.Kind == ExpressionKindStringLit {
+				byteResult = append(byteResult, []byte(expr.AsStringLit)...)
+			} else {
+				panic(fmt.Sprintf("unsupported value of type '%s' inside byte array", expr.Kind))
+			}
+
+			if len(*tokens) == 0 {
+				panic("expected ',' or ']'")
+			}
+			if (*tokens)[0].Kind != TokenKindComma {
+				break
+			}
+			*tokens = (*tokens)[1:]
+		}
+
+		if (*tokens)[0].Kind != TokenKindCloseBracket {
+			panic("cannot find matching closing bracket ']'")
+		}
+		*tokens = (*tokens)[1:]
+
+		result.Kind = ExpressionKindByteList
+		result.AsByteList = append(result.AsByteList, byteResult...)
+	default:
+		panic(fmt.Sprintf("unknown expression starting with token %s", (*tokens)[0].Text))
 	}
 	return result
-}
-
-// Parse a byte list from a source string.
-// The string is first tokenized and then is parsed to extract
-// the data.
-// Returns an error if something went wrong.
-func ParseByteArrayFromString(source string) (out []byte, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("%s", r)
-		}
-	}()
-
-	tokens, err := Tokenize(source)
-	if err != nil {
-		panic(err)
-	}
-	out = parseByteArrayFromTokens(&tokens)
-	return out, err
-}
-
-// Parse a byte list from some tokens.
-// Returns a byte array or an error.
-func parseByteArrayFromTokens(tokens *[]Token) (out []byte) {
-	if len(*tokens) == 0 {
-		return []byte{}
-	}
-
-	if (*tokens)[0].Kind == TokenKindComma {
-		panic("misplaced comma inside list")
-	}
-
-	expr := parseExprBinaryOp(tokens, 0)
-
-	if expr.Kind == ExpressionKindNumLitInt {
-		out = append(out, byte(expr.AsNumLitInt))
-	} else if expr.Kind == ExpressionKindStringLit {
-		out = append(out, []byte(expr.AsStringLit)...)
-	} else {
-		panic(fmt.Sprintf("unsupported value of type '%s' inside byte array", expr.Kind))
-	}
-
-	if len(*tokens) != 0 {
-		if (*tokens)[0].Kind != TokenKindComma {
-			panic("array values must be comma separated")
-		}
-		*tokens = (*tokens)[1:]
-		next := parseByteArrayFromTokens(tokens)
-		out = append(out, next...)
-	}
-
-	return out
 }

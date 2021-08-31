@@ -328,12 +328,16 @@ func (casm *Casm) bindMemory(directive DirectiveLine, location FileLocation) {
 			binding.Location))
 	}
 
-	chunk, err := ParseByteArrayFromString(block)
+	expr, err := ParseExprFromString(block)
 	if err != nil {
 		panic(fmt.Sprintf("%s: %s", location, err))
 	}
+	if expr.Kind != ExpressionKindByteList {
+		panic(fmt.Sprintf("%s: expected '%s' but got '%s'",
+			location, ExpressionKindByteList, expr.Kind))
+	}
 	memAddr := len(casm.Memory)
-	casm.Memory = append(casm.Memory, chunk...)
+	casm.Memory = append(casm.Memory, expr.AsByteList...)
 
 	casm.Bindings = append(casm.Bindings, Binding{
 		Status:        BindingEvaluated,
@@ -437,6 +441,8 @@ func (casm *Casm) evaluateExpression(expr Expression, location FileLocation) (re
 		}
 	case ExpressionKindBinaryOp:
 		ret = casm.evaluateBinaryOp(expr, location)
+	case ExpressionKindByteList:
+		panic(fmt.Sprintf("%s: cannot use byte lists as operands, only supported use is in memory directives", location))
 	}
 	return ret
 }
@@ -454,12 +460,13 @@ func (casm *Casm) evaluateExpression(expr Expression, location FileLocation) (re
 //     [-, -, -, -, -], //o
 //     [-, -, -, -, -], //b
 // ]
-var binaryOpEvaluationMap = [5][5]ExpressionKind{
-	{ExpressionKindNumLitInt, ExpressionKindNumLitFloat, -1, -1, -1},
-	{ExpressionKindNumLitFloat, ExpressionKindNumLitFloat, -1, -1, -1},
-	{-1, -1, ExpressionKindStringLit, -1, -1},
-	{-1, -1, -1, -1, -1},
-	{-1, -1, -1, -1, -1},
+var binaryOpEvaluationMap = [6][6]ExpressionKind{
+	{ExpressionKindNumLitInt, ExpressionKindNumLitFloat, -1, -1, -1, -1},
+	{ExpressionKindNumLitFloat, ExpressionKindNumLitFloat, -1, -1, -1, -1},
+	{-1, -1, ExpressionKindStringLit, -1, -1, -1},
+	{-1, -1, -1, -1, -1, -1},
+	{-1, -1, -1, -1, -1, -1},
+	{-1, -1, -1, -1, -1, -1},
 }
 
 // Map an ExpressionKind to a TypeRepresentation.
