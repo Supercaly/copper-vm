@@ -78,6 +78,11 @@ func main() {
 		casm.OutputFile = filepath.Join(fileDir, fileName)
 	}
 
+	// Set the default search path for stdlib
+	pwd, _ := os.Getwd()
+	casm.IncludePaths = append(casm.IncludePaths, pwd)
+	casm.IncludePaths = append(casm.IncludePaths, filepath.Join(os.Getenv("GOPATH"), "stdlib"))
+
 	if err := casm.TranslateSourceFile(casm.InputFile); err != nil {
 		log.Fatalf("[ERROR]: %s", err)
 	}

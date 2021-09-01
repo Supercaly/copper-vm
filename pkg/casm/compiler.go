@@ -361,13 +361,6 @@ func (casm *Casm) translateInclude(directive DirectiveLine, location FileLocatio
 
 // Resolve an include path from the list of includes.
 func (casm *Casm) resolveIncludePath(path string) (exist bool, resolved string) {
-	// Check the path itself
-	internal.DebugPrint("[INFO]: search for '%s' in .\n", path)
-	_, err := os.Stat(path)
-	if err == nil {
-		return true, path
-	}
-
 	// Check the include paths
 	for _, includePath := range casm.IncludePaths {
 		resolved = filepath.Join(includePath, path)
