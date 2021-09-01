@@ -1,6 +1,10 @@
-# Copper VM
+<p align="center">
+    <img src="assets/full_logo.png"/>
+</p>
 
-A simple **Virtual Machine** with his own byte-code.
+<p align="center">
+    A simple <b>Virtual Machine</b> with his own byte-code.
+</p>
 
 ## Executables
 
@@ -13,18 +17,28 @@ The Copper VM ecosystem is composed by this executables:
 
 ## Quick Start
 
-Before executing the programs you need to build them; you can build them in a local `build` directory using:
+### Pre-compiled binaries
+
+Official pre-compiled binaries are available for download [here](https://github.com/Supercaly/coppervm/releases/tag/v0.0.1)
+
+### Install from source
+
+You can compile the programs form source, first you need to this repository locally with 
+
+```console
+$ git clone https://github.com/Supercaly/coppervm.git
+```
+
+and then build the executables in a local `build` directory using:
 
 ```console
 $ ./scripts/build_programs.sh
 ```
 
-```console
-$> .\scripts\build_programs.bat
-```
-
-or you can install them to the directory named by the `GOBIN` environment variable using:
+or you can install them to your go's `GOPATH` directory using:
 
 ```console
-$ go install ./cmd/...
+$ ./scripts/install_programs.sh
 ```
+
+**Note:** On *Windows* run the scripts with same name but extension *.bat*
