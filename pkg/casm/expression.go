@@ -231,13 +231,13 @@ func ParseExprFromString(source string) (out Expression, err error) {
 // The implementation is inspired by this:
 // - "https://www.engr.mun.ca/~theo/Misc/exp_parsing.htm"
 // - "https://en.wikipedia.org/wiki/Operator-precedence_parser"
-func parseExprBinaryOp(tokens *[]Token, precedence int) (result Expression) {
+func parseExprBinaryOp(tokens *Tokens, precedence int) (result Expression) {
 	result = parseExprPrimary(tokens)
 
 	for len(*tokens) > 1 && tokenIsOperator((*tokens)[0]) &&
-		binOpPrecedenceMap[tokenAsBinaryOpKind((*tokens)[0])] >= precedence {
-		op := tokenAsBinaryOpKind((*tokens)[0])
-		*tokens = (*tokens)[1:]
+		binOpPrecedenceMap[tokenAsBinaryOpKind(tokens.First())] >= precedence {
+		op := tokenAsBinaryOpKind(tokens.First())
+		tokens.Pop()
 		rhs := parseExprBinaryOp(tokens, binOpPrecedenceMap[op]+1)
 
 		// left and right have the same type and are not bindings
@@ -263,14 +263,14 @@ func parseExprBinaryOp(tokens *[]Token, precedence int) (result Expression) {
 
 // Parse a primary expression form a list of tokens.
 // Returns an error if something went wrong.
-func parseExprPrimary(tokens *[]Token) (result Expression) {
-	if len(*tokens) == 0 {
+func parseExprPrimary(tokens *Tokens) (result Expression) {
+	if tokens.Empty() {
 		panic("trying to parse empty expression")
 	}
 
-	switch (*tokens)[0].Kind {
+	switch tokens.First().Kind {
 	case TokenKindNumLit:
-		numberStr := (*tokens)[0].Text
+		numberStr := tokens.First().Text
 		if strings.HasPrefix(numberStr, "0x") || strings.HasPrefix(numberStr, "0X") {
 			// Try hexadecimal
 			hexNumber, err := strconv.ParseUint(numberStr[2:], 16, 64)
@@ -306,13 +306,13 @@ func parseExprPrimary(tokens *[]Token) (result Expression) {
 				result.AsNumLitInt = intNumber
 			}
 		}
-		*tokens = (*tokens)[1:]
+		tokens.Pop()
 	case TokenKindStringLit:
 		result.Kind = ExpressionKindStringLit
-		result.AsStringLit = (*tokens)[0].Text
-		*tokens = (*tokens)[1:]
+		result.AsStringLit = tokens.First().Text
+		tokens.Pop()
 	case TokenKindCharLit:
-		charStr := (*tokens)[0].Text
+		charStr := tokens.First().Text
 		char, _, t, err := strconv.UnquoteChar(charStr+`\'`, '\'')
 		if err != nil {
 			panic(fmt.Sprintf("error parsing character literal '%s'", charStr))
@@ -322,12 +322,13 @@ func parseExprPrimary(tokens *[]Token) (result Expression) {
 		}
 		result.Kind = ExpressionKindNumLitInt
 		result.AsNumLitInt = int64(char)
+		tokens.Pop()
 	case TokenKindSymbol:
 		result.Kind = ExpressionKindBinding
-		result.AsBinding = (*tokens)[0].Text
-		*tokens = (*tokens)[1:]
+		result.AsBinding = tokens.First().Text
+		tokens.Pop()
 	case TokenKindMinus:
-		*tokens = (*tokens)[1:]
+		tokens.Pop()
 		result = parseExprBinaryOp(tokens, 3)
 		if result.Kind == ExpressionKindNumLitInt {
 			result.AsNumLitInt = -result.AsNumLitInt
@@ -335,17 +336,17 @@ func parseExprPrimary(tokens *[]Token) (result Expression) {
 			result.AsNumLitFloat = -result.AsNumLitFloat
 		}
 	case TokenKindOpenParen:
-		*tokens = (*tokens)[1:]
+		tokens.Pop()
 		result = parseExprBinaryOp(tokens, 0)
-		if len(*tokens) == 0 || (*tokens)[0].Kind != TokenKindCloseParen {
+		if tokens.Empty() || tokens.First().Kind != TokenKindCloseParen {
 			panic("cannot find matching closing parenthesis ')'")
 		}
-		*tokens = (*tokens)[1:]
+		tokens.Pop()
 	case TokenKindOpenBracket:
-		*tokens = (*tokens)[1:]
+		tokens.Pop()
 
 		var byteResult []byte
-		for len(*tokens) != 0 && (*tokens)[0].Kind != TokenKindCloseBracket {
+		for !tokens.Empty() && tokens.First().Kind != TokenKindCloseBracket {
 			expr := parseExprBinaryOp(tokens, 0)
 			if expr.Kind == ExpressionKindNumLitInt {
 				byteResult = append(byteResult, byte(expr.AsNumLitInt))
@@ -355,24 +356,24 @@ func parseExprPrimary(tokens *[]Token) (result Expression) {
 				panic(fmt.Sprintf("unsupported value of type '%s' inside byte array", expr.Kind))
 			}
 
-			if len(*tokens) == 0 {
+			if tokens.Empty() {
 				panic("expected ',' or ']'")
 			}
-			if (*tokens)[0].Kind != TokenKindComma {
+			if tokens.First().Kind != TokenKindComma {
 				break
 			}
-			*tokens = (*tokens)[1:]
+			tokens.Pop()
 		}
 
-		if (*tokens)[0].Kind != TokenKindCloseBracket {
+		if tokens.First().Kind != TokenKindCloseBracket {
 			panic("cannot find matching closing bracket ']'")
 		}
-		*tokens = (*tokens)[1:]
+		tokens.Pop()
 
 		result.Kind = ExpressionKindByteList
 		result.AsByteList = append(result.AsByteList, byteResult...)
 	default:
-		panic(fmt.Sprintf("unknown expression starting with token %s", (*tokens)[0].Text))
+		panic(fmt.Sprintf("unknown expression starting with token %s", tokens.First().Text))
 	}
 	return result
 }

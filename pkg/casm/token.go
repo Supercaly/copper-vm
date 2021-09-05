@@ -33,10 +33,35 @@ type Token struct {
 	Text string
 }
 
+type Tokens []Token
+
+// Returns the first Token of the Tokens list.
+func (t Tokens) First() Token {
+	if len(t) == 0 {
+		panic("trying to access the elements of an empty tokens list")
+	}
+	return t[0]
+}
+
+// Returns true if the Tokens list if empty, false otherwise.
+func (t Tokens) Empty() bool {
+	return len(t) == 0
+}
+
+// Removes and returns the first element of the Tokens list.
+func (t *Tokens) Pop() (out Token) {
+	if len(*t) == 0 {
+		panic("trying to pop the elements of an empty tokens list")
+	}
+	out = (*t)[0]
+	*t = (*t)[1:]
+	return out
+}
+
 // Tokenize a source string.
 // Returns a list of tokens from a string or an error
 // if something went wrong.
-func Tokenize(source string) (out []Token, err error) {
+func Tokenize(source string) (out Tokens, err error) {
 	for source != "" {
 		source = strings.TrimSpace(source)
 		switch source[0] {

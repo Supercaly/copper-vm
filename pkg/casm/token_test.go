@@ -7,6 +7,60 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+func TestTokensEmpty(t *testing.T) {
+	assert := assert.New(t)
+	tokens := Tokens{}
+	assert.Len(tokens, 0)
+	assert.True(tokens.Empty())
+
+	tokens = Tokens{
+		token(TokenKindAsterisk, ""),
+		token(TokenKindPlus, ""),
+		token(TokenKindMinus, ""),
+	}
+	assert.Len(tokens, 3)
+	assert.False(tokens.Empty())
+}
+
+func TestTokensFirst(t *testing.T) {
+	assert := assert.New(t)
+	tokens := Tokens{
+		token(TokenKindAsterisk, ""),
+		token(TokenKindPlus, ""),
+		token(TokenKindMinus, ""),
+	}
+	token := tokens.First()
+	assert.Equal(tokens[0], token)
+
+	func() {
+		defer func() { recover() }()
+		tokens := Tokens{}
+		tokens.First()
+		assert.Fail("expecting an error")
+	}()
+}
+
+func TestTokensPop(t *testing.T) {
+	assert := assert.New(t)
+	tokens := Tokens{
+		token(TokenKindAsterisk, ""),
+		token(TokenKindPlus, ""),
+		token(TokenKindMinus, ""),
+	}
+	tokenBeforePop := tokens.First()
+	token := tokens.Pop()
+	assert.Equal(tokenBeforePop, token)
+	assert.Len(tokens, 2)
+	assert.True(!tokens.Empty())
+
+	func() {
+		defer func() { recover() }()
+		tokens := Tokens{}
+		tokens.Pop()
+		assert.Fail("expecting an error")
+	}()
+}
+
 // Wrapper function to create a Token.
 func token(kind TokenKind, text string) Token {
 	return Token{Kind: kind, Text: text}
@@ -14,55 +68,55 @@ func token(kind TokenKind, text string) Token {
 
 var testTokens = []struct {
 	in       string
-	out      []Token
+	out      Tokens
 	hasError bool
 }{
-	{"1", []Token{token(TokenKindNumLit, "1")}, false},
-	{"1.2", []Token{token(TokenKindNumLit, "1.2")}, false},
-	{".2", []Token{token(TokenKindNumLit, ".2")}, false},
-	{"test", []Token{token(TokenKindSymbol, "test")}, false},
-	{"-5", []Token{
+	{"1", Tokens{token(TokenKindNumLit, "1")}, false},
+	{"1.2", Tokens{token(TokenKindNumLit, "1.2")}, false},
+	{".2", Tokens{token(TokenKindNumLit, ".2")}, false},
+	{"test", Tokens{token(TokenKindSymbol, "test")}, false},
+	{"-5", Tokens{
 		token(TokenKindMinus, "-"),
 		token(TokenKindNumLit, "5"),
 	}, false},
-	{"test12", []Token{token(TokenKindSymbol, "test12")}, false},
-	{"12test", []Token{
+	{"test12", Tokens{token(TokenKindSymbol, "test12")}, false},
+	{"12test", Tokens{
 		token(TokenKindNumLit, "12"),
 		token(TokenKindSymbol, "test"),
 	}, false},
-	{"test_case", []Token{token(TokenKindSymbol, "test_case")}, false},
-	{"_test", []Token{token(TokenKindSymbol, "_test")}, false},
-	{"1,2,3", []Token{
+	{"test_case", Tokens{token(TokenKindSymbol, "test_case")}, false},
+	{"_test", Tokens{token(TokenKindSymbol, "_test")}, false},
+	{"1,2,3", Tokens{
 		token(TokenKindNumLit, "1"),
 		token(TokenKindComma, ","),
 		token(TokenKindNumLit, "2"),
 		token(TokenKindComma, ","),
 		token(TokenKindNumLit, "3"),
 	}, false},
-	{`"string"`, []Token{token(TokenKindStringLit, "string")}, false},
-	{`"string`, []Token{}, true},
-	{`'a'`, []Token{token(TokenKindCharLit, "a")}, false},
-	{`'a`, []Token{}, true},
-	{"0x5CFF", []Token{token(TokenKindNumLit, "0x5CFF")}, false},
-	{"0X5CFF", []Token{token(TokenKindNumLit, "0X5CFF")}, false},
-	{"0b110011", []Token{token(TokenKindNumLit, "0b110011")}, false},
-	{"0B110011", []Token{token(TokenKindNumLit, "0B110011")}, false},
-	{"+-*/%", []Token{
+	{`"string"`, Tokens{token(TokenKindStringLit, "string")}, false},
+	{`"string`, Tokens{}, true},
+	{`'a'`, Tokens{token(TokenKindCharLit, "a")}, false},
+	{`'a`, Tokens{}, true},
+	{"0x5CFF", Tokens{token(TokenKindNumLit, "0x5CFF")}, false},
+	{"0X5CFF", Tokens{token(TokenKindNumLit, "0X5CFF")}, false},
+	{"0b110011", Tokens{token(TokenKindNumLit, "0b110011")}, false},
+	{"0B110011", Tokens{token(TokenKindNumLit, "0B110011")}, false},
+	{"+-*/%", Tokens{
 		token(TokenKindPlus, "+"),
 		token(TokenKindMinus, "-"),
 		token(TokenKindAsterisk, "*"),
 		token(TokenKindSlash, "/"),
 		token(TokenKindPercent, "%"),
 	}, false},
-	{"()", []Token{
+	{"()", Tokens{
 		token(TokenKindOpenParen, "("),
 		token(TokenKindCloseParen, ")"),
 	}, false},
-	{"[]", []Token{
+	{"[]", Tokens{
 		token(TokenKindOpenBracket, "["),
 		token(TokenKindCloseBracket, "]"),
 	}, false},
-	{"$", []Token{}, true},
+	{"$", Tokens{}, true},
 }
 
 func TestTokenize(t *testing.T) {
