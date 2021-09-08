@@ -62,45 +62,45 @@ func (t *Tokens) Pop() (out Token) {
 // Returns a list of tokens from a string or an error
 // if something went wrong.
 func Tokenize(source string) (out Tokens, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("%s", r)
+		}
+	}()
+
 	for source != "" {
 		source = strings.TrimSpace(source)
 		switch source[0] {
 		case '+':
 			source = source[1:]
-			out = append(out, Token{
-				Kind: TokenKindPlus,
-				Text: "+",
-			})
+			out = append(out, Token{Kind: TokenKindPlus})
 		case '-':
 			source = source[1:]
-			out = append(out, Token{
-				Kind: TokenKindMinus,
-				Text: "-",
-			})
+			out = append(out, Token{Kind: TokenKindMinus})
 		case '*':
 			source = source[1:]
-			out = append(out, Token{
-				Kind: TokenKindAsterisk,
-				Text: "*",
-			})
+			out = append(out, Token{Kind: TokenKindAsterisk})
 		case '/':
 			source = source[1:]
-			out = append(out, Token{
-				Kind: TokenKindSlash,
-				Text: "/",
-			})
+			out = append(out, Token{Kind: TokenKindSlash})
 		case '%':
 			source = source[1:]
-			out = append(out, Token{
-				Kind: TokenKindPercent,
-				Text: "%",
-			})
+			out = append(out, Token{Kind: TokenKindPercent})
 		case ',':
 			source = source[1:]
-			out = append(out, Token{
-				Kind: TokenKindComma,
-				Text: ",",
-			})
+			out = append(out, Token{Kind: TokenKindComma})
+		case '(':
+			source = source[1:]
+			out = append(out, Token{Kind: TokenKindOpenParen})
+		case ')':
+			source = source[1:]
+			out = append(out, Token{Kind: TokenKindCloseParen})
+		case '[':
+			source = source[1:]
+			out = append(out, Token{Kind: TokenKindOpenBracket})
+		case ']':
+			source = source[1:]
+			out = append(out, Token{Kind: TokenKindCloseBracket})
 		case '"':
 			source = source[1:]
 			if strings.Contains(source, "\"") {
@@ -108,15 +108,14 @@ func Tokenize(source string) (out Tokens, err error) {
 				source = rest[1:]
 				unquotedStr, err := strconv.Unquote(`"` + str + `"`)
 				if err != nil {
-					return []Token{},
-						fmt.Errorf("error tokenizing literal string '%s'", str)
+					panic(fmt.Sprintf("error tokenizing literal string '%s'", str))
 				}
 				out = append(out, Token{
 					Kind: TokenKindStringLit,
 					Text: unquotedStr,
 				})
 			} else {
-				return []Token{}, fmt.Errorf("could not find closing \"")
+				panic("could not find closing \"")
 			}
 		case '\'':
 			source = source[1:]
@@ -128,32 +127,8 @@ func Tokenize(source string) (out Tokens, err error) {
 					Text: char,
 				})
 			} else {
-				return []Token{}, fmt.Errorf("could not find closing '")
+				panic("could not find closing '")
 			}
-		case '(':
-			source = source[1:]
-			out = append(out, Token{
-				Kind: TokenKindOpenParen,
-				Text: "(",
-			})
-		case ')':
-			source = source[1:]
-			out = append(out, Token{
-				Kind: TokenKindCloseParen,
-				Text: ")",
-			})
-		case '[':
-			source = source[1:]
-			out = append(out, Token{
-				Kind: TokenKindOpenBracket,
-				Text: "[",
-			})
-		case ']':
-			source = source[1:]
-			out = append(out, Token{
-				Kind: TokenKindCloseBracket,
-				Text: "]",
-			})
 		default:
 			if isDigit(rune(source[0])) {
 				// Tokenize a number
@@ -172,8 +147,7 @@ func Tokenize(source string) (out Tokens, err error) {
 					Text: symbol,
 				})
 			} else {
-				return []Token{},
-					fmt.Errorf("unknown token starting with '%s'", string(source[0]))
+				panic(fmt.Sprintf("unknown token starting with '%s'", string(source[0])))
 			}
 		}
 	}
