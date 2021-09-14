@@ -49,39 +49,56 @@ func TestTranslateSourceFile(t *testing.T) {
 	}
 }
 
-var testSources = []struct {
-	in       string
-	out      []coppervm.InstDef
-	hasError bool
-}{
-	{"main:\n", []coppervm.InstDef{}, false},
-	{"push 1\n", []coppervm.InstDef{
-		{
-			Kind:       coppervm.InstPush,
-			HasOperand: true,
-			Name:       "push",
-			Operand:    coppervm.WordU64(1),
-		},
-	}, false},
-	{"%const N 1\n", []coppervm.InstDef{}, false},
-	{":", []coppervm.InstDef{}, true},
-	{"wrong\n", []coppervm.InstDef{}, true},
-	{"push \n", []coppervm.InstDef{}, true},
-	{"%dir 0\n", []coppervm.InstDef{}, true},
-	{"push N\n", []coppervm.InstDef{
-		{
-			Kind:       coppervm.InstPush,
-			HasOperand: true,
-			Name:       "push",
-			Operand:    coppervm.WordU64(0),
-		},
-	}, true},
-	{"%entry main\n%const main 2.0", []coppervm.InstDef{}, true},
-	{"%entry main\n%entry main2", []coppervm.InstDef{}, true},
-	{"%include abc", []coppervm.InstDef{}, true},
+func ir(kind IRKind, value interface{}, loc FileLocation) (ir IR) {
+	ir.Location = loc
+	ir.Kind = kind
+	switch kind {
+	case IRKindLabel:
+		ir.AsLabel = value.(LabelIR)
+	case IRKindInstruction:
+		ir.AsInstruction = value.(InstructionIR)
+	case IRKindEntry:
+		ir.AsEntry = value.(EntryIR)
+	case IRKindConst:
+		ir.AsConst = value.(ConstIR)
+	case IRKindMemory:
+		ir.AsMemory = value.(MemoryIR)
+	}
+	return ir
 }
 
-func TestTranslateSource(t *testing.T) {
+var testSources = []struct {
+	in       string
+	out      []IR
+	hasError bool
+}{
+	{"main:\n", []IR{ir(IRKindLabel, LabelIR{"main"}, FileLocation{"test_file", 1})}, false},
+	{"push 1\n", []IR{
+		ir(IRKindInstruction, InstructionIR{
+			Name:       "push",
+			HasOperand: true,
+			Operand:    expression(ExpressionKindNumLitInt, int64(1)),
+		}, FileLocation{"test_file", 1}),
+	}, false},
+	{"%const N 1\n", []IR{ir(IRKindConst, ConstIR{
+		"N",
+		expression(ExpressionKindNumLitInt, int64(1)),
+	}, FileLocation{"test_file", 1})}, false},
+	{":", []IR{}, true},
+	{"wrong\n", []IR{}, true},
+	{"push \n", []IR{}, true},
+	{"%dir 0\n", []IR{}, true},
+	{"push N\n", []IR{
+		ir(IRKindInstruction, InstructionIR{
+			HasOperand: true,
+			Name:       "push",
+			Operand:    expression(ExpressionKindBinding, "N"),
+		}, FileLocation{"test_file", 1}),
+	}, false},
+	{"%include abc", []IR{}, true},
+}
+
+func TestTranslateIR(t *testing.T) {
 	for _, test := range testSources {
 		func() {
 			defer func() {
@@ -91,28 +108,20 @@ func TestTranslateSource(t *testing.T) {
 				}
 			}()
 
+			lines, err := Linize(test.in, "test_file")
+			if err != nil {
+				panic(err)
+			}
+
 			ctx := Casm{}
-			ctx.translateSource(test.in, "test_file")
+			irs := ctx.translateIR(lines)
 
 			if test.hasError {
 				assert.Fail(t, "expecting an error", test)
 			}
-			assert.Condition(t, func() (success bool) { return instArrayEquals(test.out, ctx.Program) }, test)
+			assert.Equal(t, test.out, irs, test)
 		}()
 	}
-}
-
-// Compares two arrays of InstDef.
-func instArrayEquals(a []coppervm.InstDef, b []coppervm.InstDef) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i, v := range a {
-		if b[i] != v {
-			return false
-		}
-	}
-	return true
 }
 
 func TestGetBindingByName(t *testing.T) {
@@ -177,11 +186,11 @@ func TestBindLabel(t *testing.T) {
 
 	func() {
 		defer func() { recover() }()
-		casm.bindLabel("a_label", 1, FileLocation{})
+		casm.bindLabel(LabelIR{"a_label"}, 1, FileLocation{})
 		assert.Fail(t, "expecting an error")
 	}()
 
-	casm.bindLabel("new_label", 2, FileLocation{})
+	casm.bindLabel(LabelIR{"new_label"}, 2, FileLocation{})
 	exist, binding := casm.getBindingByName("new_label")
 	assert.True(t, exist)
 
@@ -197,28 +206,26 @@ func TestBindLabel(t *testing.T) {
 
 func TestBindConst(t *testing.T) {
 	tests := []struct {
-		name         string
-		value        string
+		constIR      ConstIR
 		binding      Binding
 		memoryLength int
 		hasError     bool
 	}{
-		{name: "a_const", value: "1", hasError: true},
-		{name: "new_const", value: "2", hasError: false, binding: Binding{
+		{constIR: ConstIR{Name: "a_const", Value: expression(ExpressionKindNumLitInt, int64(1))}, hasError: true},
+		{constIR: ConstIR{Name: "new_const", Value: expression(ExpressionKindNumLitInt, int64(2))}, hasError: false, binding: Binding{
 			Name:     "new_const",
 			Value:    expression(ExpressionKindNumLitInt, int64(2)),
 			Location: FileLocation{},
 			IsLabel:  false},
 		},
-		{name: "new_const2", hasError: true},
-		{name: "str_const", value: `"test_str"`, hasError: false, binding: Binding{
+		{constIR: ConstIR{Name: "str_const", Value: expression(ExpressionKindStringLit, `"test_str"`)}, hasError: false, binding: Binding{
 			Status:        BindingEvaluated,
 			Name:          "str_const",
-			Value:         expression(ExpressionKindStringLit, "test_str"),
+			Value:         expression(ExpressionKindStringLit, `"test_str"`),
 			EvaluatedWord: coppervm.WordU64(0),
 			Location:      FileLocation{},
 			IsLabel:       false},
-			memoryLength: 9,
+			memoryLength: 11,
 		},
 	}
 
@@ -239,12 +246,12 @@ func TestBindConst(t *testing.T) {
 						IsLabel:  false},
 				},
 			}
-			casm.bindConst(DirectiveLine{Name: "const", Block: test.name + " " + test.value}, FileLocation{})
+			casm.bindConst(test.constIR, FileLocation{})
 
 			if test.hasError {
 				assert.Fail(t, "expecting an error", test)
 			} else {
-				exist, binding := casm.getBindingByName(test.name)
+				exist, binding := casm.getBindingByName(test.constIR.Name)
 				assert.True(t, exist, test)
 				assert.Equal(t, test.binding, binding, test)
 				assert.Equal(t, test.memoryLength, len(casm.Memory), test)
@@ -258,12 +265,12 @@ func TestBindEntry(t *testing.T) {
 		casm := Casm{}
 		defer func() { recover() }()
 		casm.HasEntry = true
-		casm.bindEntry("main", FileLocation{})
+		casm.bindEntry(EntryIR{"main"}, FileLocation{})
 		assert.Fail(t, "expecting an error")
 	}()
 
 	casm := Casm{}
-	casm.bindEntry("entry", FileLocation{"", 10})
+	casm.bindEntry(EntryIR{"entry"}, FileLocation{"", 10})
 	assert.True(t, casm.HasEntry)
 	assert.Equal(t, "entry", casm.DeferredEntryName)
 	assert.Equal(t, 10, casm.EntryLocation.Location)
@@ -281,11 +288,11 @@ func TestBindMemory(t *testing.T) {
 
 	func() {
 		defer func() { recover() }()
-		casm.bindMemory(DirectiveLine{Name: "memory", Block: "mem [1]"}, FileLocation{})
+		casm.bindMemory(MemoryIR{Name: "mem", Value: expression(ExpressionKindByteList, []byte{1})}, FileLocation{})
 		assert.Fail(t, "expecting an error")
 	}()
 
-	casm.bindMemory(DirectiveLine{Name: "memory", Block: "new_mem [2,3]"}, FileLocation{})
+	casm.bindMemory(MemoryIR{Name: "new_mem", Value: expression(ExpressionKindByteList, []byte{2, 3})}, FileLocation{})
 	exist, binding := casm.getBindingByName("new_mem")
 	assert.True(t, exist)
 
@@ -297,14 +304,6 @@ func TestBindMemory(t *testing.T) {
 		IsLabel:       false,
 	}
 	assert.Equal(t, want, binding)
-
-	func() {
-		defer func() {
-			recover()
-		}()
-		casm.bindMemory(DirectiveLine{Name: "memory", Block: "new_mem2 [,]"}, FileLocation{})
-		assert.Fail(t, "expecting an error")
-	}()
 }
 
 var evaluateExpressionsTests = []struct {
@@ -630,7 +629,7 @@ func TestEvaluateBinding(t *testing.T) {
 
 func TestStrings(t *testing.T) {
 	casm := Casm{}
-	casm.translateSource("%const str \"a string\"\npush str\npush str\npush \"a new string\"\npush \"a\"+str", "")
+	casm.TranslateSourceFile("testdata/string.casm")
 	assert.Equal(t, uint64(0), casm.Program[0].Operand.AsU64)
 	assert.Equal(t, uint64(0), casm.Program[1].Operand.AsU64)
 	assert.Equal(t, uint64(9), casm.Program[2].Operand.AsU64)

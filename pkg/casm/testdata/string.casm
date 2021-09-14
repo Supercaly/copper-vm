@@ -1,0 +1,5 @@
+%const str "a string"
+push str
+push str
+push "a new string"
+push "a"+str
