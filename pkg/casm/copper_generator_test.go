@@ -153,10 +153,10 @@ func TestBindEntry(t *testing.T) {
 	}()
 
 	cgen := copperGenerator{}
-	cgen.bindEntry(EntryIR{"entry"}, FileLocation{"", 10})
+	cgen.bindEntry(EntryIR{"entry"}, fileLocation(10, 0))
 	assert.True(t, cgen.HasEntry)
 	assert.Equal(t, "entry", cgen.DeferredEntryName)
-	assert.Equal(t, 10, cgen.EntryLocation.Location)
+	assert.Equal(t, 10, cgen.EntryLocation.Row)
 }
 
 func TestBindMemory(t *testing.T) {

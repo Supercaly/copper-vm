@@ -9,22 +9,22 @@ import (
 
 func TestTokenIsOperator(t *testing.T) {
 	tests := []struct {
-		in  Token
+		in  token
 		out bool
 	}{
-		{token(TokenKindNumLit, "1"), false},
-		{token(TokenKindStringLit, ""), false},
-		{token(TokenKindSymbol, "_a"), false},
-		{token(TokenKindPlus, "+"), true},
-		{token(TokenKindMinus, "-"), true},
-		{token(TokenKindAsterisk, "*"), true},
-		{token(TokenKindSlash, "/"), true},
-		{token(TokenKindPercent, "%"), true},
-		{token(TokenKindComma, ","), false},
-		{token(TokenKindOpenParen, "("), false},
-		{token(TokenKindCloseParen, ")"), false},
-		{token(TokenKindOpenBracket, "["), false},
-		{token(TokenKindCloseBracket, "]"), false},
+		{newToken(tokenKindNumLit, "1", fileLocation(0, 0)), false},
+		{newToken(tokenKindStringLit, "", fileLocation(0, 0)), false},
+		{newToken(tokenKindSymbol, "_a", fileLocation(0, 0)), false},
+		{newToken(tokenKindPlus, "+", fileLocation(0, 0)), true},
+		{newToken(tokenKindMinus, "-", fileLocation(0, 0)), true},
+		{newToken(tokenKindAsterisk, "*", fileLocation(0, 0)), true},
+		{newToken(tokenKindSlash, "/", fileLocation(0, 0)), true},
+		{newToken(tokenKindPercent, "%", fileLocation(0, 0)), true},
+		{newToken(tokenKindComma, ",", fileLocation(0, 0)), false},
+		{newToken(tokenKindOpenParen, "(", fileLocation(0, 0)), false},
+		{newToken(tokenKindCloseParen, ")", fileLocation(0, 0)), false},
+		{newToken(tokenKindOpenBracket, "[", fileLocation(0, 0)), false},
+		{newToken(tokenKindCloseBracket, "]", fileLocation(0, 0)), false},
 	}
 
 	for _, test := range tests {
@@ -34,23 +34,23 @@ func TestTokenIsOperator(t *testing.T) {
 
 func TestTokenAsBinaryOpKind(t *testing.T) {
 	tests := []struct {
-		in       Token
+		in       token
 		out      BinaryOpKind
 		hasError bool
 	}{
-		{token(TokenKindNumLit, "1"), 0, true},
-		{token(TokenKindStringLit, ""), 0, true},
-		{token(TokenKindSymbol, "_a"), 0, true},
-		{token(TokenKindPlus, "+"), BinaryOpKindPlus, false},
-		{token(TokenKindMinus, "-"), BinaryOpKindMinus, false},
-		{token(TokenKindAsterisk, "*"), BinaryOpKindTimes, false},
-		{token(TokenKindSlash, "/"), BinaryOpKindDivide, false},
-		{token(TokenKindPercent, "%"), BinaryOpKindModulo, false},
-		{token(TokenKindComma, ","), 0, true},
-		{token(TokenKindOpenParen, "("), 0, true},
-		{token(TokenKindCloseParen, ")"), 0, true},
-		{token(TokenKindOpenBracket, "["), 0, true},
-		{token(TokenKindCloseBracket, "]"), 0, true},
+		{newToken(tokenKindNumLit, "1", fileLocation(0, 0)), 0, true},
+		{newToken(tokenKindStringLit, "", fileLocation(0, 0)), 0, true},
+		{newToken(tokenKindSymbol, "_a", fileLocation(0, 0)), 0, true},
+		{newToken(tokenKindPlus, "+", fileLocation(0, 0)), BinaryOpKindPlus, false},
+		{newToken(tokenKindMinus, "-", fileLocation(0, 0)), BinaryOpKindMinus, false},
+		{newToken(tokenKindAsterisk, "*", fileLocation(0, 0)), BinaryOpKindTimes, false},
+		{newToken(tokenKindSlash, "/", fileLocation(0, 0)), BinaryOpKindDivide, false},
+		{newToken(tokenKindPercent, "%", fileLocation(0, 0)), BinaryOpKindModulo, false},
+		{newToken(tokenKindComma, ",", fileLocation(0, 0)), 0, true},
+		{newToken(tokenKindOpenParen, "(", fileLocation(0, 0)), 0, true},
+		{newToken(tokenKindCloseParen, ")", fileLocation(0, 0)), 0, true},
+		{newToken(tokenKindOpenBracket, "[", fileLocation(0, 0)), 0, true},
+		{newToken(tokenKindCloseBracket, "]", fileLocation(0, 0)), 0, true},
 	}
 
 	for _, test := range tests {
@@ -428,16 +428,24 @@ var testExpressions = []struct {
 	{"(1", Expression{}, true},
 }
 
-func TestParseExprFromString(t *testing.T) {
+func TestParseExprFromTokens(t *testing.T) {
 	for _, test := range testExpressions {
-		expr, err := ParseExprFromString(test.in)
+		func() {
+			defer func() {
+				r := recover()
+				if r != nil && !test.hasError {
+					assert.Fail(t, "unexpected error", test)
+				}
+			}()
 
-		if test.hasError {
-			assert.Error(t, err, test)
-		} else {
-			assert.NoError(t, err, test)
+			tokens := tokenize(test.in, "")
+			expr := parseExprFromTokens(&tokens)
+
 			assert.Condition(t, func() (success bool) { return expressionEquals(expr, test.out) }, test)
-		}
+			if test.hasError {
+				assert.Fail(t, "expecting an error", test)
+			}
+		}()
 	}
 }
 

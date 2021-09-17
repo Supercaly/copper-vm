@@ -1,4 +1,4 @@
-%include dump.casm
+%include "dump.casm"
 %entry main
 
 main:

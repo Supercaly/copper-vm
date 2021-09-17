@@ -17,17 +17,6 @@ const (
 	ExpressionKindByteList
 )
 
-func (kind ExpressionKind) String() string {
-	return [...]string{
-		"ExpressionKindNumLitInt",
-		"ExpressionKindNumLitFloat",
-		"ExpressionKindStringLit",
-		"ExpressionKindBinaryOp",
-		"ExpressionKindBinding",
-		"ExpressionKindByteList",
-	}[kind]
-}
-
 type Expression struct {
 	Kind          ExpressionKind
 	AsNumLitInt   int64
@@ -36,27 +25,6 @@ type Expression struct {
 	AsBinaryOp    BinaryOp
 	AsBinding     string
 	AsByteList    []byte
-}
-
-func (expr Expression) String() (out string) {
-	out += "{"
-	out += fmt.Sprintf("Kind: %s, ", expr.Kind)
-	switch expr.Kind {
-	case ExpressionKindNumLitInt:
-		out += fmt.Sprintf("AsNumLitInt: %d", expr.AsNumLitInt)
-	case ExpressionKindNumLitFloat:
-		out += fmt.Sprintf("AsNumLitFloat: %f", expr.AsNumLitFloat)
-	case ExpressionKindStringLit:
-		out += fmt.Sprintf("AsStringLit: %s", expr.AsStringLit)
-	case ExpressionKindBinaryOp:
-		out += fmt.Sprintf("AsBinaryOp: %s", expr.AsBinaryOp)
-	case ExpressionKindBinding:
-		out += fmt.Sprintf("AsBinding: %s", expr.AsBinding)
-	case ExpressionKindByteList:
-		out += fmt.Sprintf("AsByteList: %s", expr.AsByteList)
-	}
-	out += "}"
-	return out
 }
 
 type BinaryOpKind int
@@ -69,33 +37,10 @@ const (
 	BinaryOpKindModulo
 )
 
-func (kind BinaryOpKind) String() string {
-	return [...]string{
-		"BinaryOpKindPlus",
-		"BinaryOpKindMinus",
-		"BinaryOpKindTimes",
-		"BinaryOpKindDivide",
-		"BinaryOpKindModulo",
-	}[kind]
-}
-
 type BinaryOp struct {
 	Kind BinaryOpKind
 	Lhs  *Expression
 	Rhs  *Expression
-}
-
-func (binop BinaryOp) String() (out string) {
-	out += "{"
-	out += fmt.Sprintf("Kind: %s, ", binop.Kind)
-	if binop.Lhs != nil {
-		out += fmt.Sprintf("Lhs: %s, ", *binop.Lhs)
-	}
-	if binop.Rhs != nil {
-		out += fmt.Sprintf("Rhs: %s", *binop.Rhs)
-	}
-	out += "}"
-	return out
 }
 
 // Map with the precedence of the binary operations.
@@ -107,13 +52,13 @@ var binOpPrecedenceMap = map[BinaryOpKind]int{
 
 // Returns true if given token is a binary operator
 // false otherwise.
-func tokenIsOperator(token Token) (out bool) {
+func tokenIsOperator(token token) (out bool) {
 	switch token.Kind {
-	case TokenKindPlus,
-		TokenKindMinus,
-		TokenKindAsterisk,
-		TokenKindSlash,
-		TokenKindPercent:
+	case tokenKindPlus,
+		tokenKindMinus,
+		tokenKindAsterisk,
+		tokenKindSlash,
+		tokenKindPercent:
 		out = true
 	default:
 		out = false
@@ -124,17 +69,17 @@ func tokenIsOperator(token Token) (out bool) {
 // Returns the correct binary operation kind from the given token.
 // NOTE: Before calling this method make sure the token is a binary operator
 // calling tokenIsOperator.
-func tokenAsBinaryOpKind(token Token) (out BinaryOpKind) {
+func tokenAsBinaryOpKind(token token) (out BinaryOpKind) {
 	switch token.Kind {
-	case TokenKindPlus:
+	case tokenKindPlus:
 		out = BinaryOpKindPlus
-	case TokenKindMinus:
+	case tokenKindMinus:
 		out = BinaryOpKindMinus
-	case TokenKindAsterisk:
+	case tokenKindAsterisk:
 		out = BinaryOpKindTimes
-	case TokenKindSlash:
+	case tokenKindSlash:
 		out = BinaryOpKindDivide
-	case TokenKindPercent:
+	case tokenKindPercent:
 		out = BinaryOpKindModulo
 	default:
 		panic(fmt.Sprintf("token %#v is not a binary operatator", token))
@@ -208,30 +153,17 @@ func computeOpWithSameType(lhs Expression, rhs Expression, op BinaryOpKind) (out
 	return out
 }
 
-// Parse an expression from a source string.
-// The string is first tokenized and then is parsed to extract
-// an expression.
-// Returns an error if something went wrong.
-func ParseExprFromString(source string) (out Expression, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("%s", r)
-		}
-	}()
-
-	tokens, err := Tokenize(source)
-	if err != nil {
-		panic(err)
-	}
-	out = parseExprBinaryOp(&tokens, 0)
-	return out, err
+// Parse an expression from a list of tokens.
+// This method will panic if something went wrong.
+func parseExprFromTokens(tokens *tokens) Expression {
+	return parseExprBinaryOp(tokens, 0)
 }
 
 // Parse an expression as a binary operation using the precedence climbing algorithm.
 // The implementation is inspired by this:
 // - "https://www.engr.mun.ca/~theo/Misc/exp_parsing.htm"
 // - "https://en.wikipedia.org/wiki/Operator-precedence_parser"
-func parseExprBinaryOp(tokens *Tokens, precedence int) (result Expression) {
+func parseExprBinaryOp(tokens *tokens, precedence int) (result Expression) {
 	result = parseExprPrimary(tokens)
 
 	for len(*tokens) > 1 && tokenIsOperator((*tokens)[0]) &&
@@ -263,13 +195,13 @@ func parseExprBinaryOp(tokens *Tokens, precedence int) (result Expression) {
 
 // Parse a primary expression form a list of tokens.
 // Returns an error if something went wrong.
-func parseExprPrimary(tokens *Tokens) (result Expression) {
+func parseExprPrimary(tokens *tokens) (result Expression) {
 	if tokens.Empty() {
 		panic("trying to parse empty expression")
 	}
 
 	switch tokens.First().Kind {
-	case TokenKindNumLit:
+	case tokenKindNumLit:
 		numberStr := tokens.First().Text
 		if strings.HasPrefix(numberStr, "0x") || strings.HasPrefix(numberStr, "0X") {
 			// Try hexadecimal
@@ -307,11 +239,11 @@ func parseExprPrimary(tokens *Tokens) (result Expression) {
 			}
 		}
 		tokens.Pop()
-	case TokenKindStringLit:
+	case tokenKindStringLit:
 		result.Kind = ExpressionKindStringLit
 		result.AsStringLit = tokens.First().Text
 		tokens.Pop()
-	case TokenKindCharLit:
+	case tokenKindCharLit:
 		charStr := tokens.First().Text
 		char, _, t, err := strconv.UnquoteChar(charStr+`\'`, '\'')
 		if err != nil {
@@ -323,11 +255,11 @@ func parseExprPrimary(tokens *Tokens) (result Expression) {
 		result.Kind = ExpressionKindNumLitInt
 		result.AsNumLitInt = int64(char)
 		tokens.Pop()
-	case TokenKindSymbol:
+	case tokenKindSymbol:
 		result.Kind = ExpressionKindBinding
 		result.AsBinding = tokens.First().Text
 		tokens.Pop()
-	case TokenKindMinus:
+	case tokenKindMinus:
 		tokens.Pop()
 		result = parseExprBinaryOp(tokens, 3)
 		if result.Kind == ExpressionKindNumLitInt {
@@ -335,18 +267,18 @@ func parseExprPrimary(tokens *Tokens) (result Expression) {
 		} else if result.Kind == ExpressionKindNumLitFloat {
 			result.AsNumLitFloat = -result.AsNumLitFloat
 		}
-	case TokenKindOpenParen:
+	case tokenKindOpenParen:
 		tokens.Pop()
 		result = parseExprBinaryOp(tokens, 0)
-		if tokens.Empty() || tokens.First().Kind != TokenKindCloseParen {
+		if tokens.Empty() || tokens.First().Kind != tokenKindCloseParen {
 			panic("cannot find matching closing parenthesis ')'")
 		}
 		tokens.Pop()
-	case TokenKindOpenBracket:
+	case tokenKindOpenBracket:
 		tokens.Pop()
 
 		var byteResult []byte
-		for !tokens.Empty() && tokens.First().Kind != TokenKindCloseBracket {
+		for !tokens.Empty() && tokens.First().Kind != tokenKindCloseBracket {
 			expr := parseExprBinaryOp(tokens, 0)
 			if expr.Kind == ExpressionKindNumLitInt {
 				byteResult = append(byteResult, byte(expr.AsNumLitInt))
@@ -359,13 +291,13 @@ func parseExprPrimary(tokens *Tokens) (result Expression) {
 			if tokens.Empty() {
 				panic("expected ',' or ']'")
 			}
-			if tokens.First().Kind != TokenKindComma {
+			if tokens.First().Kind != tokenKindComma {
 				break
 			}
 			tokens.Pop()
 		}
 
-		if tokens.First().Kind != TokenKindCloseBracket {
+		if tokens.First().Kind != tokenKindCloseBracket {
 			panic("cannot find matching closing bracket ']'")
 		}
 		tokens.Pop()
@@ -376,4 +308,59 @@ func parseExprPrimary(tokens *Tokens) (result Expression) {
 		panic(fmt.Sprintf("unknown expression starting with token %s", tokens.First().Text))
 	}
 	return result
+}
+
+func (kind ExpressionKind) String() string {
+	return [...]string{
+		"ExpressionKindNumLitInt",
+		"ExpressionKindNumLitFloat",
+		"ExpressionKindStringLit",
+		"ExpressionKindBinaryOp",
+		"ExpressionKindBinding",
+		"ExpressionKindByteList",
+	}[kind]
+}
+
+func (expr Expression) String() (out string) {
+	out += "{"
+	out += fmt.Sprintf("Kind: %s, ", expr.Kind)
+	switch expr.Kind {
+	case ExpressionKindNumLitInt:
+		out += fmt.Sprintf("AsNumLitInt: %d", expr.AsNumLitInt)
+	case ExpressionKindNumLitFloat:
+		out += fmt.Sprintf("AsNumLitFloat: %f", expr.AsNumLitFloat)
+	case ExpressionKindStringLit:
+		out += fmt.Sprintf("AsStringLit: %s", expr.AsStringLit)
+	case ExpressionKindBinaryOp:
+		out += fmt.Sprintf("AsBinaryOp: %s", expr.AsBinaryOp)
+	case ExpressionKindBinding:
+		out += fmt.Sprintf("AsBinding: %s", expr.AsBinding)
+	case ExpressionKindByteList:
+		out += fmt.Sprintf("AsByteList: %s", expr.AsByteList)
+	}
+	out += "}"
+	return out
+}
+
+func (kind BinaryOpKind) String() string {
+	return [...]string{
+		"BinaryOpKindPlus",
+		"BinaryOpKindMinus",
+		"BinaryOpKindTimes",
+		"BinaryOpKindDivide",
+		"BinaryOpKindModulo",
+	}[kind]
+}
+
+func (binop BinaryOp) String() (out string) {
+	out += "{"
+	out += fmt.Sprintf("Kind: %s, ", binop.Kind)
+	if binop.Lhs != nil {
+		out += fmt.Sprintf("Lhs: %s, ", *binop.Lhs)
+	}
+	if binop.Rhs != nil {
+		out += fmt.Sprintf("Rhs: %s", *binop.Rhs)
+	}
+	out += "}"
+	return out
 }

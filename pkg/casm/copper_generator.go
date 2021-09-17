@@ -250,13 +250,13 @@ func (cgen *copperGenerator) bindMemory(memory MemoryIR, location FileLocation) 
 }
 
 // Represent the result of an expression evaluation.
-type EvalResult struct {
+type evalResult struct {
 	Word coppervm.Word
 	Type ExpressionKind
 }
 
 // Evaluate a binding to extract am eval result.
-func (cgen *copperGenerator) evaluateBinding(binding binding, location FileLocation) (ret EvalResult) {
+func (cgen *copperGenerator) evaluateBinding(binding binding, location FileLocation) (ret evalResult) {
 	switch binding.Status {
 	case bindingUnevaluated:
 		idx := cgen.getBindingIndexByName(binding.Name)
@@ -270,7 +270,7 @@ func (cgen *copperGenerator) evaluateBinding(binding binding, location FileLocat
 	case bindingEvaluating:
 		panic(fmt.Sprintf("%s: cycling binding definition detected", location))
 	case bindingEvaluated:
-		ret = EvalResult{
+		ret = evalResult{
 			binding.EvaluatedWord,
 			binding.Value.Kind,
 		}
@@ -280,7 +280,7 @@ func (cgen *copperGenerator) evaluateBinding(binding binding, location FileLocat
 }
 
 // Evaluate an expression to extract an eval result.
-func (cgen *copperGenerator) evaluateExpression(expr Expression, location FileLocation) (ret EvalResult) {
+func (cgen *copperGenerator) evaluateExpression(expr Expression, location FileLocation) (ret evalResult) {
 	switch expr.Kind {
 	case ExpressionKindBinding:
 		exist, binding := cgen.getBindingByName(expr.AsBinding)
@@ -289,18 +289,18 @@ func (cgen *copperGenerator) evaluateExpression(expr Expression, location FileLo
 		}
 		ret = cgen.evaluateBinding(binding, location)
 	case ExpressionKindNumLitInt:
-		ret = EvalResult{
+		ret = evalResult{
 			coppervm.WordI64(expr.AsNumLitInt),
 			ExpressionKindNumLitInt,
 		}
 	case ExpressionKindNumLitFloat:
-		ret = EvalResult{
+		ret = evalResult{
 			coppervm.WordF64(expr.AsNumLitFloat),
 			ExpressionKindNumLitFloat,
 		}
 	case ExpressionKindStringLit:
 		strBase := cgen.pushStringToMemory(expr.AsStringLit)
-		ret = EvalResult{
+		ret = evalResult{
 			coppervm.WordU64(uint64(strBase)),
 			ExpressionKindStringLit,
 		}
@@ -343,7 +343,7 @@ var exprKindToTypeRepMap = map[ExpressionKind]coppervm.TypeRepresentation{
 }
 
 // Evaluate a binary op expression to extract an eval result.
-func (cgen *copperGenerator) evaluateBinaryOp(binop Expression, location FileLocation) (result EvalResult) {
+func (cgen *copperGenerator) evaluateBinaryOp(binop Expression, location FileLocation) (result evalResult) {
 	lhs_result := cgen.evaluateExpression(*binop.AsBinaryOp.Lhs, location)
 	rhs_result := cgen.evaluateExpression(*binop.AsBinaryOp.Rhs, location)
 
@@ -367,7 +367,7 @@ func (cgen *copperGenerator) evaluateBinaryOp(binop Expression, location FileLoc
 		}
 		leftStr := cgen.getStringByAddress(int(lhs_result.Word.AsU64))
 		rightStr := cgen.getStringByAddress(int(rhs_result.Word.AsU64))
-		result = EvalResult{
+		result = evalResult{
 			coppervm.WordU64(uint64(cgen.pushStringToMemory(leftStr + rightStr))),
 			ExpressionKindStringLit,
 		}
@@ -378,16 +378,16 @@ func (cgen *copperGenerator) evaluateBinaryOp(binop Expression, location FileLoc
 		resultTypeRep := exprKindToTypeRepMap[resultType]
 		switch binop.AsBinaryOp.Kind {
 		case BinaryOpKindPlus:
-			result = EvalResult{coppervm.AddWord(lhs_result.Word, rhs_result.Word, resultTypeRep), resultType}
+			result = evalResult{coppervm.AddWord(lhs_result.Word, rhs_result.Word, resultTypeRep), resultType}
 		case BinaryOpKindMinus:
-			result = EvalResult{coppervm.SubWord(lhs_result.Word, rhs_result.Word, resultTypeRep), resultType}
+			result = evalResult{coppervm.SubWord(lhs_result.Word, rhs_result.Word, resultTypeRep), resultType}
 		case BinaryOpKindTimes:
-			result = EvalResult{coppervm.MulWord(lhs_result.Word, rhs_result.Word, resultTypeRep), resultType}
+			result = evalResult{coppervm.MulWord(lhs_result.Word, rhs_result.Word, resultTypeRep), resultType}
 		case BinaryOpKindDivide:
 			if rhs_result.Word.AsI64 == 0 || rhs_result.Word.AsF64 == 0.0 {
 				panic(fmt.Sprintf("%s: divide by zero", location))
 			}
-			result = EvalResult{coppervm.DivWord(lhs_result.Word, rhs_result.Word, resultTypeRep), resultType}
+			result = evalResult{coppervm.DivWord(lhs_result.Word, rhs_result.Word, resultTypeRep), resultType}
 		case BinaryOpKindModulo:
 			// Since the only pos are int-float and float-int allways panic
 			panic(fmt.Sprintf("%s: unsupported '%%' operation between floating point literals", location))
