@@ -16,6 +16,7 @@ import (
 func usage(stream io.Writer, program string) {
 	fmt.Fprintf(stream, "Usage: %s [OPTIONS] <input.copper>\n", program)
 	fmt.Fprintf(stream, "[OPTIONS]: \n")
+	fmt.Fprintf(stream, "    -t [copper|x86-64]   Select the build target (default copper).\n")
 	fmt.Fprintf(stream, "    -I <include/path>    Add include path.\n")
 	fmt.Fprintf(stream, "    -o <out.vm>          Specify the output path.\n")
 	fmt.Fprintf(stream, "    -d                   Add debug symbols to use with copperdb.\n")
@@ -36,6 +37,19 @@ func main() {
 		if flag == "-h" {
 			usage(os.Stdout, program)
 			os.Exit(0)
+		} else if flag == "-t" {
+			if len(args) == 0 {
+				usage(os.Stderr, program)
+				log.Fatalf("[ERROR]: No argument provided for flag `%s`\n", flag)
+			}
+			var target string
+			target, args = internal.Shift(args)
+			switch target {
+			case "copper":
+				casm.Target = c.BuildTargetCopper
+			case "x86-64":
+				casm.Target = c.BuildTargetX86_64
+			}
 		} else if flag == "-o" {
 			if len(args) == 0 {
 				usage(os.Stderr, program)
