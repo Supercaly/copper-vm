@@ -190,6 +190,8 @@ func (casm *Casm) translateIR(tokens *tokens) (out []IR) {
 			}
 		case tokenKindColon:
 			panic(fmt.Sprintf("%s: empty labels are not supported", tokens.First().Location))
+		case tokenKindNewLine:
+			tokens.Pop()
 		default:
 			panic(fmt.Sprintf("%s: unsupported line start '%s'", tokens.First().Location, tokens.First().Kind))
 		}

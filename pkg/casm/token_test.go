@@ -190,11 +190,13 @@ func TestTokenizationDeDuplication(t *testing.T) {
 		}
 	}()
 
-	tok := tokenize("a\n\n\n\nb", "")
+	tok := tokenize("\na\n\n\n\nb\n", "")
 	assert.Equal(t, tokens{
-		newToken(tokenKindSymbol, "a", fileLocation(0, 0)),
-		newToken(tokenKindNewLine, "", fileLocation(0, 1)),
-		newToken(tokenKindSymbol, "b", fileLocation(4, 0)),
+		newToken(tokenKindNewLine, "", fileLocation(0, 0)),
+		newToken(tokenKindSymbol, "a", fileLocation(1, 0)),
+		newToken(tokenKindNewLine, "", fileLocation(1, 1)),
+		newToken(tokenKindSymbol, "b", fileLocation(5, 0)),
+		newToken(tokenKindNewLine, "", fileLocation(5, 1)),
 	}, tok)
 }
 

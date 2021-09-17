@@ -68,7 +68,7 @@ func (t *tokens) expectTokenKind(kind tokenKind) {
 		panic(fmt.Sprintf("expecting token '%s' but list is empty", kind))
 	}
 	if t.First().Kind != kind {
-		panic(fmt.Sprintf("expecting token '%s' but got '%s'", kind, t.First().Kind))
+		panic(fmt.Sprintf("%s: expecting token '%s' but got '%s'", t.First().Location, kind, t.First().Kind))
 	}
 }
 
