@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/Supercaly/coppervm/internal"
 	"github.com/Supercaly/coppervm/pkg/coppervm"
@@ -47,14 +46,14 @@ func (casm *Casm) TranslateSourceFile(filePath string) (err error) {
 
 	internal.DebugPrint("[INFO]: Building program '%s'\n", filePath)
 
-	// Linize the source
-	lines, err := Linize(source, filePath)
+	// Tokenize the source
+	tokens, err := Tokenize(source, filePath)
 	if err != nil {
 		panic(err)
 	}
 
 	// Create intermediate representation
-	irs := casm.TranslateIR(lines)
+	irs := casm.TranslateIR(&tokens)
 
 	// Generate the program depending on the build target
 	switch casm.Target {
@@ -97,94 +96,105 @@ func (casm *Casm) SaveProgramToFile() (err error) {
 	return err
 }
 
-// Convert lines to intermediate representation.
-func (casm *Casm) TranslateIR(lines []Line) (out []IR) {
-	for _, line := range lines {
-		switch line.Kind {
-		case LineKindLabel:
-			if line.AsLabel.Name == "" {
-				panic(fmt.Sprintf("%s: empty labels are not supported", line.Location))
-			}
+// Convert tokens to intermediate representation.
+func (casm *Casm) TranslateIR(tokens *Tokens) (out []IR) {
+	for !tokens.Empty() {
+		switch tokens.First().Kind {
+		case TokenKindSymbol:
+			symbol := tokens.Pop()
 
-			out = append(out, IR{
-				Kind:     IRKindLabel,
-				AsLabel:  LabelIR{line.AsLabel.Name},
-				Location: line.Location,
-			})
-		case LineKindInstruction:
-			exist, instDef := coppervm.GetInstDefByName(line.AsInstruction.Name)
-			if !exist {
-				panic(fmt.Sprintf("%s: unknown instruction '%s'",
-					line.Location,
-					line.AsInstruction.Name))
-			}
-
-			var operand Expression
-			if instDef.HasOperand {
-				var err error
-				operand, err = ParseExprFromString(line.AsInstruction.Operand)
-				if err != nil {
-					panic(fmt.Sprintf("%s: %s", line.Location, err))
+			if !tokens.Empty() && tokens.First().Kind == TokenKindColon {
+				// Label definition
+				tokens.Pop()
+				out = append(out, IR{
+					Kind:     IRKindLabel,
+					AsLabel:  LabelIR{symbol.Text},
+					Location: symbol.Location,
+				})
+			} else {
+				// Intruction definition
+				exist, instDef := coppervm.GetInstDefByName(symbol.Text)
+				if !exist {
+					panic(fmt.Sprintf("%s: unknown instruction '%s'",
+						symbol.Location,
+						symbol.Text))
 				}
+
+				var operand Expression
+				if instDef.HasOperand {
+					operand = parseExprFromTokens(tokens)
+				}
+				out = append(out, IR{
+					Kind: IRKindInstruction,
+					AsInstruction: InstructionIR{
+						Name:       instDef.Name,
+						Operand:    operand,
+						HasOperand: instDef.HasOperand,
+					},
+					Location: symbol.Location,
+				})
 			}
-			out = append(out, IR{
-				Kind: IRKindInstruction,
-				AsInstruction: InstructionIR{
-					Name:       instDef.Name,
-					Operand:    operand,
-					HasOperand: instDef.HasOperand,
-				},
-				Location: line.Location,
-			})
-		case LineKindDirective:
-			switch line.AsDirective.Name {
+			if len(*tokens) != 0 {
+				tokens.expectTokenKind(TokenKindNewLine)
+				tokens.Pop()
+			}
+		case TokenKindPercent:
+			directive := tokens.Pop()
+			tokens.expectTokenKind(TokenKindSymbol)
+
+			directiveName := tokens.Pop().Text
+			switch directiveName {
 			case "entry":
+				tokens.expectTokenKind(TokenKindSymbol)
+				name := tokens.Pop()
 				out = append(out, IR{
 					Kind: IRKindEntry,
 					AsEntry: EntryIR{
-						Name: line.AsDirective.Block,
+						Name: name.Text,
 					},
-					Location: line.Location,
+					Location: directive.Location,
 				})
 			case "const":
-				name, block := internal.SplitByDelim(line.AsDirective.Block, ' ')
-				name = strings.TrimSpace(name)
-				block = strings.TrimSpace(block)
-				expr, err := ParseExprFromString(block)
-				if err != nil {
-					panic(fmt.Sprintf("%s: %s", line.Location, err))
-				}
+				tokens.expectTokenKind(TokenKindSymbol)
+				name := tokens.Pop()
+				expr := parseExprFromTokens(tokens)
 
 				out = append(out, IR{
 					Kind: IRKindConst,
 					AsConst: ConstIR{
-						Name:  name,
+						Name:  name.Text,
 						Value: expr,
 					},
-					Location: line.Location,
+					Location: directive.Location,
 				})
 			case "memory":
-				name, block := internal.SplitByDelim(line.AsDirective.Block, ' ')
-				name = strings.TrimSpace(name)
-				block = strings.TrimSpace(block)
-				expr, err := ParseExprFromString(block)
-				if err != nil {
-					panic(fmt.Sprintf("%s: %s", line.Location, err))
-				}
+				tokens.expectTokenKind(TokenKindSymbol)
+				name := tokens.Pop()
+				expr := parseExprFromTokens(tokens)
 
 				out = append(out, IR{
 					Kind: IRKindMemory,
 					AsMemory: MemoryIR{
-						Name:  name,
+						Name:  name.Text,
 						Value: expr,
 					},
-					Location: line.Location,
+					Location: directive.Location,
 				})
 			case "include":
-				out = append(out, casm.translateInclude(line.AsDirective, line.Location)...)
+				tokens.expectTokenKind(TokenKindStringLit)
+				includePath := tokens.Pop()
+				out = append(out, casm.translateInclude(includePath.Text, includePath.Location)...)
 			default:
-				panic(fmt.Sprintf("%s: unknown directive '%s'", line.Location, line.AsDirective.Name))
+				panic(fmt.Sprintf("%s: unknown directive '%s'", directive.Location, directiveName))
 			}
+			if len(*tokens) != 0 {
+				tokens.expectTokenKind(TokenKindNewLine)
+				tokens.Pop()
+			}
+		case TokenKindColon:
+			panic(fmt.Sprintf("%s: empty labels are not supported", tokens.First().Location))
+		default:
+			panic(fmt.Sprintf("%s: unsupported line start '%s'", tokens.First().Location, tokens.First().Kind))
 		}
 	}
 
@@ -192,10 +202,10 @@ func (casm *Casm) TranslateIR(lines []Line) (out []IR) {
 }
 
 // Translate include directive.
-func (casm *Casm) translateInclude(directive DirectiveLine, location FileLocation) (out []IR) {
-	exist, resolvedPath := casm.resolveIncludePath(directive.Block)
+func (casm *Casm) translateInclude(path string, location FileLocation) (out []IR) {
+	exist, resolvedPath := casm.resolveIncludePath(path)
 	if !exist {
-		panic(fmt.Sprintf("%s: cannot resolve include file '%s'", location, directive.Block))
+		panic(fmt.Sprintf("%s: cannot resolve include file '%s'", location, path))
 	}
 
 	if casm.IncludeLevel >= CasmMaxIncludeLevel {
@@ -205,11 +215,11 @@ func (casm *Casm) translateInclude(directive DirectiveLine, location FileLocatio
 	// Generate IR from included file
 	casm.IncludeLevel++
 	includeSource := readSourceFile(resolvedPath)
-	lines, err := Linize(includeSource, resolvedPath)
+	tokens, err := Tokenize(includeSource, resolvedPath)
 	if err != nil {
 		panic(err)
 	}
-	out = casm.TranslateIR(lines)
+	out = casm.TranslateIR(&tokens)
 	casm.IncludeLevel--
 
 	return out

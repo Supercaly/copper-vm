@@ -1,6 +1,7 @@
 package casm
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -86,18 +87,18 @@ var testSources = []struct {
 	out      []IR
 	hasError bool
 }{
-	{"main:\n", []IR{ir(IRKindLabel, LabelIR{"main"}, FileLocation{FileName: "test_file", Location: 1})}, false},
+	{"main:\n", []IR{ir(IRKindLabel, LabelIR{"main"}, fileLocation(0, 0))}, false},
 	{"push 1\n", []IR{
 		ir(IRKindInstruction, InstructionIR{
 			Name:       "push",
 			HasOperand: true,
 			Operand:    expression(ExpressionKindNumLitInt, int64(1)),
-		}, FileLocation{FileName: "test_file", Location: 1}),
+		}, fileLocation(0, 0)),
 	}, false},
 	{"%const N 1\n", []IR{ir(IRKindConst, ConstIR{
 		"N",
 		expression(ExpressionKindNumLitInt, int64(1)),
-	}, FileLocation{FileName: "test_file", Location: 1})}, false},
+	}, fileLocation(0, 0))}, false},
 	{":", []IR{}, true},
 	{"wrong\n", []IR{}, true},
 	{"push \n", []IR{}, true},
@@ -107,7 +108,7 @@ var testSources = []struct {
 			HasOperand: true,
 			Name:       "push",
 			Operand:    expression(ExpressionKindBinding, "N"),
-		}, FileLocation{FileName: "test_file", Location: 1}),
+		}, fileLocation(0, 0)),
 	}, false},
 	{"%include abc", []IR{}, true},
 }
@@ -118,17 +119,17 @@ func TestTranslateIR(t *testing.T) {
 			defer func() {
 				r := recover()
 				if r != nil && !test.hasError {
-					assert.Fail(t, "unexpected error", test)
+					assert.Fail(t, fmt.Sprintf("unexpected error %s", r), test)
 				}
 			}()
 
-			lines, err := Linize(test.in, "test_file")
+			tokens, err := Tokenize(test.in, "")
 			if err != nil {
 				panic(err)
 			}
 
 			ctx := Casm{}
-			irs := ctx.TranslateIR(lines)
+			irs := ctx.TranslateIR(&tokens)
 
 			if test.hasError {
 				assert.Fail(t, "expecting an error", test)

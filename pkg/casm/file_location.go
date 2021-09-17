@@ -4,7 +4,6 @@ import "fmt"
 
 type FileLocation struct {
 	FileName string
-	Location int
 	Col      int
 	Row      int
 }

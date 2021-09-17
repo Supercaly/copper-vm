@@ -428,16 +428,27 @@ var testExpressions = []struct {
 	{"(1", Expression{}, true},
 }
 
-func TestParseExprFromString(t *testing.T) {
+func TestParseExprFromTokens(t *testing.T) {
 	for _, test := range testExpressions {
-		expr, err := ParseExprFromString(test.in)
+		func() {
+			defer func() {
+				r := recover()
+				if r != nil && !test.hasError {
+					assert.Fail(t, "unexpected error", test)
+				}
+			}()
 
-		if test.hasError {
-			assert.Error(t, err, test)
-		} else {
-			assert.NoError(t, err, test)
+			tokens, err := Tokenize(test.in, "")
+			if err != nil {
+				panic(err)
+			}
+			expr := parseExprFromTokens(&tokens)
+
 			assert.Condition(t, func() (success bool) { return expressionEquals(expr, test.out) }, test)
-		}
+			if test.hasError {
+				assert.Fail(t, "expecting an error", test)
+			}
+		}()
 	}
 }
 

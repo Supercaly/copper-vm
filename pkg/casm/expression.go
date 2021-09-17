@@ -208,23 +208,10 @@ func computeOpWithSameType(lhs Expression, rhs Expression, op BinaryOpKind) (out
 	return out
 }
 
-// Parse an expression from a source string.
-// The string is first tokenized and then is parsed to extract
-// an expression.
-// Returns an error if something went wrong.
-func ParseExprFromString(source string) (out Expression, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("%s", r)
-		}
-	}()
-
-	tokens, err := Tokenize(source, "")
-	if err != nil {
-		panic(err)
-	}
-	out = parseExprBinaryOp(&tokens, 0)
-	return out, err
+// Parse an expression from a list of tokens.
+// This method will panic if something went wrong.
+func parseExprFromTokens(tokens *Tokens) Expression {
+	return parseExprBinaryOp(tokens, 0)
 }
 
 // Parse an expression as a binary operation using the precedence climbing algorithm.

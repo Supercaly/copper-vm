@@ -61,9 +61,46 @@ func TestTokensPop(t *testing.T) {
 	}()
 }
 
+func TestExpectTokenKind(t *testing.T) {
+	tests := []struct {
+		in       Tokens
+		expected TokenKind
+		hasError bool
+	}{
+		{Tokens{
+			token(TokenKindAsterisk, "", fileLocation(0, 0)),
+			token(TokenKindPlus, "", fileLocation(0, 0)),
+			token(TokenKindMinus, "", fileLocation(0, 0)),
+		}, TokenKindAsterisk, false},
+		{Tokens{
+			token(TokenKindPlus, "", fileLocation(0, 0)),
+		}, TokenKindPlus, false},
+		{Tokens{
+			token(TokenKindPlus, "", fileLocation(0, 0)),
+		}, TokenKindSymbol, true},
+		{Tokens{}, TokenKindSymbol, true},
+	}
+
+	for _, test := range tests {
+		func() {
+			defer func() {
+				r := recover()
+				if r != nil && !test.hasError {
+					assert.Fail(t, "unexpected error", test)
+				}
+			}()
+
+			test.in.expectTokenKind(test.expected)
+			if test.hasError {
+				assert.Fail(t, "expecting an error", test)
+			}
+		}()
+	}
+}
+
 // Wrapper function to create a FileLocation.
 func fileLocation(row int, col int) FileLocation {
-	return FileLocation{FileName: "", Location: 0, Col: col, Row: row}
+	return FileLocation{FileName: "", Col: col, Row: row}
 }
 
 // Wrapper function to create a Token.

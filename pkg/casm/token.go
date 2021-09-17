@@ -61,6 +61,17 @@ func (t *Tokens) Pop() (out Token) {
 	return out
 }
 
+// This method will panic if list of tokens is empty or the next
+// token is not of given type.
+func (t *Tokens) expectTokenKind(kind TokenKind) {
+	if t.Empty() {
+		panic(fmt.Sprintf("expecting token '%s' but list is empty", kind))
+	}
+	if t.First().Kind != kind {
+		panic(fmt.Sprintf("expecting token '%s' but got '%s'", kind, t.First().Kind))
+	}
+}
+
 // Tokenize a source string.
 // Returns a list of tokens from a string or an error
 // if something went wrong.
@@ -221,4 +232,25 @@ func isAlpha(r rune) bool {
 
 func isDigit(r rune) bool {
 	return unicode.IsNumber(r) || r == '.'
+}
+
+func (kind TokenKind) String() string {
+	return [...]string{
+		"TokenKindNumLit",
+		"TokenKindStringLit",
+		"TokenKindCharLit",
+		"TokenKindSymbol",
+		"TokenKindPlus",
+		"TokenKindMinus",
+		"TokenKindAsterisk",
+		"TokenKindSlash",
+		"TokenKindPercent",
+		"TokenKindComma",
+		"TokenKindOpenParen",
+		"TokenKindCloseParen",
+		"TokenKindOpenBracket",
+		"TokenKindCloseBracket",
+		"TokenKindNewLine",
+		"TokenKindColon",
+	}[kind]
 }
