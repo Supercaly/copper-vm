@@ -14,9 +14,9 @@ func TestTokensEmpty(t *testing.T) {
 	assert.True(tokens.Empty())
 
 	tokens = Tokens{
-		token(TokenKindAsterisk, ""),
-		token(TokenKindPlus, ""),
-		token(TokenKindMinus, ""),
+		token(TokenKindAsterisk, "", fileLocation(0, 0)),
+		token(TokenKindPlus, "", fileLocation(0, 0)),
+		token(TokenKindMinus, "", fileLocation(0, 0)),
 	}
 	assert.Len(tokens, 3)
 	assert.False(tokens.Empty())
@@ -25,9 +25,9 @@ func TestTokensEmpty(t *testing.T) {
 func TestTokensFirst(t *testing.T) {
 	assert := assert.New(t)
 	tokens := Tokens{
-		token(TokenKindAsterisk, ""),
-		token(TokenKindPlus, ""),
-		token(TokenKindMinus, ""),
+		token(TokenKindAsterisk, "", fileLocation(0, 0)),
+		token(TokenKindPlus, "", fileLocation(0, 0)),
+		token(TokenKindMinus, "", fileLocation(0, 0)),
 	}
 	token := tokens.First()
 	assert.Equal(tokens[0], token)
@@ -43,9 +43,9 @@ func TestTokensFirst(t *testing.T) {
 func TestTokensPop(t *testing.T) {
 	assert := assert.New(t)
 	tokens := Tokens{
-		token(TokenKindAsterisk, ""),
-		token(TokenKindPlus, ""),
-		token(TokenKindMinus, ""),
+		token(TokenKindAsterisk, "", fileLocation(0, 0)),
+		token(TokenKindPlus, "", fileLocation(0, 0)),
+		token(TokenKindMinus, "", fileLocation(0, 0)),
 	}
 	tokenBeforePop := tokens.First()
 	token := tokens.Pop()
@@ -61,9 +61,14 @@ func TestTokensPop(t *testing.T) {
 	}()
 }
 
+// Wrapper function to create a FileLocation.
+func fileLocation(row int, col int) FileLocation {
+	return FileLocation{FileName: "", Location: 0, Col: col, Row: row}
+}
+
 // Wrapper function to create a Token.
-func token(kind TokenKind, text string) Token {
-	return Token{Kind: kind, Text: text}
+func token(kind TokenKind, text string, location FileLocation) Token {
+	return Token{kind, text, location}
 }
 
 var testTokens = []struct {
@@ -71,57 +76,59 @@ var testTokens = []struct {
 	out      Tokens
 	hasError bool
 }{
-	{"1", Tokens{token(TokenKindNumLit, "1")}, false},
-	{"1.2", Tokens{token(TokenKindNumLit, "1.2")}, false},
-	{".2", Tokens{token(TokenKindNumLit, ".2")}, false},
-	{"test", Tokens{token(TokenKindSymbol, "test")}, false},
+	{"1", Tokens{token(TokenKindNumLit, "1", fileLocation(0, 0))}, false},
+	{"1.2", Tokens{token(TokenKindNumLit, "1.2", fileLocation(0, 0))}, false},
+	{".2", Tokens{token(TokenKindNumLit, ".2", fileLocation(0, 0))}, false},
+	{"test", Tokens{token(TokenKindSymbol, "test", fileLocation(0, 0))}, false},
 	{"-5", Tokens{
-		token(TokenKindMinus, ""),
-		token(TokenKindNumLit, "5"),
+		token(TokenKindMinus, "", fileLocation(0, 0)),
+		token(TokenKindNumLit, "5", fileLocation(0, 1)),
 	}, false},
-	{"test12", Tokens{token(TokenKindSymbol, "test12")}, false},
+	{"test12", Tokens{token(TokenKindSymbol, "test12", fileLocation(0, 0))}, false},
 	{"12test", Tokens{
-		token(TokenKindNumLit, "12"),
-		token(TokenKindSymbol, "test"),
+		token(TokenKindNumLit, "12", fileLocation(0, 0)),
+		token(TokenKindSymbol, "test", fileLocation(0, 2)),
 	}, false},
-	{"test_case", Tokens{token(TokenKindSymbol, "test_case")}, false},
-	{"_test", Tokens{token(TokenKindSymbol, "_test")}, false},
+	{"test_case", Tokens{token(TokenKindSymbol, "test_case", fileLocation(0, 0))}, false},
+	{"_test", Tokens{token(TokenKindSymbol, "_test", fileLocation(0, 0))}, false},
 	{"1,2,3", Tokens{
-		token(TokenKindNumLit, "1"),
-		token(TokenKindComma, ""),
-		token(TokenKindNumLit, "2"),
-		token(TokenKindComma, ""),
-		token(TokenKindNumLit, "3"),
+		token(TokenKindNumLit, "1", fileLocation(0, 0)),
+		token(TokenKindComma, "", fileLocation(0, 1)),
+		token(TokenKindNumLit, "2", fileLocation(0, 2)),
+		token(TokenKindComma, "", fileLocation(0, 3)),
+		token(TokenKindNumLit, "3", fileLocation(0, 4)),
 	}, false},
-	{`"string"`, Tokens{token(TokenKindStringLit, "string")}, false},
+	{`"string"`, Tokens{token(TokenKindStringLit, "string", fileLocation(0, 0))}, false},
 	{`"string`, Tokens{}, true},
-	{`'a'`, Tokens{token(TokenKindCharLit, "a")}, false},
+	{`'a'`, Tokens{token(TokenKindCharLit, "a", fileLocation(0, 0))}, false},
 	{`'a`, Tokens{}, true},
-	{"0x5CFF", Tokens{token(TokenKindNumLit, "0x5CFF")}, false},
-	{"0X5CFF", Tokens{token(TokenKindNumLit, "0X5CFF")}, false},
-	{"0b110011", Tokens{token(TokenKindNumLit, "0b110011")}, false},
-	{"0B110011", Tokens{token(TokenKindNumLit, "0B110011")}, false},
+	{"0x5CFF", Tokens{token(TokenKindNumLit, "0x5CFF", fileLocation(0, 0))}, false},
+	{"0X5CFF", Tokens{token(TokenKindNumLit, "0X5CFF", fileLocation(0, 0))}, false},
+	{"0b110011", Tokens{token(TokenKindNumLit, "0b110011", fileLocation(0, 0))}, false},
+	{"0B110011", Tokens{token(TokenKindNumLit, "0B110011", fileLocation(0, 0))}, false},
 	{"+-*/%", Tokens{
-		token(TokenKindPlus, ""),
-		token(TokenKindMinus, ""),
-		token(TokenKindAsterisk, ""),
-		token(TokenKindSlash, ""),
-		token(TokenKindPercent, ""),
+		token(TokenKindPlus, "", fileLocation(0, 0)),
+		token(TokenKindMinus, "", fileLocation(0, 1)),
+		token(TokenKindAsterisk, "", fileLocation(0, 2)),
+		token(TokenKindSlash, "", fileLocation(0, 3)),
+		token(TokenKindPercent, "", fileLocation(0, 4)),
 	}, false},
 	{"()", Tokens{
-		token(TokenKindOpenParen, ""),
-		token(TokenKindCloseParen, ""),
+		token(TokenKindOpenParen, "", fileLocation(0, 0)),
+		token(TokenKindCloseParen, "", fileLocation(0, 1)),
 	}, false},
 	{"[]", Tokens{
-		token(TokenKindOpenBracket, ""),
-		token(TokenKindCloseBracket, ""),
+		token(TokenKindOpenBracket, "", fileLocation(0, 0)),
+		token(TokenKindCloseBracket, "", fileLocation(0, 1)),
 	}, false},
+	{"\n", Tokens{token(TokenKindNewLine, "", fileLocation(0, 0))}, false},
+	{":", Tokens{token(TokenKindColon, "", fileLocation(0, 0))}, false},
 	{"$", Tokens{}, true},
 }
 
 func TestTokenize(t *testing.T) {
 	for _, test := range testTokens {
-		tok, err := Tokenize(test.in)
+		tok, err := Tokenize(test.in, "")
 
 		if test.hasError {
 			assert.Error(t, err, test)
@@ -130,6 +137,16 @@ func TestTokenize(t *testing.T) {
 			assert.Equal(t, test.out, tok, test)
 		}
 	}
+}
+
+func TestTokenizationDeDuplication(t *testing.T) {
+	tok, err := Tokenize("a\n\n\n\nb", "")
+	assert.NoError(t, err)
+	assert.Equal(t, Tokens{
+		token(TokenKindSymbol, "a", fileLocation(0, 0)),
+		token(TokenKindNewLine, "", fileLocation(0, 1)),
+		token(TokenKindSymbol, "b", fileLocation(4, 0)),
+	}, tok)
 }
 
 type AsciiTestSuite struct {

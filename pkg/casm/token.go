@@ -26,11 +26,14 @@ const (
 	TokenKindCloseParen
 	TokenKindOpenBracket
 	TokenKindCloseBracket
+	TokenKindNewLine
+	TokenKindColon
 )
 
 type Token struct {
-	Kind TokenKind
-	Text string
+	Kind     TokenKind
+	Text     string
+	Location FileLocation
 }
 
 type Tokens []Token
@@ -61,46 +64,74 @@ func (t *Tokens) Pop() (out Token) {
 // Tokenize a source string.
 // Returns a list of tokens from a string or an error
 // if something went wrong.
-func Tokenize(source string) (out Tokens, err error) {
+func Tokenize(source string, filePath string) (out Tokens, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("%s", r)
 		}
 	}()
 
-	for source != "" {
-		source = strings.TrimSpace(source)
+	location := FileLocation{FileName: filePath}
+
+	// Tokenize the whole source string
+	for len(source) != 0 {
 		switch source[0] {
+		case ' ':
+			source = source[1:]
+			location.Col++
+		case ';':
+			var comment string
+			comment, source = internal.SplitByDelim(source, '\n')
+			location.Col += len(comment)
+		case '\n':
+			source = source[1:]
+			out = append(out, Token{Kind: TokenKindNewLine, Location: location})
+			location.Row++
+			location.Col = 0
 		case '+':
 			source = source[1:]
-			out = append(out, Token{Kind: TokenKindPlus})
+			out = append(out, Token{Kind: TokenKindPlus, Location: location})
+			location.Col++
 		case '-':
 			source = source[1:]
-			out = append(out, Token{Kind: TokenKindMinus})
+			out = append(out, Token{Kind: TokenKindMinus, Location: location})
+			location.Col++
 		case '*':
 			source = source[1:]
-			out = append(out, Token{Kind: TokenKindAsterisk})
+			out = append(out, Token{Kind: TokenKindAsterisk, Location: location})
+			location.Col++
 		case '/':
 			source = source[1:]
-			out = append(out, Token{Kind: TokenKindSlash})
+			out = append(out, Token{Kind: TokenKindSlash, Location: location})
+			location.Col++
 		case '%':
 			source = source[1:]
-			out = append(out, Token{Kind: TokenKindPercent})
+			out = append(out, Token{Kind: TokenKindPercent, Location: location})
+			location.Col++
 		case ',':
 			source = source[1:]
-			out = append(out, Token{Kind: TokenKindComma})
+			out = append(out, Token{Kind: TokenKindComma, Location: location})
+			location.Col++
+		case ':':
+			source = source[1:]
+			out = append(out, Token{Kind: TokenKindColon, Location: location})
+			location.Col++
 		case '(':
 			source = source[1:]
-			out = append(out, Token{Kind: TokenKindOpenParen})
+			out = append(out, Token{Kind: TokenKindOpenParen, Location: location})
+			location.Col++
 		case ')':
 			source = source[1:]
-			out = append(out, Token{Kind: TokenKindCloseParen})
+			out = append(out, Token{Kind: TokenKindCloseParen, Location: location})
+			location.Col++
 		case '[':
 			source = source[1:]
-			out = append(out, Token{Kind: TokenKindOpenBracket})
+			out = append(out, Token{Kind: TokenKindOpenBracket, Location: location})
+			location.Col++
 		case ']':
 			source = source[1:]
-			out = append(out, Token{Kind: TokenKindCloseBracket})
+			out = append(out, Token{Kind: TokenKindCloseBracket, Location: location})
+			location.Col++
 		case '"':
 			source = source[1:]
 			if strings.Contains(source, "\"") {
@@ -111,9 +142,12 @@ func Tokenize(source string) (out Tokens, err error) {
 					panic(fmt.Sprintf("error tokenizing literal string '%s'", str))
 				}
 				out = append(out, Token{
-					Kind: TokenKindStringLit,
-					Text: unquotedStr,
+					Kind:     TokenKindStringLit,
+					Text:     unquotedStr,
+					Location: location,
 				})
+				// TODO: Location in not incremented correctly if there's a new line in the string
+				location.Col += len(unquotedStr) + 2
 			} else {
 				panic("could not find closing \"")
 			}
@@ -123,9 +157,12 @@ func Tokenize(source string) (out Tokens, err error) {
 				char, rest := internal.SplitByDelim(source, '\'')
 				source = rest[1:]
 				out = append(out, Token{
-					Kind: TokenKindCharLit,
-					Text: char,
+					Kind:     TokenKindCharLit,
+					Text:     char,
+					Location: location,
 				})
+				// TODO: Location in not incremented correctly if there's a new line in the char
+				location.Col += len(char) + 2
 			} else {
 				panic("could not find closing '")
 			}
@@ -135,22 +172,38 @@ func Tokenize(source string) (out Tokens, err error) {
 				number, rest := internal.SplitWhile(source, isNumber)
 				source = rest
 				out = append(out, Token{
-					Kind: TokenKindNumLit,
-					Text: number,
+					Kind:     TokenKindNumLit,
+					Text:     number,
+					Location: location,
 				})
+				location.Col += len(number)
 			} else if isAlpha(rune(source[0])) {
 				// Tokenize a symbol
 				symbol, rest := internal.SplitWhile(source, isAlpha)
 				source = rest
 				out = append(out, Token{
-					Kind: TokenKindSymbol,
-					Text: symbol,
+					Kind:     TokenKindSymbol,
+					Text:     symbol,
+					Location: location,
 				})
+				location.Col += len(symbol)
 			} else {
-				panic(fmt.Sprintf("unknown token starting with '%s'", string(source[0])))
+				panic(fmt.Sprintf("%s: unknown token starting with '%s'", location, string(source[0])))
 			}
 		}
 	}
+
+	// Remove duplicate consecutive new lines
+	var newOut []Token
+	var lastToken Token
+	for _, t := range out {
+		if t.Kind != TokenKindNewLine || lastToken.Kind != TokenKindNewLine {
+			newOut = append(newOut, t)
+		}
+		lastToken = t
+	}
+	out = newOut
+
 	return out, err
 }
 

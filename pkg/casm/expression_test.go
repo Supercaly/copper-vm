@@ -12,19 +12,19 @@ func TestTokenIsOperator(t *testing.T) {
 		in  Token
 		out bool
 	}{
-		{token(TokenKindNumLit, "1"), false},
-		{token(TokenKindStringLit, ""), false},
-		{token(TokenKindSymbol, "_a"), false},
-		{token(TokenKindPlus, "+"), true},
-		{token(TokenKindMinus, "-"), true},
-		{token(TokenKindAsterisk, "*"), true},
-		{token(TokenKindSlash, "/"), true},
-		{token(TokenKindPercent, "%"), true},
-		{token(TokenKindComma, ","), false},
-		{token(TokenKindOpenParen, "("), false},
-		{token(TokenKindCloseParen, ")"), false},
-		{token(TokenKindOpenBracket, "["), false},
-		{token(TokenKindCloseBracket, "]"), false},
+		{token(TokenKindNumLit, "1", fileLocation(0, 0)), false},
+		{token(TokenKindStringLit, "", fileLocation(0, 0)), false},
+		{token(TokenKindSymbol, "_a", fileLocation(0, 0)), false},
+		{token(TokenKindPlus, "+", fileLocation(0, 0)), true},
+		{token(TokenKindMinus, "-", fileLocation(0, 0)), true},
+		{token(TokenKindAsterisk, "*", fileLocation(0, 0)), true},
+		{token(TokenKindSlash, "/", fileLocation(0, 0)), true},
+		{token(TokenKindPercent, "%", fileLocation(0, 0)), true},
+		{token(TokenKindComma, ",", fileLocation(0, 0)), false},
+		{token(TokenKindOpenParen, "(", fileLocation(0, 0)), false},
+		{token(TokenKindCloseParen, ")", fileLocation(0, 0)), false},
+		{token(TokenKindOpenBracket, "[", fileLocation(0, 0)), false},
+		{token(TokenKindCloseBracket, "]", fileLocation(0, 0)), false},
 	}
 
 	for _, test := range tests {
@@ -38,19 +38,19 @@ func TestTokenAsBinaryOpKind(t *testing.T) {
 		out      BinaryOpKind
 		hasError bool
 	}{
-		{token(TokenKindNumLit, "1"), 0, true},
-		{token(TokenKindStringLit, ""), 0, true},
-		{token(TokenKindSymbol, "_a"), 0, true},
-		{token(TokenKindPlus, "+"), BinaryOpKindPlus, false},
-		{token(TokenKindMinus, "-"), BinaryOpKindMinus, false},
-		{token(TokenKindAsterisk, "*"), BinaryOpKindTimes, false},
-		{token(TokenKindSlash, "/"), BinaryOpKindDivide, false},
-		{token(TokenKindPercent, "%"), BinaryOpKindModulo, false},
-		{token(TokenKindComma, ","), 0, true},
-		{token(TokenKindOpenParen, "("), 0, true},
-		{token(TokenKindCloseParen, ")"), 0, true},
-		{token(TokenKindOpenBracket, "["), 0, true},
-		{token(TokenKindCloseBracket, "]"), 0, true},
+		{token(TokenKindNumLit, "1", fileLocation(0, 0)), 0, true},
+		{token(TokenKindStringLit, "", fileLocation(0, 0)), 0, true},
+		{token(TokenKindSymbol, "_a", fileLocation(0, 0)), 0, true},
+		{token(TokenKindPlus, "+", fileLocation(0, 0)), BinaryOpKindPlus, false},
+		{token(TokenKindMinus, "-", fileLocation(0, 0)), BinaryOpKindMinus, false},
+		{token(TokenKindAsterisk, "*", fileLocation(0, 0)), BinaryOpKindTimes, false},
+		{token(TokenKindSlash, "/", fileLocation(0, 0)), BinaryOpKindDivide, false},
+		{token(TokenKindPercent, "%", fileLocation(0, 0)), BinaryOpKindModulo, false},
+		{token(TokenKindComma, ",", fileLocation(0, 0)), 0, true},
+		{token(TokenKindOpenParen, "(", fileLocation(0, 0)), 0, true},
+		{token(TokenKindCloseParen, ")", fileLocation(0, 0)), 0, true},
+		{token(TokenKindOpenBracket, "[", fileLocation(0, 0)), 0, true},
+		{token(TokenKindCloseBracket, "]", fileLocation(0, 0)), 0, true},
 	}
 
 	for _, test := range tests {

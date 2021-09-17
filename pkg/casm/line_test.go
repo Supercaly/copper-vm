@@ -17,7 +17,7 @@ func line(kind LineKind, value interface{}, location int) (line Line) {
 	case LineKindLabel:
 		line.AsLabel = value.(LabelLine)
 	}
-	line.Location = FileLocation{"", location}
+	line.Location = FileLocation{FileName: "", Location: location}
 	return line
 }
 

@@ -86,18 +86,18 @@ var testSources = []struct {
 	out      []IR
 	hasError bool
 }{
-	{"main:\n", []IR{ir(IRKindLabel, LabelIR{"main"}, FileLocation{"test_file", 1})}, false},
+	{"main:\n", []IR{ir(IRKindLabel, LabelIR{"main"}, FileLocation{FileName: "test_file", Location: 1})}, false},
 	{"push 1\n", []IR{
 		ir(IRKindInstruction, InstructionIR{
 			Name:       "push",
 			HasOperand: true,
 			Operand:    expression(ExpressionKindNumLitInt, int64(1)),
-		}, FileLocation{"test_file", 1}),
+		}, FileLocation{FileName: "test_file", Location: 1}),
 	}, false},
 	{"%const N 1\n", []IR{ir(IRKindConst, ConstIR{
 		"N",
 		expression(ExpressionKindNumLitInt, int64(1)),
-	}, FileLocation{"test_file", 1})}, false},
+	}, FileLocation{FileName: "test_file", Location: 1})}, false},
 	{":", []IR{}, true},
 	{"wrong\n", []IR{}, true},
 	{"push \n", []IR{}, true},
@@ -107,7 +107,7 @@ var testSources = []struct {
 			HasOperand: true,
 			Name:       "push",
 			Operand:    expression(ExpressionKindBinding, "N"),
-		}, FileLocation{"test_file", 1}),
+		}, FileLocation{FileName: "test_file", Location: 1}),
 	}, false},
 	{"%include abc", []IR{}, true},
 }

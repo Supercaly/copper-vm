@@ -219,7 +219,7 @@ func ParseExprFromString(source string) (out Expression, err error) {
 		}
 	}()
 
-	tokens, err := Tokenize(source)
+	tokens, err := Tokenize(source, "")
 	if err != nil {
 		panic(err)
 	}
