@@ -9,37 +9,37 @@ import (
 	"github.com/Supercaly/coppervm/internal"
 )
 
-type TokenKind int
+type tokenKind int
 
 const (
-	TokenKindNumLit TokenKind = iota
-	TokenKindStringLit
-	TokenKindCharLit
-	TokenKindSymbol
-	TokenKindPlus
-	TokenKindMinus
-	TokenKindAsterisk
-	TokenKindSlash
-	TokenKindPercent
-	TokenKindComma
-	TokenKindOpenParen
-	TokenKindCloseParen
-	TokenKindOpenBracket
-	TokenKindCloseBracket
-	TokenKindNewLine
-	TokenKindColon
+	tokenKindNumLit tokenKind = iota
+	tokenKindStringLit
+	tokenKindCharLit
+	tokenKindSymbol
+	tokenKindPlus
+	tokenKindMinus
+	tokenKindAsterisk
+	tokenKindSlash
+	tokenKindPercent
+	tokenKindComma
+	tokenKindOpenParen
+	tokenKindCloseParen
+	tokenKindOpenBracket
+	tokenKindCloseBracket
+	tokenKindNewLine
+	tokenKindColon
 )
 
-type Token struct {
-	Kind     TokenKind
+type token struct {
+	Kind     tokenKind
 	Text     string
 	Location FileLocation
 }
 
-type Tokens []Token
+type tokens []token
 
 // Returns the first Token of the Tokens list.
-func (t Tokens) First() Token {
+func (t tokens) First() token {
 	if len(t) == 0 {
 		panic("trying to access the elements of an empty tokens list")
 	}
@@ -47,12 +47,12 @@ func (t Tokens) First() Token {
 }
 
 // Returns true if the Tokens list if empty, false otherwise.
-func (t Tokens) Empty() bool {
+func (t tokens) Empty() bool {
 	return len(t) == 0
 }
 
 // Removes and returns the first element of the Tokens list.
-func (t *Tokens) Pop() (out Token) {
+func (t *tokens) Pop() (out token) {
 	if len(*t) == 0 {
 		panic("trying to pop the elements of an empty tokens list")
 	}
@@ -63,7 +63,7 @@ func (t *Tokens) Pop() (out Token) {
 
 // This method will panic if list of tokens is empty or the next
 // token is not of given type.
-func (t *Tokens) expectTokenKind(kind TokenKind) {
+func (t *tokens) expectTokenKind(kind tokenKind) {
 	if t.Empty() {
 		panic(fmt.Sprintf("expecting token '%s' but list is empty", kind))
 	}
@@ -73,15 +73,9 @@ func (t *Tokens) expectTokenKind(kind TokenKind) {
 }
 
 // Tokenize a source string.
-// Returns a list of tokens from a string or an error
-// if something went wrong.
-func Tokenize(source string, filePath string) (out Tokens, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("%s", r)
-		}
-	}()
-
+// Returns a list of tokens from a string.
+// This method will panic when something went wrong.
+func tokenize(source string, filePath string) (out tokens) {
 	location := FileLocation{FileName: filePath}
 
 	// Tokenize the whole source string
@@ -96,52 +90,52 @@ func Tokenize(source string, filePath string) (out Tokens, err error) {
 			location.Col += len(comment)
 		case '\n':
 			source = source[1:]
-			out = append(out, Token{Kind: TokenKindNewLine, Location: location})
+			out = append(out, token{Kind: tokenKindNewLine, Location: location})
 			location.Row++
 			location.Col = 0
 		case '+':
 			source = source[1:]
-			out = append(out, Token{Kind: TokenKindPlus, Location: location})
+			out = append(out, token{Kind: tokenKindPlus, Location: location})
 			location.Col++
 		case '-':
 			source = source[1:]
-			out = append(out, Token{Kind: TokenKindMinus, Location: location})
+			out = append(out, token{Kind: tokenKindMinus, Location: location})
 			location.Col++
 		case '*':
 			source = source[1:]
-			out = append(out, Token{Kind: TokenKindAsterisk, Location: location})
+			out = append(out, token{Kind: tokenKindAsterisk, Location: location})
 			location.Col++
 		case '/':
 			source = source[1:]
-			out = append(out, Token{Kind: TokenKindSlash, Location: location})
+			out = append(out, token{Kind: tokenKindSlash, Location: location})
 			location.Col++
 		case '%':
 			source = source[1:]
-			out = append(out, Token{Kind: TokenKindPercent, Location: location})
+			out = append(out, token{Kind: tokenKindPercent, Location: location})
 			location.Col++
 		case ',':
 			source = source[1:]
-			out = append(out, Token{Kind: TokenKindComma, Location: location})
+			out = append(out, token{Kind: tokenKindComma, Location: location})
 			location.Col++
 		case ':':
 			source = source[1:]
-			out = append(out, Token{Kind: TokenKindColon, Location: location})
+			out = append(out, token{Kind: tokenKindColon, Location: location})
 			location.Col++
 		case '(':
 			source = source[1:]
-			out = append(out, Token{Kind: TokenKindOpenParen, Location: location})
+			out = append(out, token{Kind: tokenKindOpenParen, Location: location})
 			location.Col++
 		case ')':
 			source = source[1:]
-			out = append(out, Token{Kind: TokenKindCloseParen, Location: location})
+			out = append(out, token{Kind: tokenKindCloseParen, Location: location})
 			location.Col++
 		case '[':
 			source = source[1:]
-			out = append(out, Token{Kind: TokenKindOpenBracket, Location: location})
+			out = append(out, token{Kind: tokenKindOpenBracket, Location: location})
 			location.Col++
 		case ']':
 			source = source[1:]
-			out = append(out, Token{Kind: TokenKindCloseBracket, Location: location})
+			out = append(out, token{Kind: tokenKindCloseBracket, Location: location})
 			location.Col++
 		case '"':
 			source = source[1:]
@@ -152,8 +146,8 @@ func Tokenize(source string, filePath string) (out Tokens, err error) {
 				if err != nil {
 					panic(fmt.Sprintf("error tokenizing literal string '%s'", str))
 				}
-				out = append(out, Token{
-					Kind:     TokenKindStringLit,
+				out = append(out, token{
+					Kind:     tokenKindStringLit,
 					Text:     unquotedStr,
 					Location: location,
 				})
@@ -167,8 +161,8 @@ func Tokenize(source string, filePath string) (out Tokens, err error) {
 			if strings.Contains(source, "'") {
 				char, rest := internal.SplitByDelim(source, '\'')
 				source = rest[1:]
-				out = append(out, Token{
-					Kind:     TokenKindCharLit,
+				out = append(out, token{
+					Kind:     tokenKindCharLit,
 					Text:     char,
 					Location: location,
 				})
@@ -182,8 +176,8 @@ func Tokenize(source string, filePath string) (out Tokens, err error) {
 				// Tokenize a number
 				number, rest := internal.SplitWhile(source, isNumber)
 				source = rest
-				out = append(out, Token{
-					Kind:     TokenKindNumLit,
+				out = append(out, token{
+					Kind:     tokenKindNumLit,
 					Text:     number,
 					Location: location,
 				})
@@ -192,8 +186,8 @@ func Tokenize(source string, filePath string) (out Tokens, err error) {
 				// Tokenize a symbol
 				symbol, rest := internal.SplitWhile(source, isAlpha)
 				source = rest
-				out = append(out, Token{
-					Kind:     TokenKindSymbol,
+				out = append(out, token{
+					Kind:     tokenKindSymbol,
 					Text:     symbol,
 					Location: location,
 				})
@@ -205,17 +199,17 @@ func Tokenize(source string, filePath string) (out Tokens, err error) {
 	}
 
 	// Remove duplicate consecutive new lines
-	var newOut []Token
-	var lastToken Token
+	var newOut []token
+	var lastToken token
 	for _, t := range out {
-		if t.Kind != TokenKindNewLine || lastToken.Kind != TokenKindNewLine {
+		if t.Kind != tokenKindNewLine || lastToken.Kind != tokenKindNewLine {
 			newOut = append(newOut, t)
 		}
 		lastToken = t
 	}
 	out = newOut
 
-	return out, err
+	return out
 }
 
 func isNumber(r rune) bool {
@@ -234,7 +228,7 @@ func isDigit(r rune) bool {
 	return unicode.IsNumber(r) || r == '.'
 }
 
-func (kind TokenKind) String() string {
+func (kind tokenKind) String() string {
 	return [...]string{
 		"TokenKindNumLit",
 		"TokenKindStringLit",

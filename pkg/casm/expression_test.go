@@ -9,22 +9,22 @@ import (
 
 func TestTokenIsOperator(t *testing.T) {
 	tests := []struct {
-		in  Token
+		in  token
 		out bool
 	}{
-		{token(TokenKindNumLit, "1", fileLocation(0, 0)), false},
-		{token(TokenKindStringLit, "", fileLocation(0, 0)), false},
-		{token(TokenKindSymbol, "_a", fileLocation(0, 0)), false},
-		{token(TokenKindPlus, "+", fileLocation(0, 0)), true},
-		{token(TokenKindMinus, "-", fileLocation(0, 0)), true},
-		{token(TokenKindAsterisk, "*", fileLocation(0, 0)), true},
-		{token(TokenKindSlash, "/", fileLocation(0, 0)), true},
-		{token(TokenKindPercent, "%", fileLocation(0, 0)), true},
-		{token(TokenKindComma, ",", fileLocation(0, 0)), false},
-		{token(TokenKindOpenParen, "(", fileLocation(0, 0)), false},
-		{token(TokenKindCloseParen, ")", fileLocation(0, 0)), false},
-		{token(TokenKindOpenBracket, "[", fileLocation(0, 0)), false},
-		{token(TokenKindCloseBracket, "]", fileLocation(0, 0)), false},
+		{newToken(tokenKindNumLit, "1", fileLocation(0, 0)), false},
+		{newToken(tokenKindStringLit, "", fileLocation(0, 0)), false},
+		{newToken(tokenKindSymbol, "_a", fileLocation(0, 0)), false},
+		{newToken(tokenKindPlus, "+", fileLocation(0, 0)), true},
+		{newToken(tokenKindMinus, "-", fileLocation(0, 0)), true},
+		{newToken(tokenKindAsterisk, "*", fileLocation(0, 0)), true},
+		{newToken(tokenKindSlash, "/", fileLocation(0, 0)), true},
+		{newToken(tokenKindPercent, "%", fileLocation(0, 0)), true},
+		{newToken(tokenKindComma, ",", fileLocation(0, 0)), false},
+		{newToken(tokenKindOpenParen, "(", fileLocation(0, 0)), false},
+		{newToken(tokenKindCloseParen, ")", fileLocation(0, 0)), false},
+		{newToken(tokenKindOpenBracket, "[", fileLocation(0, 0)), false},
+		{newToken(tokenKindCloseBracket, "]", fileLocation(0, 0)), false},
 	}
 
 	for _, test := range tests {
@@ -34,23 +34,23 @@ func TestTokenIsOperator(t *testing.T) {
 
 func TestTokenAsBinaryOpKind(t *testing.T) {
 	tests := []struct {
-		in       Token
+		in       token
 		out      BinaryOpKind
 		hasError bool
 	}{
-		{token(TokenKindNumLit, "1", fileLocation(0, 0)), 0, true},
-		{token(TokenKindStringLit, "", fileLocation(0, 0)), 0, true},
-		{token(TokenKindSymbol, "_a", fileLocation(0, 0)), 0, true},
-		{token(TokenKindPlus, "+", fileLocation(0, 0)), BinaryOpKindPlus, false},
-		{token(TokenKindMinus, "-", fileLocation(0, 0)), BinaryOpKindMinus, false},
-		{token(TokenKindAsterisk, "*", fileLocation(0, 0)), BinaryOpKindTimes, false},
-		{token(TokenKindSlash, "/", fileLocation(0, 0)), BinaryOpKindDivide, false},
-		{token(TokenKindPercent, "%", fileLocation(0, 0)), BinaryOpKindModulo, false},
-		{token(TokenKindComma, ",", fileLocation(0, 0)), 0, true},
-		{token(TokenKindOpenParen, "(", fileLocation(0, 0)), 0, true},
-		{token(TokenKindCloseParen, ")", fileLocation(0, 0)), 0, true},
-		{token(TokenKindOpenBracket, "[", fileLocation(0, 0)), 0, true},
-		{token(TokenKindCloseBracket, "]", fileLocation(0, 0)), 0, true},
+		{newToken(tokenKindNumLit, "1", fileLocation(0, 0)), 0, true},
+		{newToken(tokenKindStringLit, "", fileLocation(0, 0)), 0, true},
+		{newToken(tokenKindSymbol, "_a", fileLocation(0, 0)), 0, true},
+		{newToken(tokenKindPlus, "+", fileLocation(0, 0)), BinaryOpKindPlus, false},
+		{newToken(tokenKindMinus, "-", fileLocation(0, 0)), BinaryOpKindMinus, false},
+		{newToken(tokenKindAsterisk, "*", fileLocation(0, 0)), BinaryOpKindTimes, false},
+		{newToken(tokenKindSlash, "/", fileLocation(0, 0)), BinaryOpKindDivide, false},
+		{newToken(tokenKindPercent, "%", fileLocation(0, 0)), BinaryOpKindModulo, false},
+		{newToken(tokenKindComma, ",", fileLocation(0, 0)), 0, true},
+		{newToken(tokenKindOpenParen, "(", fileLocation(0, 0)), 0, true},
+		{newToken(tokenKindCloseParen, ")", fileLocation(0, 0)), 0, true},
+		{newToken(tokenKindOpenBracket, "[", fileLocation(0, 0)), 0, true},
+		{newToken(tokenKindCloseBracket, "]", fileLocation(0, 0)), 0, true},
 	}
 
 	for _, test := range tests {
@@ -438,10 +438,7 @@ func TestParseExprFromTokens(t *testing.T) {
 				}
 			}()
 
-			tokens, err := Tokenize(test.in, "")
-			if err != nil {
-				panic(err)
-			}
+			tokens := tokenize(test.in, "")
 			expr := parseExprFromTokens(&tokens)
 
 			assert.Condition(t, func() (success bool) { return expressionEquals(expr, test.out) }, test)

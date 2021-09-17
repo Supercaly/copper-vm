@@ -21,10 +21,10 @@ type Casm struct {
 
 	Target BuildTarget
 
-	CopperGen copperGenerator
-	X86_64Gen x86_64Generator
+	copperGen copperGenerator
+	x86_64Gen x86_64Generator
 
-	IncludeLevel int
+	includeLevel int
 	IncludePaths []string
 
 	AddDebugSymbols bool
@@ -47,20 +47,17 @@ func (casm *Casm) TranslateSourceFile(filePath string) (err error) {
 	internal.DebugPrint("[INFO]: Building program '%s'\n", filePath)
 
 	// Tokenize the source
-	tokens, err := Tokenize(source, filePath)
-	if err != nil {
-		panic(err)
-	}
+	tokens := tokenize(source, filePath)
 
 	// Create intermediate representation
-	irs := casm.TranslateIR(&tokens)
+	irs := casm.translateIR(&tokens)
 
 	// Generate the program depending on the build target
 	switch casm.Target {
 	case BuildTargetCopper:
-		casm.CopperGen.generateProgram(irs)
+		casm.copperGen.generateProgram(irs)
 	case BuildTargetX86_64:
-		casm.X86_64Gen.generateProgram(irs)
+		casm.x86_64Gen.generateProgram(irs)
 	}
 
 	internal.DebugPrint("[INFO]: Built program '%s'\n", filePath)
@@ -79,12 +76,12 @@ func (casm *Casm) SaveProgramToFile() (err error) {
 	var programSource string
 	switch casm.Target {
 	case BuildTargetCopper:
-		programSource = casm.CopperGen.saveProgram(casm.AddDebugSymbols)
+		programSource = casm.copperGen.saveProgram(casm.AddDebugSymbols)
 		if filepath.Ext(casm.OutputFile) != coppervm.CoppervmFileExtention {
 			panic(fmt.Errorf("file '%s' is not a valid %s file", casm.OutputFile, coppervm.CoppervmFileExtention))
 		}
 	case BuildTargetX86_64:
-		programSource = casm.X86_64Gen.saveProgram()
+		programSource = casm.x86_64Gen.saveProgram()
 	}
 
 	// save program to file
@@ -97,13 +94,13 @@ func (casm *Casm) SaveProgramToFile() (err error) {
 }
 
 // Convert tokens to intermediate representation.
-func (casm *Casm) TranslateIR(tokens *Tokens) (out []IR) {
+func (casm *Casm) translateIR(tokens *tokens) (out []IR) {
 	for !tokens.Empty() {
 		switch tokens.First().Kind {
-		case TokenKindSymbol:
+		case tokenKindSymbol:
 			symbol := tokens.Pop()
 
-			if !tokens.Empty() && tokens.First().Kind == TokenKindColon {
+			if !tokens.Empty() && tokens.First().Kind == tokenKindColon {
 				// Label definition
 				tokens.Pop()
 				out = append(out, IR{
@@ -135,17 +132,17 @@ func (casm *Casm) TranslateIR(tokens *Tokens) (out []IR) {
 				})
 			}
 			if len(*tokens) != 0 {
-				tokens.expectTokenKind(TokenKindNewLine)
+				tokens.expectTokenKind(tokenKindNewLine)
 				tokens.Pop()
 			}
-		case TokenKindPercent:
+		case tokenKindPercent:
 			directive := tokens.Pop()
-			tokens.expectTokenKind(TokenKindSymbol)
+			tokens.expectTokenKind(tokenKindSymbol)
 
 			directiveName := tokens.Pop().Text
 			switch directiveName {
 			case "entry":
-				tokens.expectTokenKind(TokenKindSymbol)
+				tokens.expectTokenKind(tokenKindSymbol)
 				name := tokens.Pop()
 				out = append(out, IR{
 					Kind: IRKindEntry,
@@ -155,7 +152,7 @@ func (casm *Casm) TranslateIR(tokens *Tokens) (out []IR) {
 					Location: directive.Location,
 				})
 			case "const":
-				tokens.expectTokenKind(TokenKindSymbol)
+				tokens.expectTokenKind(tokenKindSymbol)
 				name := tokens.Pop()
 				expr := parseExprFromTokens(tokens)
 
@@ -168,7 +165,7 @@ func (casm *Casm) TranslateIR(tokens *Tokens) (out []IR) {
 					Location: directive.Location,
 				})
 			case "memory":
-				tokens.expectTokenKind(TokenKindSymbol)
+				tokens.expectTokenKind(tokenKindSymbol)
 				name := tokens.Pop()
 				expr := parseExprFromTokens(tokens)
 
@@ -181,17 +178,17 @@ func (casm *Casm) TranslateIR(tokens *Tokens) (out []IR) {
 					Location: directive.Location,
 				})
 			case "include":
-				tokens.expectTokenKind(TokenKindStringLit)
+				tokens.expectTokenKind(tokenKindStringLit)
 				includePath := tokens.Pop()
 				out = append(out, casm.translateInclude(includePath.Text, includePath.Location)...)
 			default:
 				panic(fmt.Sprintf("%s: unknown directive '%s'", directive.Location, directiveName))
 			}
 			if len(*tokens) != 0 {
-				tokens.expectTokenKind(TokenKindNewLine)
+				tokens.expectTokenKind(tokenKindNewLine)
 				tokens.Pop()
 			}
-		case TokenKindColon:
+		case tokenKindColon:
 			panic(fmt.Sprintf("%s: empty labels are not supported", tokens.First().Location))
 		default:
 			panic(fmt.Sprintf("%s: unsupported line start '%s'", tokens.First().Location, tokens.First().Kind))
@@ -208,19 +205,16 @@ func (casm *Casm) translateInclude(path string, location FileLocation) (out []IR
 		panic(fmt.Sprintf("%s: cannot resolve include file '%s'", location, path))
 	}
 
-	if casm.IncludeLevel >= CasmMaxIncludeLevel {
+	if casm.includeLevel >= CasmMaxIncludeLevel {
 		panic("maximum include level reached")
 	}
 
 	// Generate IR from included file
-	casm.IncludeLevel++
+	casm.includeLevel++
 	includeSource := readSourceFile(resolvedPath)
-	tokens, err := Tokenize(includeSource, resolvedPath)
-	if err != nil {
-		panic(err)
-	}
-	out = casm.TranslateIR(&tokens)
-	casm.IncludeLevel--
+	tokens := tokenize(includeSource, resolvedPath)
+	out = casm.translateIR(&tokens)
+	casm.includeLevel--
 
 	return out
 }

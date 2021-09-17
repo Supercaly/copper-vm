@@ -9,76 +9,76 @@ import (
 
 func TestTokensEmpty(t *testing.T) {
 	assert := assert.New(t)
-	tokens := Tokens{}
-	assert.Len(tokens, 0)
-	assert.True(tokens.Empty())
+	tok := tokens{}
+	assert.Len(tok, 0)
+	assert.True(tok.Empty())
 
-	tokens = Tokens{
-		token(TokenKindAsterisk, "", fileLocation(0, 0)),
-		token(TokenKindPlus, "", fileLocation(0, 0)),
-		token(TokenKindMinus, "", fileLocation(0, 0)),
+	tok = tokens{
+		newToken(tokenKindAsterisk, "", fileLocation(0, 0)),
+		newToken(tokenKindPlus, "", fileLocation(0, 0)),
+		newToken(tokenKindMinus, "", fileLocation(0, 0)),
 	}
-	assert.Len(tokens, 3)
-	assert.False(tokens.Empty())
+	assert.Len(tok, 3)
+	assert.False(tok.Empty())
 }
 
 func TestTokensFirst(t *testing.T) {
 	assert := assert.New(t)
-	tokens := Tokens{
-		token(TokenKindAsterisk, "", fileLocation(0, 0)),
-		token(TokenKindPlus, "", fileLocation(0, 0)),
-		token(TokenKindMinus, "", fileLocation(0, 0)),
+	tok := tokens{
+		newToken(tokenKindAsterisk, "", fileLocation(0, 0)),
+		newToken(tokenKindPlus, "", fileLocation(0, 0)),
+		newToken(tokenKindMinus, "", fileLocation(0, 0)),
 	}
-	token := tokens.First()
-	assert.Equal(tokens[0], token)
+	token := tok.First()
+	assert.Equal(tok[0], token)
 
 	func() {
 		defer func() { recover() }()
-		tokens := Tokens{}
-		tokens.First()
+		tok := tokens{}
+		tok.First()
 		assert.Fail("expecting an error")
 	}()
 }
 
 func TestTokensPop(t *testing.T) {
 	assert := assert.New(t)
-	tokens := Tokens{
-		token(TokenKindAsterisk, "", fileLocation(0, 0)),
-		token(TokenKindPlus, "", fileLocation(0, 0)),
-		token(TokenKindMinus, "", fileLocation(0, 0)),
+	tok := tokens{
+		newToken(tokenKindAsterisk, "", fileLocation(0, 0)),
+		newToken(tokenKindPlus, "", fileLocation(0, 0)),
+		newToken(tokenKindMinus, "", fileLocation(0, 0)),
 	}
-	tokenBeforePop := tokens.First()
-	token := tokens.Pop()
+	tokenBeforePop := tok.First()
+	token := tok.Pop()
 	assert.Equal(tokenBeforePop, token)
-	assert.Len(tokens, 2)
-	assert.True(!tokens.Empty())
+	assert.Len(tok, 2)
+	assert.True(!tok.Empty())
 
 	func() {
 		defer func() { recover() }()
-		tokens := Tokens{}
-		tokens.Pop()
+		tok := tokens{}
+		tok.Pop()
 		assert.Fail("expecting an error")
 	}()
 }
 
 func TestExpectTokenKind(t *testing.T) {
 	tests := []struct {
-		in       Tokens
-		expected TokenKind
+		in       tokens
+		expected tokenKind
 		hasError bool
 	}{
-		{Tokens{
-			token(TokenKindAsterisk, "", fileLocation(0, 0)),
-			token(TokenKindPlus, "", fileLocation(0, 0)),
-			token(TokenKindMinus, "", fileLocation(0, 0)),
-		}, TokenKindAsterisk, false},
-		{Tokens{
-			token(TokenKindPlus, "", fileLocation(0, 0)),
-		}, TokenKindPlus, false},
-		{Tokens{
-			token(TokenKindPlus, "", fileLocation(0, 0)),
-		}, TokenKindSymbol, true},
-		{Tokens{}, TokenKindSymbol, true},
+		{tokens{
+			newToken(tokenKindAsterisk, "", fileLocation(0, 0)),
+			newToken(tokenKindPlus, "", fileLocation(0, 0)),
+			newToken(tokenKindMinus, "", fileLocation(0, 0)),
+		}, tokenKindAsterisk, false},
+		{tokens{
+			newToken(tokenKindPlus, "", fileLocation(0, 0)),
+		}, tokenKindPlus, false},
+		{tokens{
+			newToken(tokenKindPlus, "", fileLocation(0, 0)),
+		}, tokenKindSymbol, true},
+		{tokens{}, tokenKindSymbol, true},
 	}
 
 	for _, test := range tests {
@@ -104,85 +104,97 @@ func fileLocation(row int, col int) FileLocation {
 }
 
 // Wrapper function to create a Token.
-func token(kind TokenKind, text string, location FileLocation) Token {
-	return Token{kind, text, location}
+func newToken(kind tokenKind, text string, location FileLocation) token {
+	return token{kind, text, location}
 }
 
 var testTokens = []struct {
 	in       string
-	out      Tokens
+	out      tokens
 	hasError bool
 }{
-	{"1", Tokens{token(TokenKindNumLit, "1", fileLocation(0, 0))}, false},
-	{"1.2", Tokens{token(TokenKindNumLit, "1.2", fileLocation(0, 0))}, false},
-	{".2", Tokens{token(TokenKindNumLit, ".2", fileLocation(0, 0))}, false},
-	{"test", Tokens{token(TokenKindSymbol, "test", fileLocation(0, 0))}, false},
-	{"-5", Tokens{
-		token(TokenKindMinus, "", fileLocation(0, 0)),
-		token(TokenKindNumLit, "5", fileLocation(0, 1)),
+	{"1", tokens{newToken(tokenKindNumLit, "1", fileLocation(0, 0))}, false},
+	{"1.2", tokens{newToken(tokenKindNumLit, "1.2", fileLocation(0, 0))}, false},
+	{".2", tokens{newToken(tokenKindNumLit, ".2", fileLocation(0, 0))}, false},
+	{"test", tokens{newToken(tokenKindSymbol, "test", fileLocation(0, 0))}, false},
+	{"-5", tokens{
+		newToken(tokenKindMinus, "", fileLocation(0, 0)),
+		newToken(tokenKindNumLit, "5", fileLocation(0, 1)),
 	}, false},
-	{"test12", Tokens{token(TokenKindSymbol, "test12", fileLocation(0, 0))}, false},
-	{"12test", Tokens{
-		token(TokenKindNumLit, "12", fileLocation(0, 0)),
-		token(TokenKindSymbol, "test", fileLocation(0, 2)),
+	{"test12", tokens{newToken(tokenKindSymbol, "test12", fileLocation(0, 0))}, false},
+	{"12test", tokens{
+		newToken(tokenKindNumLit, "12", fileLocation(0, 0)),
+		newToken(tokenKindSymbol, "test", fileLocation(0, 2)),
 	}, false},
-	{"test_case", Tokens{token(TokenKindSymbol, "test_case", fileLocation(0, 0))}, false},
-	{"_test", Tokens{token(TokenKindSymbol, "_test", fileLocation(0, 0))}, false},
-	{"1,2,3", Tokens{
-		token(TokenKindNumLit, "1", fileLocation(0, 0)),
-		token(TokenKindComma, "", fileLocation(0, 1)),
-		token(TokenKindNumLit, "2", fileLocation(0, 2)),
-		token(TokenKindComma, "", fileLocation(0, 3)),
-		token(TokenKindNumLit, "3", fileLocation(0, 4)),
+	{"test_case", tokens{newToken(tokenKindSymbol, "test_case", fileLocation(0, 0))}, false},
+	{"_test", tokens{newToken(tokenKindSymbol, "_test", fileLocation(0, 0))}, false},
+	{"1,2,3", tokens{
+		newToken(tokenKindNumLit, "1", fileLocation(0, 0)),
+		newToken(tokenKindComma, "", fileLocation(0, 1)),
+		newToken(tokenKindNumLit, "2", fileLocation(0, 2)),
+		newToken(tokenKindComma, "", fileLocation(0, 3)),
+		newToken(tokenKindNumLit, "3", fileLocation(0, 4)),
 	}, false},
-	{`"string"`, Tokens{token(TokenKindStringLit, "string", fileLocation(0, 0))}, false},
-	{`"string`, Tokens{}, true},
-	{`'a'`, Tokens{token(TokenKindCharLit, "a", fileLocation(0, 0))}, false},
-	{`'a`, Tokens{}, true},
-	{"0x5CFF", Tokens{token(TokenKindNumLit, "0x5CFF", fileLocation(0, 0))}, false},
-	{"0X5CFF", Tokens{token(TokenKindNumLit, "0X5CFF", fileLocation(0, 0))}, false},
-	{"0b110011", Tokens{token(TokenKindNumLit, "0b110011", fileLocation(0, 0))}, false},
-	{"0B110011", Tokens{token(TokenKindNumLit, "0B110011", fileLocation(0, 0))}, false},
-	{"+-*/%", Tokens{
-		token(TokenKindPlus, "", fileLocation(0, 0)),
-		token(TokenKindMinus, "", fileLocation(0, 1)),
-		token(TokenKindAsterisk, "", fileLocation(0, 2)),
-		token(TokenKindSlash, "", fileLocation(0, 3)),
-		token(TokenKindPercent, "", fileLocation(0, 4)),
+	{`"string"`, tokens{newToken(tokenKindStringLit, "string", fileLocation(0, 0))}, false},
+	{`"string`, tokens{}, true},
+	{`'a'`, tokens{newToken(tokenKindCharLit, "a", fileLocation(0, 0))}, false},
+	{`'a`, tokens{}, true},
+	{"0x5CFF", tokens{newToken(tokenKindNumLit, "0x5CFF", fileLocation(0, 0))}, false},
+	{"0X5CFF", tokens{newToken(tokenKindNumLit, "0X5CFF", fileLocation(0, 0))}, false},
+	{"0b110011", tokens{newToken(tokenKindNumLit, "0b110011", fileLocation(0, 0))}, false},
+	{"0B110011", tokens{newToken(tokenKindNumLit, "0B110011", fileLocation(0, 0))}, false},
+	{"+-*/%", tokens{
+		newToken(tokenKindPlus, "", fileLocation(0, 0)),
+		newToken(tokenKindMinus, "", fileLocation(0, 1)),
+		newToken(tokenKindAsterisk, "", fileLocation(0, 2)),
+		newToken(tokenKindSlash, "", fileLocation(0, 3)),
+		newToken(tokenKindPercent, "", fileLocation(0, 4)),
 	}, false},
-	{"()", Tokens{
-		token(TokenKindOpenParen, "", fileLocation(0, 0)),
-		token(TokenKindCloseParen, "", fileLocation(0, 1)),
+	{"()", tokens{
+		newToken(tokenKindOpenParen, "", fileLocation(0, 0)),
+		newToken(tokenKindCloseParen, "", fileLocation(0, 1)),
 	}, false},
-	{"[]", Tokens{
-		token(TokenKindOpenBracket, "", fileLocation(0, 0)),
-		token(TokenKindCloseBracket, "", fileLocation(0, 1)),
+	{"[]", tokens{
+		newToken(tokenKindOpenBracket, "", fileLocation(0, 0)),
+		newToken(tokenKindCloseBracket, "", fileLocation(0, 1)),
 	}, false},
-	{"\n", Tokens{token(TokenKindNewLine, "", fileLocation(0, 0))}, false},
-	{":", Tokens{token(TokenKindColon, "", fileLocation(0, 0))}, false},
-	{"$", Tokens{}, true},
+	{"\n", tokens{newToken(tokenKindNewLine, "", fileLocation(0, 0))}, false},
+	{":", tokens{newToken(tokenKindColon, "", fileLocation(0, 0))}, false},
+	{"$", tokens{}, true},
 }
 
 func TestTokenize(t *testing.T) {
 	for _, test := range testTokens {
-		tok, err := Tokenize(test.in, "")
+		func() {
+			defer func() {
+				r := recover()
+				if r != nil && !test.hasError {
+					assert.Fail(t, "unexpected error", test)
+				}
+			}()
 
-		if test.hasError {
-			assert.Error(t, err, test)
-		} else {
-			assert.NoError(t, err, test)
+			tok := tokenize(test.in, "")
+
+			if test.hasError {
+				assert.Fail(t, "expecting an error", test)
+			}
 			assert.Equal(t, test.out, tok, test)
-		}
+		}()
 	}
 }
 
 func TestTokenizationDeDuplication(t *testing.T) {
-	tok, err := Tokenize("a\n\n\n\nb", "")
-	assert.NoError(t, err)
-	assert.Equal(t, Tokens{
-		token(TokenKindSymbol, "a", fileLocation(0, 0)),
-		token(TokenKindNewLine, "", fileLocation(0, 1)),
-		token(TokenKindSymbol, "b", fileLocation(4, 0)),
+	defer func() {
+		if r := recover(); r != nil {
+			assert.Fail(t, "unexpected error")
+		}
+	}()
+
+	tok := tokenize("a\n\n\n\nb", "")
+	assert.Equal(t, tokens{
+		newToken(tokenKindSymbol, "a", fileLocation(0, 0)),
+		newToken(tokenKindNewLine, "", fileLocation(0, 1)),
+		newToken(tokenKindSymbol, "b", fileLocation(4, 0)),
 	}, tok)
 }
 
