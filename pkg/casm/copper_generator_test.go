@@ -9,7 +9,7 @@ import (
 
 func TestGetBindingByName(t *testing.T) {
 	cgen := copperGenerator{
-		Bindings: []Binding{
+		Bindings: []binding{
 			{Name: "a_label",
 				Value:    expression(ExpressionKindNumLitInt, int64(1)),
 				Location: FileLocation{},
@@ -35,7 +35,7 @@ func TestGetBindingByName(t *testing.T) {
 
 func TestGetBindingIndexByName(t *testing.T) {
 	cgen := copperGenerator{
-		Bindings: []Binding{
+		Bindings: []binding{
 			{Name: "a_label",
 				Value:    expression(ExpressionKindNumLitInt, int64(1)),
 				Location: FileLocation{},
@@ -59,7 +59,7 @@ func TestGetBindingIndexByName(t *testing.T) {
 
 func TestBindLabel(t *testing.T) {
 	cgen := copperGenerator{
-		Bindings: []Binding{
+		Bindings: []binding{
 			{Name: "a_label",
 				Value:    expression(ExpressionKindNumLitInt, int64(1)),
 				Location: FileLocation{},
@@ -74,35 +74,35 @@ func TestBindLabel(t *testing.T) {
 	}()
 
 	cgen.bindLabel(LabelIR{"new_label"}, 2, FileLocation{})
-	exist, binding := cgen.getBindingByName("new_label")
+	exist, b := cgen.getBindingByName("new_label")
 	assert.True(t, exist)
 
-	label := Binding{
+	label := binding{
 		Name:          "new_label",
 		EvaluatedWord: coppervm.WordU64(2),
 		Location:      FileLocation{},
 		IsLabel:       true,
-		Status:        BindingEvaluated,
+		Status:        bindingEvaluated,
 	}
-	assert.Equal(t, label, binding)
+	assert.Equal(t, label, b)
 }
 
 func TestBindConst(t *testing.T) {
 	tests := []struct {
 		constIR      ConstIR
-		binding      Binding
+		binding      binding
 		memoryLength int
 		hasError     bool
 	}{
 		{constIR: ConstIR{Name: "a_const", Value: expression(ExpressionKindNumLitInt, int64(1))}, hasError: true},
-		{constIR: ConstIR{Name: "new_const", Value: expression(ExpressionKindNumLitInt, int64(2))}, hasError: false, binding: Binding{
+		{constIR: ConstIR{Name: "new_const", Value: expression(ExpressionKindNumLitInt, int64(2))}, hasError: false, binding: binding{
 			Name:     "new_const",
 			Value:    expression(ExpressionKindNumLitInt, int64(2)),
 			Location: FileLocation{},
 			IsLabel:  false},
 		},
-		{constIR: ConstIR{Name: "str_const", Value: expression(ExpressionKindStringLit, `"test_str"`)}, hasError: false, binding: Binding{
-			Status:        BindingEvaluated,
+		{constIR: ConstIR{Name: "str_const", Value: expression(ExpressionKindStringLit, `"test_str"`)}, hasError: false, binding: binding{
+			Status:        bindingEvaluated,
 			Name:          "str_const",
 			Value:         expression(ExpressionKindStringLit, `"test_str"`),
 			EvaluatedWord: coppervm.WordU64(0),
@@ -122,7 +122,7 @@ func TestBindConst(t *testing.T) {
 			}()
 
 			cgen := copperGenerator{
-				Bindings: []Binding{
+				Bindings: []binding{
 					{Name: "a_const",
 						Value:    Expression{Kind: ExpressionKindNumLitInt, AsNumLitInt: 1},
 						Location: FileLocation{},
@@ -161,7 +161,7 @@ func TestBindEntry(t *testing.T) {
 
 func TestBindMemory(t *testing.T) {
 	cgen := copperGenerator{
-		Bindings: []Binding{
+		Bindings: []binding{
 			{Name: "mem",
 				Value:    expression(ExpressionKindNumLitInt, int64(0)),
 				Location: FileLocation{},
@@ -176,17 +176,17 @@ func TestBindMemory(t *testing.T) {
 	}()
 
 	cgen.bindMemory(MemoryIR{Name: "new_mem", Value: expression(ExpressionKindByteList, []byte{2, 3})}, FileLocation{})
-	exist, binding := cgen.getBindingByName("new_mem")
+	exist, b := cgen.getBindingByName("new_mem")
 	assert.True(t, exist)
 
-	want := Binding{
-		Status:        BindingEvaluated,
+	want := binding{
+		Status:        bindingEvaluated,
 		Name:          "new_mem",
 		EvaluatedWord: coppervm.WordU64(0),
 		Location:      FileLocation{},
 		IsLabel:       false,
 	}
-	assert.Equal(t, want, binding)
+	assert.Equal(t, want, b)
 }
 
 var evaluateExpressionsTests = []struct {
@@ -204,7 +204,7 @@ var evaluateExpressionsTests = []struct {
 
 func TestEvaluateExpression(t *testing.T) {
 	cgen := copperGenerator{}
-	cgen.Bindings = append(cgen.Bindings, Binding{
+	cgen.Bindings = append(cgen.Bindings, binding{
 		Name:  "a_bind",
 		Value: expression(ExpressionKindNumLitInt, int64(3)),
 	})
@@ -484,7 +484,7 @@ func TestEvaluateBinaryOp(t *testing.T) {
 
 func TestEvaluateBinding(t *testing.T) {
 	cgen := copperGenerator{
-		Bindings: []Binding{
+		Bindings: []binding{
 			{Name: "a_bind", Value: expression(ExpressionKindNumLitInt, int64(5))},
 			{Name: "cycl1", Value: expression(ExpressionKindBinding, "cycl2")},
 			{Name: "cycl2", Value: expression(ExpressionKindBinding, "cycl1")},
@@ -505,7 +505,7 @@ func TestEvaluateBinding(t *testing.T) {
 
 	func() {
 		defer func() { recover() }()
-		cgen.evaluateBinding(Binding{Name: "bind"}, FileLocation{})
+		cgen.evaluateBinding(binding{Name: "bind"}, FileLocation{})
 		assert.Fail(t, "expecting an error")
 	}()
 }

@@ -9,8 +9,8 @@ import (
 )
 
 type copperGenerator struct {
-	Bindings         []Binding
-	DeferredOperands []DeferredOperand
+	Bindings         []binding
+	DeferredOperands []deferredOperand
 
 	Program []coppervm.InstDef
 
@@ -70,7 +70,7 @@ func (cgen *copperGenerator) firstPass(irs []IR) {
 			if instDef.HasOperand {
 				if inst.Operand.Kind == ExpressionKindBinding {
 					cgen.DeferredOperands = append(cgen.DeferredOperands,
-						DeferredOperand{
+						deferredOperand{
 							Name:     inst.Operand.AsBinding,
 							Address:  len(cgen.Program),
 							Location: ir.Location,
@@ -143,13 +143,13 @@ func (cgen *copperGenerator) secondPass() {
 // Returns a binding by its name.
 // If the binding exist the first return parameter will be true,
 // otherwise it'll be null.
-func (cgen *copperGenerator) getBindingByName(name string) (bool, Binding) {
+func (cgen *copperGenerator) getBindingByName(name string) (bool, binding) {
 	for _, b := range cgen.Bindings {
 		if b.Name == name {
 			return true, b
 		}
 	}
-	return false, Binding{}
+	return false, binding{}
 }
 
 // Returns the index of a binding by it's name.
@@ -165,16 +165,16 @@ func (cgen *copperGenerator) getBindingIndexByName(name string) int {
 
 // Binds a label.
 func (cgen *copperGenerator) bindLabel(label LabelIR, address int, location FileLocation) {
-	exist, binding := cgen.getBindingByName(label.Name)
+	exist, b := cgen.getBindingByName(label.Name)
 	if exist {
 		panic(fmt.Sprintf("%s: label name '%s' is already bound at location '%s'",
 			location,
 			label.Name,
-			binding.Location))
+			b.Location))
 	}
 
-	cgen.Bindings = append(cgen.Bindings, Binding{
-		Status:        BindingEvaluated,
+	cgen.Bindings = append(cgen.Bindings, binding{
+		Status:        bindingEvaluated,
 		Name:          label.Name,
 		EvaluatedWord: coppervm.WordU64(uint64(address)),
 		Location:      location,
@@ -184,16 +184,16 @@ func (cgen *copperGenerator) bindLabel(label LabelIR, address int, location File
 
 // Binds a constant.
 func (cgen *copperGenerator) bindConst(constIR ConstIR, location FileLocation) {
-	exist, binding := cgen.getBindingByName(constIR.Name)
+	exist, b := cgen.getBindingByName(constIR.Name)
 	if exist {
 		panic(fmt.Sprintf("%s: constant name '%s' is already bound at location '%s'",
 			location,
 			constIR.Name,
-			binding.Location))
+			b.Location))
 	}
 
-	newBinding := Binding{
-		Status:   BindingUnevaluated,
+	newBinding := binding{
+		Status:   bindingUnevaluated,
 		Name:     constIR.Name,
 		Value:    constIR.Value,
 		Location: location,
@@ -204,7 +204,7 @@ func (cgen *copperGenerator) bindConst(constIR ConstIR, location FileLocation) {
 	if constIR.Value.Kind == ExpressionKindStringLit {
 		baseAddr := cgen.pushStringToMemory(constIR.Value.AsStringLit)
 		newBinding.EvaluatedWord = coppervm.WordU64(uint64(baseAddr))
-		newBinding.Status = BindingEvaluated
+		newBinding.Status = bindingEvaluated
 	}
 
 	cgen.Bindings = append(cgen.Bindings, newBinding)
@@ -225,12 +225,12 @@ func (cgen *copperGenerator) bindEntry(entry EntryIR, location FileLocation) {
 
 // Binds a memory definition.
 func (cgen *copperGenerator) bindMemory(memory MemoryIR, location FileLocation) {
-	exist, binding := cgen.getBindingByName(memory.Name)
+	exist, b := cgen.getBindingByName(memory.Name)
 	if exist {
 		panic(fmt.Sprintf("%s: memory name '%s' is already bound at location '%s'",
 			location,
 			memory.Name,
-			binding.Location))
+			b.Location))
 	}
 
 	if memory.Value.Kind != ExpressionKindByteList {
@@ -240,8 +240,8 @@ func (cgen *copperGenerator) bindMemory(memory MemoryIR, location FileLocation) 
 	memAddr := len(cgen.Memory)
 	cgen.Memory = append(cgen.Memory, memory.Value.AsByteList...)
 
-	cgen.Bindings = append(cgen.Bindings, Binding{
-		Status:        BindingEvaluated,
+	cgen.Bindings = append(cgen.Bindings, binding{
+		Status:        bindingEvaluated,
 		Name:          memory.Name,
 		EvaluatedWord: coppervm.WordU64(uint64(memAddr)),
 		Location:      location,
@@ -256,20 +256,20 @@ type EvalResult struct {
 }
 
 // Evaluate a binding to extract am eval result.
-func (cgen *copperGenerator) evaluateBinding(binding Binding, location FileLocation) (ret EvalResult) {
+func (cgen *copperGenerator) evaluateBinding(binding binding, location FileLocation) (ret EvalResult) {
 	switch binding.Status {
-	case BindingUnevaluated:
+	case bindingUnevaluated:
 		idx := cgen.getBindingIndexByName(binding.Name)
 		if idx == -1 {
 			panic(fmt.Sprintf("%s: cannot find index binding %s", location, binding.Name))
 		}
-		cgen.Bindings[idx].Status = BindingEvaluating
+		cgen.Bindings[idx].Status = bindingEvaluating
 		ret = cgen.evaluateExpression(binding.Value, location)
-		cgen.Bindings[idx].Status = BindingEvaluated
+		cgen.Bindings[idx].Status = bindingEvaluated
 		cgen.Bindings[idx].EvaluatedWord = ret.Word
-	case BindingEvaluating:
+	case bindingEvaluating:
 		panic(fmt.Sprintf("%s: cycling binding definition detected", location))
-	case BindingEvaluated:
+	case bindingEvaluated:
 		ret = EvalResult{
 			binding.EvaluatedWord,
 			binding.Value.Kind,

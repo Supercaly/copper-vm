@@ -6,8 +6,8 @@ import (
 	"github.com/Supercaly/coppervm/pkg/coppervm"
 )
 
-type Binding struct {
-	Status        BindingStatus
+type binding struct {
+	Status        bindingStatus
 	Name          string
 	Value         Expression
 	EvaluatedWord coppervm.Word
@@ -15,7 +15,7 @@ type Binding struct {
 	IsLabel       bool
 }
 
-func (b Binding) String() string {
+func (b binding) String() string {
 	return fmt.Sprintf("%s %s (%s) %s %s %t",
 		b.Name,
 		b.Value,
@@ -25,15 +25,15 @@ func (b Binding) String() string {
 		b.IsLabel)
 }
 
-type BindingStatus int
+type bindingStatus int
 
 const (
-	BindingUnevaluated BindingStatus = iota
-	BindingEvaluating
-	BindingEvaluated
+	bindingUnevaluated bindingStatus = iota
+	bindingEvaluating
+	bindingEvaluated
 )
 
-func (state BindingStatus) String() string {
+func (state bindingStatus) String() string {
 	return [...]string{
 		"BindingUnevaluated",
 		"BindingEvaluating",
@@ -41,7 +41,7 @@ func (state BindingStatus) String() string {
 	}[state]
 }
 
-type DeferredOperand struct {
+type deferredOperand struct {
 	Name     string
 	Address  int
 	Location FileLocation
