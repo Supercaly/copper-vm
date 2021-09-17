@@ -144,7 +144,7 @@ func tokenize(source string, filePath string) (out tokens) {
 				source = rest[1:]
 				unquotedStr, err := strconv.Unquote(`"` + str + `"`)
 				if err != nil {
-					panic(fmt.Sprintf("error tokenizing literal string '%s'", str))
+					panic(fmt.Sprintf("%s: error tokenizing literal string '%s'", location, str))
 				}
 				out = append(out, token{
 					Kind:     tokenKindStringLit,
@@ -154,7 +154,7 @@ func tokenize(source string, filePath string) (out tokens) {
 				// TODO: Location in not incremented correctly if there's a new line in the string
 				location.Col += len(unquotedStr) + 2
 			} else {
-				panic("could not find closing \"")
+				panic(fmt.Sprintf("%s: could not find closing \"", location))
 			}
 		case '\'':
 			source = source[1:]
@@ -169,7 +169,7 @@ func tokenize(source string, filePath string) (out tokens) {
 				// TODO: Location in not incremented correctly if there's a new line in the char
 				location.Col += len(char) + 2
 			} else {
-				panic("could not find closing '")
+				panic(fmt.Sprintf("%s: could not find closing '", location))
 			}
 		default:
 			if isDigit(rune(source[0])) {
