@@ -1,4 +1,4 @@
-%include string.casm
+%include "string.casm"
 %const hello "Hello World\n"
 %entry main
 
