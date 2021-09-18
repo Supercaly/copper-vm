@@ -33,6 +33,17 @@
 | fmul | - | floating point multiplication of first two elements on the stack, the result is pushed on stack top and the elements are consumed | 
 | fdiv | - | floating point division of first two elements on the stack, the result is pushed on stack top and the elements are consumed |
 
+## Bitwise operations
+
+| Mnemonic | Operand | Description |
+| --- | :---: | --- |
+| and | - | perform bitwise and between first two elements on the stack, the result is pushed on stack top |
+| or | - | perform bitwise or between first two elements on the stack, the result is pushed on stack top |
+| xor | - | perform bitwise exclusive or (xor) between first two elements on the stack, the result is pushed on stack top |
+| not | - | negates every bit of the first element on the stack |
+| shl | - | perform a left bit shift between first two elements on the stack, the result is pushed on stack top |
+| shr | - | perform a right bit shift between first two elements on the stack, the result is pushed on stack top |
+
 ## Flow control
 | Mnemonic | Operand | Description |
 | --- | :---: | --- |
