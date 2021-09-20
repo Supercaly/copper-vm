@@ -1,0 +1,164 @@
+; Compute the Rule110 algorithm printing his pattern to stdout
+; https://en.wikipedia.org/wiki/Rule_110
+
+; #include <stdio.h>
+;
+; #define BOARD_CAP 30
+; static int board[BOARD_CAP];
+;
+; int main()
+; {
+;     board[BOARD_CAP - 2] = 1;
+;
+;     for (size_t i = 0; i < BOARD_CAP - 2; ++i) {
+;         for (size_t j = 0; j < BOARD_CAP; ++j) {
+;             fputc(" *"[board[j]], stdout);
+;         }
+;         fputc('\n', stdout);
+;
+;         int pattern = (board[0] << 1) | board[1];
+;         for (size_t j = 1; j < BOARD_CAP - 1; ++j) {
+;             pattern = ((pattern << 1) & 7) | board[j + 1];
+;             board[j] = (110 >> pattern) & 1;
+;         }
+;     }
+;     return 0;
+; }
+%const board_cap    30
+%memory board       [0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,]
+%memory print_board [0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0]
+; %memory board byte_array(board_cap)
+; %memory board word_array(board_cap)
+%memory i           [0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0]
+%memory j           [0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0]
+%memory pattern     [0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0]
+%entry main
+
+main:
+    push 1
+    push board_cap - 2
+    write
+
+    jmp outer_loop_cmp
+    outer_loop:
+        ; j = 0
+        push 0
+        push j
+        iwrite
+        jmp print_loop_cmp
+        print_loop:
+            push board
+            push j
+            iread
+            add
+            read
+
+            jnz _print_loop_else
+                push '.'
+                jmp _print_loop_end
+            _print_loop_else:
+                push '*'
+            _print_loop_end:
+
+            push j
+            iread
+            push print_board
+            add
+            write
+
+            ; j++
+            push j
+            iread
+            push 1
+            add
+            push j
+            iwrite
+        print_loop_cmp:
+            push j
+            iread
+            push board_cap
+            cmp
+            jl print_loop
+        
+        push '\n'
+        push print_board + board_cap
+        write
+        push 1
+        push print_board
+        push board_cap+1
+        syscall 1
+        drop
+
+        ; compute the next step
+        push board
+        read
+        push 1
+        shl
+        push board + 1
+        read
+        or
+        push pattern
+        iwrite
+
+        push 1
+        push j
+        iwrite
+        jmp next_state_loop_cmp
+        next_state_loop:
+            push pattern
+            iread
+            push 1
+            shl
+            push 7
+            and
+            push j
+            iread
+            push 1
+            add
+            push board
+            add
+            read
+            or
+            push pattern
+            iwrite
+
+            push 110
+            push pattern
+            iread
+            shr
+            push 1
+            and
+            push j
+            iread
+            push board
+            add
+            write
+
+            push j
+            iread
+            push 1
+            add
+            push j
+            iwrite
+        next_state_loop_cmp:
+            push j
+            iread
+            push board_cap - 1
+            cmp
+            jl next_state_loop
+
+    push i
+    iread
+    push 1
+    add
+    push i
+    iwrite
+
+    outer_loop_cmp:
+        push i
+        iread
+        push board_cap - 2
+        cmp
+        jl outer_loop
+
+    halt   
