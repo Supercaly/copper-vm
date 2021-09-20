@@ -8,6 +8,7 @@
 | push | value | push a value to the stack.<br/>The value could be: unsigned integer (15), signed integer (-3), floating point (2.6, -15.3)|
 | swap | n | swap the stack top with the n-th element |
 | dup | - | duplicate the stack top |
+| over | n | duplicate the n-th element |
 | drop | - | pop the stack top |
 | halt | - | stops the virtual machine execution (it's the same as calling syscall exit with code 0) |
 

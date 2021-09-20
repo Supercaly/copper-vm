@@ -28,6 +28,11 @@ var InstDefs = [InstCount]InstDef{
 		Name:       "dup",
 	},
 	{
+		Kind:       InstOver,
+		HasOperand: true,
+		Name:       "over",
+	},
+	{
 		Kind:       InstDrop,
 		HasOperand: false,
 		Name:       "drop",
@@ -239,6 +244,7 @@ const (
 	InstPush
 	InstSwap
 	InstDup
+	InstOver
 	InstDrop
 	InstHalt
 

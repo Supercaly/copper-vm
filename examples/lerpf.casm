@@ -8,25 +8,26 @@
 ; output:
 ; a + (b - a) * t
 lerpf:
-    swap 2
-    dup
-    swap 2
+    swap 3
     swap 1
-    fsub
+    over 1
+    over 3
+    swap 1
 
-    swap 1
-    swap 2
+    fsub
     fmul
     fadd
+    
+    swap 1
+    drop
+    swap 1
 
-    jmp return
+    ret
 
 main:
     push 1.0
     push 10.0
     push 0.7
-    jmp lerpf
-return:
-    dup
+    call lerpf
     print
     halt

@@ -12,23 +12,22 @@ main:
 
 loop:
     swap 2
-    swap 1
-    dup
-    swap 2
+    over 1
 
     add
     dup
     print ; output Fn = Fn-1 + Fn-2
-    
+ 
     ; N = N - 1
     swap 2
     push 1
     sub
 
     ; prepare the stack for the next iteration
-    swap 2
     swap 1
     swap 2
+    swap 1
+
     dup
     jnz loop ; if N > 0 jump to loop
 

@@ -33,7 +33,7 @@ func (cg *copperGenerator) saveProgram(addDebugSymbols bool) string {
 			if b.IsLabel {
 				dbSymbols = append(dbSymbols, coppervm.DebugSymbol{
 					Name:    b.Name,
-					Address: coppervm.InstAddr(b.Value.AsNumLitInt),
+					Address: coppervm.InstAddr(b.EvaluatedWord.AsU64),
 				})
 			}
 		}

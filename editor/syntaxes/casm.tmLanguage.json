@@ -49,7 +49,7 @@
 			"patterns": [
 				{
 					"name": "keyword.mnemonic.casm",
-					"match": "\\b(noop|push|swap|dup|drop|add|sub|mul|imul|div|idiv|mod|imod|fadd|fsub|fmul|fdiv|and|or|xor|shl|shr|not|cmp|icmp|fcmp|jmp|jz|jnz|jg|jl|jge|jle|call|ret|read|iread|fread|write|iwrite|fwrite|syscall|print|halt)\\b"
+					"match": "\\b(noop|push|swap|dup|over|drop|add|sub|mul|imul|div|idiv|mod|imod|fadd|fsub|fmul|fdiv|and|or|xor|shl|shr|not|cmp|icmp|fcmp|jmp|jz|jnz|jg|jl|jge|jle|call|ret|read|iread|fread|write|iwrite|fwrite|syscall|print|halt)\\b"
 				}
 			]
 		},

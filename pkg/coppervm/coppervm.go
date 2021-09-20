@@ -146,6 +146,16 @@ func (vm *Coppervm) ExecuteInstruction() *CoppervmError {
 			return err
 		}
 		vm.Ip++
+	case InstOver:
+		loc := currentInst.Operand.AsU64
+		if vm.StackSize < int64(loc) {
+			return ErrorStackUnderflow(vm)
+		}
+		newVal := vm.Stack[vm.StackSize-int64(loc)-1]
+		if err := vm.pushStack(newVal); err.Kind != ErrorKindOk {
+			return err
+		}
+		vm.Ip++
 	case InstDrop:
 		if vm.StackSize < 1 {
 			return ErrorStackUnderflow(vm)
