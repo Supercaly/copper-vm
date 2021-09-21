@@ -1,6 +1,7 @@
 package casm
 
 import (
+	"encoding/binary"
 	"fmt"
 	"strconv"
 	"strings"
@@ -194,7 +195,6 @@ func parseExprBinaryOp(tokens *tokens, precedence int) (result Expression) {
 }
 
 // Parse a primary expression form a list of tokens.
-// Returns an error if something went wrong.
 func parseExprPrimary(tokens *tokens) (result Expression) {
 	if tokens.Empty() {
 		panic("trying to parse empty expression")
@@ -202,63 +202,77 @@ func parseExprPrimary(tokens *tokens) (result Expression) {
 
 	switch tokens.First().Kind {
 	case tokenKindNumLit:
-		numberStr := tokens.First().Text
-		if strings.HasPrefix(numberStr, "0x") || strings.HasPrefix(numberStr, "0X") {
-			// Try hexadecimal
-			hexNumber, err := strconv.ParseUint(numberStr[2:], 16, 64)
-			if err != nil {
-				panic(fmt.Sprintf("error parsing hex number literal '%s'",
-					numberStr))
-			}
-			result.Kind = ExpressionKindNumLitInt
-			result.AsNumLitInt = int64(hexNumber)
-		} else if strings.HasPrefix(numberStr, "0b") || strings.HasPrefix(numberStr, "0B") {
-			// Try binary
-			binNumber, err := strconv.ParseUint(numberStr[2:], 2, 64)
-			if err != nil {
-				panic(fmt.Sprintf("error parsing binary number literal '%s'",
-					numberStr))
-			}
-			result.Kind = ExpressionKindNumLitInt
-			result.AsNumLitInt = int64(binNumber)
-		} else {
-			// Try integer
-			intNumber, err := strconv.ParseInt(numberStr, 10, 64)
-			if err != nil {
-				// Try floating point
-				floatNumber, err := strconv.ParseFloat(numberStr, 64)
-				if err != nil {
-					panic(fmt.Sprintf("error parsing number literal '%s'",
-						numberStr))
-				}
-				result.Kind = ExpressionKindNumLitFloat
-				result.AsNumLitFloat = floatNumber
-			} else {
-				result.Kind = ExpressionKindNumLitInt
-				result.AsNumLitInt = intNumber
-			}
-		}
-		tokens.Pop()
+		result = parseNumberLit(tokens)
 	case tokenKindStringLit:
 		result.Kind = ExpressionKindStringLit
-		result.AsStringLit = tokens.First().Text
-		tokens.Pop()
+		result.AsStringLit = tokens.Pop().Text
 	case tokenKindCharLit:
 		charStr := tokens.First().Text
+		location := tokens.First().Location
 		char, _, t, err := strconv.UnquoteChar(charStr+`\'`, '\'')
 		if err != nil {
-			panic(fmt.Sprintf("error parsing character literal '%s'", charStr))
+			panic(fmt.Sprintf("%s: error parsing character literal '%s'",
+				location,
+				charStr))
 		}
 		if t != "\\'" {
-			panic("unsupported multi-character character literals")
+			panic(fmt.Sprintf("%s: unsupported multi-character character literals",
+				location))
 		}
 		result.Kind = ExpressionKindNumLitInt
 		result.AsNumLitInt = int64(char)
 		tokens.Pop()
 	case tokenKindSymbol:
-		result.Kind = ExpressionKindBinding
-		result.AsBinding = tokens.First().Text
-		tokens.Pop()
+		symbol := tokens.Pop()
+		switch symbol.Text {
+		case "byte":
+			value := parseExprFromTokens(tokens)
+			if value.Kind != ExpressionKindNumLitInt {
+				panic(fmt.Sprintf("%s: unsupported '%s' value for byte",
+					symbol.Location,
+					value.Kind))
+			}
+			result.Kind = ExpressionKindByteList
+			result.AsByteList = append(result.AsByteList, byte(value.AsNumLitInt))
+		case "word":
+			value := parseExprFromTokens(tokens)
+			if value.Kind != ExpressionKindNumLitInt {
+				panic(fmt.Sprintf("%s: unsupported '%s' value for word",
+					symbol.Location,
+					value.Kind))
+			}
+			result.Kind = ExpressionKindByteList
+			var byteResult []byte = make([]byte, 8)
+			binary.BigEndian.PutUint64(byteResult, uint64(value.AsNumLitInt))
+			result.AsByteList = byteResult
+		case "byte_array":
+			sizeExpr := parseExprFromTokens(tokens)
+			if sizeExpr.Kind != ExpressionKindNumLitInt {
+				panic(fmt.Sprintf("%s: byte_array size can't be of type '%s'",
+					symbol.Location,
+					sizeExpr.Kind))
+			}
+			if sizeExpr.AsNumLitInt < 0 {
+				panic(fmt.Sprintf("%s: byte_array must have a positive size", symbol.Location))
+			}
+			result.Kind = ExpressionKindByteList
+			result.AsByteList = make([]byte, sizeExpr.AsNumLitInt)
+		case "word_array":
+			sizeExpr := parseExprFromTokens(tokens)
+			if sizeExpr.Kind != ExpressionKindNumLitInt {
+				panic(fmt.Sprintf("%s: word_array size can't be of type '%s'",
+					symbol.Location,
+					sizeExpr.Kind))
+			}
+			if sizeExpr.AsNumLitInt < 0 {
+				panic(fmt.Sprintf("%s: word_array must have a positive size", symbol.Location))
+			}
+			result.Kind = ExpressionKindByteList
+			result.AsByteList = make([]byte, sizeExpr.AsNumLitInt*8)
+		default:
+			result.Kind = ExpressionKindBinding
+			result.AsBinding = symbol.Text
+		}
 	case tokenKindMinus:
 		tokens.Pop()
 		result = parseExprBinaryOp(tokens, 3)
@@ -275,39 +289,94 @@ func parseExprPrimary(tokens *tokens) (result Expression) {
 		}
 		tokens.Pop()
 	case tokenKindOpenBracket:
-		tokens.Pop()
-
-		var byteResult []byte
-		for !tokens.Empty() && tokens.First().Kind != tokenKindCloseBracket {
-			expr := parseExprBinaryOp(tokens, 0)
-			if expr.Kind == ExpressionKindNumLitInt {
-				byteResult = append(byteResult, byte(expr.AsNumLitInt))
-			} else if expr.Kind == ExpressionKindStringLit {
-				byteResult = append(byteResult, []byte(expr.AsStringLit)...)
-			} else {
-				panic(fmt.Sprintf("unsupported value of type '%s' inside byte array", expr.Kind))
-			}
-
-			if tokens.Empty() {
-				panic("expected ',' or ']'")
-			}
-			if tokens.First().Kind != tokenKindComma {
-				break
-			}
-			tokens.Pop()
-		}
-
-		if tokens.First().Kind != tokenKindCloseBracket {
-			panic("cannot find matching closing bracket ']'")
-		}
-		tokens.Pop()
-
-		result.Kind = ExpressionKindByteList
-		result.AsByteList = append(result.AsByteList, byteResult...)
+		result = parseConstList(tokens)
 	default:
-		panic(fmt.Sprintf("unknown expression starting with token %s", tokens.First().Text))
+		panic(fmt.Sprintf("%s: unknown expression starting with token %s",
+			tokens.First().Location,
+			tokens.First().Text))
 	}
 	return result
+}
+
+// Parse a number expression from given tokens.
+func parseNumberLit(tokens *tokens) (out Expression) {
+	tokens.expectTokenKind(tokenKindNumLit)
+	numberStr := tokens.Pop().Text
+	if strings.HasPrefix(numberStr, "0x") || strings.HasPrefix(numberStr, "0X") {
+		// Try hexadecimal
+		hexNumber, err := strconv.ParseUint(numberStr[2:], 16, 64)
+		if err != nil {
+			panic(fmt.Sprintf("error parsing hex number literal '%s'",
+				numberStr))
+		}
+		out.Kind = ExpressionKindNumLitInt
+		out.AsNumLitInt = int64(hexNumber)
+	} else if strings.HasPrefix(numberStr, "0b") || strings.HasPrefix(numberStr, "0B") {
+		// Try binary
+		binNumber, err := strconv.ParseUint(numberStr[2:], 2, 64)
+		if err != nil {
+			panic(fmt.Sprintf("error parsing binary number literal '%s'",
+				numberStr))
+		}
+		out.Kind = ExpressionKindNumLitInt
+		out.AsNumLitInt = int64(binNumber)
+	} else {
+		// Try integer
+		intNumber, err := strconv.ParseInt(numberStr, 10, 64)
+		if err != nil {
+			// Try floating point
+			floatNumber, err := strconv.ParseFloat(numberStr, 64)
+			if err != nil {
+				panic(fmt.Sprintf("error parsing number literal '%s'",
+					numberStr))
+			}
+			out.Kind = ExpressionKindNumLitFloat
+			out.AsNumLitFloat = floatNumber
+		} else {
+			out.Kind = ExpressionKindNumLitInt
+			out.AsNumLitInt = intNumber
+		}
+	}
+	return out
+}
+
+// Parse constant byte list from given tokens.
+func parseConstList(tokens *tokens) (out Expression) {
+	tokens.expectTokenKind(tokenKindOpenBracket)
+	openToken := tokens.Pop()
+
+	var byteResult []byte
+	for !tokens.Empty() && tokens.First().Kind != tokenKindCloseBracket {
+		currentLocation := tokens.First().Location
+		expr := parseExprFromTokens(tokens)
+		if expr.Kind == ExpressionKindNumLitInt {
+			byteResult = append(byteResult, byte(expr.AsNumLitInt))
+		} else if expr.Kind == ExpressionKindStringLit {
+			byteResult = append(byteResult, []byte(expr.AsStringLit)...)
+		} else {
+			panic(fmt.Sprintf("%s: unsupported value of type '%s' inside constant byte array",
+				currentLocation,
+				expr.Kind))
+		}
+
+		if tokens.Empty() {
+			panic(fmt.Sprintf("%s: expected ',' or ']' in constant byte array", currentLocation))
+		}
+		if tokens.First().Kind != tokenKindComma {
+			break
+		}
+		tokens.Pop()
+	}
+
+	if tokens.First().Kind != tokenKindCloseBracket {
+		panic(fmt.Sprintf("%s: cannot find matching closing bracket ']' in constant byte array",
+			openToken.Location))
+	}
+	tokens.Pop()
+
+	out.Kind = ExpressionKindByteList
+	out.AsByteList = byteResult
+	return out
 }
 
 func (kind ExpressionKind) String() string {
