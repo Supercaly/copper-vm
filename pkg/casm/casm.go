@@ -142,7 +142,7 @@ func (casm *Casm) translateIR(tokens *tokens) (out []IR) {
 			directiveName := tokens.Pop().Text
 			switch directiveName {
 			case "entry":
-				tokens.expectTokenKind(tokenKindSymbol)
+				tokens.expectTokenKindMsg(tokenKindSymbol, "no name given to entry directive")
 				name := tokens.Pop()
 				out = append(out, IR{
 					Kind: IRKindEntry,
@@ -152,7 +152,7 @@ func (casm *Casm) translateIR(tokens *tokens) (out []IR) {
 					Location: directive.Location,
 				})
 			case "const":
-				tokens.expectTokenKind(tokenKindSymbol)
+				tokens.expectTokenKindMsg(tokenKindSymbol, "no name given to const directive")
 				name := tokens.Pop()
 				expr := parseExprFromTokens(tokens)
 
@@ -165,7 +165,7 @@ func (casm *Casm) translateIR(tokens *tokens) (out []IR) {
 					Location: directive.Location,
 				})
 			case "memory":
-				tokens.expectTokenKind(tokenKindSymbol)
+				tokens.expectTokenKindMsg(tokenKindSymbol, "no name given to memory directive")
 				name := tokens.Pop()
 				expr := parseExprFromTokens(tokens)
 
@@ -178,7 +178,7 @@ func (casm *Casm) translateIR(tokens *tokens) (out []IR) {
 					Location: directive.Location,
 				})
 			case "include":
-				tokens.expectTokenKind(tokenKindStringLit)
+				tokens.expectTokenKindMsg(tokenKindStringLit, "no path given to include directive")
 				includePath := tokens.Pop()
 				out = append(out, casm.translateInclude(includePath.Text, includePath.Location)...)
 			default:

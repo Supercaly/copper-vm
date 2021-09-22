@@ -72,6 +72,17 @@ func (t *tokens) expectTokenKind(kind tokenKind) {
 	}
 }
 
+// This method will panic with custom message if list of tokens is
+// empty or the next token is not of given type.
+func (t *tokens) expectTokenKindMsg(kind tokenKind, msg string) {
+	if t.Empty() {
+		panic(fmt.Sprintf("expecting token '%s' but list is empty", kind))
+	}
+	if t.First().Kind != kind {
+		panic(fmt.Sprintf("%s: %s", t.First().Location, msg))
+	}
+}
+
 // Tokenize a source string.
 // Returns a list of tokens from a string.
 // This method will panic when something went wrong.
