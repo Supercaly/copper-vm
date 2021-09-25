@@ -68,13 +68,8 @@ func (cgen *copperGenerator) firstPass(irs []IR) {
 			_, instDef := coppervm.GetInstDefByName(inst.Name)
 
 			if instDef.HasOperand {
-				if inst.Operand.Kind == ExpressionKindBinding {
-					cgen.DeferredOperands = append(cgen.DeferredOperands,
-						deferredOperand{
-							Name:     inst.Operand.AsBinding,
-							Address:  len(cgen.Program),
-							Location: ir.Location,
-						})
+				if isExpressionBinding(inst.Operand) {
+					cgen.pushDeferredOperandFromExpression(inst.Operand, len(cgen.Program), ir.Location)
 				} else {
 					instDef.Operand = cgen.evaluateExpression(inst.Operand, ir.Location).Word
 				}
@@ -88,6 +83,48 @@ func (cgen *copperGenerator) firstPass(irs []IR) {
 			cgen.bindMemory(ir.AsMemory, ir.Location)
 		}
 	}
+}
+
+// Push all deferred operands of an expression.
+// Note: There could be more than one operand because of the binary operations.
+func (cgen copperGenerator) pushDeferredOperandFromExpression(expr Expression, address int, location FileLocation) {
+	switch expr.Kind {
+	case ExpressionKindNumLitInt,
+		ExpressionKindNumLitFloat,
+		ExpressionKindStringLit,
+		ExpressionKindByteList:
+	case ExpressionKindBinaryOp:
+		cgen.pushDeferredOperandFromExpression(*expr.AsBinaryOp.Lhs, address, location)
+		cgen.pushDeferredOperandFromExpression(*expr.AsBinaryOp.Rhs, address, location)
+	case ExpressionKindBinding:
+		cgen.DeferredOperands = append(cgen.DeferredOperands, deferredOperand{
+			Name:     expr.AsBinding,
+			Address:  address,
+			Location: location,
+		})
+	}
+}
+
+// Returns true if an expression is a binding, false otherwise.
+// This code will check even if a binary operation contains a
+// binding as his operand.
+func isExpressionBinding(expr Expression) (ret bool) {
+	switch expr.Kind {
+	case ExpressionKindNumLitInt:
+		ret = false
+	case ExpressionKindNumLitFloat:
+		ret = false
+	case ExpressionKindStringLit:
+		ret = false
+	case ExpressionKindBinaryOp:
+		ret = isExpressionBinding(*expr.AsBinaryOp.Lhs) ||
+			isExpressionBinding(*expr.AsBinaryOp.Rhs)
+	case ExpressionKindBinding:
+		ret = true
+	case ExpressionKindByteList:
+		ret = false
+	}
+	return ret
 }
 
 // Do the second pass in the parsing process.
