@@ -106,6 +106,7 @@ func TestBindConst(t *testing.T) {
 			Name:          "str_const",
 			Value:         expression(ExpressionKindStringLit, `"test_str"`),
 			EvaluatedWord: coppervm.WordU64(0),
+			EvaluatedKind: ExpressionKindStringLit,
 			Location:      FileLocation{},
 			IsLabel:       false},
 			memoryLength: 11,
