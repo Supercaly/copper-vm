@@ -3,13 +3,9 @@
 %entry main
 
 main:
+    push 1
     push hello
     dup
     call strlen
-
-    push 1
-    swap 1
-    push hello
-    swap 1
     syscall 1
     halt
