@@ -9,8 +9,9 @@ import (
 )
 
 type copperGenerator struct {
-	Bindings         []binding
-	DeferredOperands []deferredOperand
+	Bindings            []binding
+	DeferredOperands    []deferredOperand
+	deferredExpressions map[int]Expression
 
 	Program []coppervm.InstDef
 
@@ -70,6 +71,10 @@ func (cgen *copperGenerator) firstPass(irs []IR) {
 			if instDef.HasOperand {
 				if isExpressionBinding(inst.Operand) {
 					cgen.pushDeferredOperandFromExpression(inst.Operand, len(cgen.Program), ir.Location)
+					if cgen.deferredExpressions == nil {
+						cgen.deferredExpressions = make(map[int]Expression)
+					}
+					cgen.deferredExpressions[len(cgen.Program)] = inst.Operand
 				} else {
 					instDef.Operand = cgen.evaluateExpression(inst.Operand, ir.Location).Word
 				}
@@ -87,7 +92,7 @@ func (cgen *copperGenerator) firstPass(irs []IR) {
 
 // Push all deferred operands of an expression.
 // Note: There could be more than one operand because of the binary operations.
-func (cgen copperGenerator) pushDeferredOperandFromExpression(expr Expression, address int, location FileLocation) {
+func (cgen *copperGenerator) pushDeferredOperandFromExpression(expr Expression, address int, location FileLocation) {
 	switch expr.Kind {
 	case ExpressionKindNumLitInt,
 		ExpressionKindNumLitFloat,
@@ -136,8 +141,13 @@ func (cgen *copperGenerator) secondPass() {
 				deferredOp.Location,
 				deferredOp.Name))
 		}
-		cgen.Program[deferredOp.Address].Operand = cgen.evaluateBinding(binding,
-			deferredOp.Location).Word
+		cgen.evaluateBinding(binding, deferredOp.Location)
+		var expr Expression
+		var ok bool
+		if expr, ok = cgen.deferredExpressions[deferredOp.Address]; !ok {
+			panic(fmt.Sprintf("%s: cannot find deferred expression at address '%d'", deferredOp.Location, deferredOp.Address))
+		}
+		cgen.Program[deferredOp.Address].Operand = cgen.evaluateExpression(expr, deferredOp.Location).Word
 	}
 
 	// Print all the bindings
@@ -214,6 +224,7 @@ func (cgen *copperGenerator) bindLabel(label LabelIR, address int, location File
 		Status:        bindingEvaluated,
 		Name:          label.Name,
 		EvaluatedWord: coppervm.WordU64(uint64(address)),
+		EvaluatedKind: ExpressionKindNumLitInt,
 		Location:      location,
 		IsLabel:       true,
 	})
@@ -242,6 +253,7 @@ func (cgen *copperGenerator) bindConst(constIR ConstIR, location FileLocation) {
 		baseAddr := cgen.pushStringToMemory(constIR.Value.AsStringLit)
 		newBinding.EvaluatedWord = coppervm.WordU64(uint64(baseAddr))
 		newBinding.Status = bindingEvaluated
+		newBinding.EvaluatedKind = ExpressionKindStringLit
 	}
 
 	cgen.Bindings = append(cgen.Bindings, newBinding)
@@ -281,6 +293,7 @@ func (cgen *copperGenerator) bindMemory(memory MemoryIR, location FileLocation) 
 		Status:        bindingEvaluated,
 		Name:          memory.Name,
 		EvaluatedWord: coppervm.WordU64(uint64(memAddr)),
+		EvaluatedKind: ExpressionKindNumLitInt,
 		Location:      location,
 		IsLabel:       false,
 	})
@@ -304,12 +317,13 @@ func (cgen *copperGenerator) evaluateBinding(binding binding, location FileLocat
 		ret = cgen.evaluateExpression(binding.Value, location)
 		cgen.Bindings[idx].Status = bindingEvaluated
 		cgen.Bindings[idx].EvaluatedWord = ret.Word
+		cgen.Bindings[idx].EvaluatedKind = ret.Type
 	case bindingEvaluating:
 		panic(fmt.Sprintf("%s: cycling binding definition detected", location))
 	case bindingEvaluated:
 		ret = evalResult{
 			binding.EvaluatedWord,
-			binding.Value.Kind,
+			binding.EvaluatedKind,
 		}
 	}
 	internal.DebugPrint("[INFO]: evaluated binding with result %s\n", ret)

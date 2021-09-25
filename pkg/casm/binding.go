@@ -11,6 +11,7 @@ type binding struct {
 	Name          string
 	Value         Expression
 	EvaluatedWord coppervm.Word
+	EvaluatedKind ExpressionKind
 	Location      FileLocation
 	IsLabel       bool
 }
