@@ -125,7 +125,7 @@ func TestTranslateIR(t *testing.T) {
 
 			ctx := Casm{}
 			tokens := tokenize(test.in, "")
-			irs := ctx.translateIR(&tokens)
+			irs := ctx.translateTokensToIR(&tokens)
 
 			if test.hasError {
 				assert.Fail(t, "expecting an error", test)

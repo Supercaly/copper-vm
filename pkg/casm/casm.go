@@ -50,7 +50,7 @@ func (casm *Casm) TranslateSourceFile(filePath string) (err error) {
 	tokens := tokenize(source, filePath)
 
 	// Create intermediate representation
-	irs := casm.translateIR(&tokens)
+	irs := casm.translateTokensToIR(&tokens)
 
 	// Generate the program depending on the build target
 	switch casm.Target {
@@ -94,8 +94,7 @@ func (casm *Casm) SaveProgramToFile() (err error) {
 }
 
 // Convert tokens to intermediate representation.
-// TODO: Rename translateIR method to translateTokensToIR
-func (casm *Casm) translateIR(tokens *tokens) (out []IR) {
+func (casm *Casm) translateTokensToIR(tokens *tokens) (out []IR) {
 	for !tokens.Empty() {
 		switch tokens.First().Kind {
 		case tokenKindSymbol:
@@ -216,7 +215,7 @@ func (casm *Casm) translateInclude(path string, location FileLocation) (out []IR
 	casm.includeLevel++
 	includeSource := readSourceFile(resolvedPath)
 	tokens := tokenize(includeSource, resolvedPath)
-	out = casm.translateIR(&tokens)
+	out = casm.translateTokensToIR(&tokens)
 	casm.includeLevel--
 
 	return out
