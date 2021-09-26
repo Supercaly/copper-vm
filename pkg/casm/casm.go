@@ -21,6 +21,8 @@ type Casm struct {
 
 	Target BuildTarget
 
+	internalRep *internalRep
+
 	copperGen copperGenerator
 	x86_64Gen x86_64Generator
 
@@ -28,6 +30,17 @@ type Casm struct {
 	IncludePaths []string
 
 	AddDebugSymbols bool
+}
+
+// Return a new instance of Casm.
+func NewCasm() Casm {
+	intRep := internalRep{}
+	casm := Casm{
+		internalRep: &intRep,
+	}
+	casm.copperGen.rep = &intRep
+	casm.x86_64Gen.rep = &intRep
+	return casm
 }
 
 // Translate a casm file to target binary.
@@ -68,12 +81,16 @@ func (casm *Casm) TranslateIntermediateRep(ir []IR) (err error) {
 
 	internal.DebugPrint("[INFO]: building program...\n")
 
-	// Generate the program depending on the build target
+	// Generate an internal program from IR
+	casm.internalRep.firstPass(ir)
+	casm.internalRep.secondPass()
+
+	// Generate the output program depending on the build target
 	switch casm.Target {
 	case BuildTargetCopper:
-		casm.copperGen.generateProgram(ir)
+		casm.copperGen.generateProgram()
 	case BuildTargetX86_64:
-		casm.x86_64Gen.generateProgram(ir)
+		casm.x86_64Gen.generateProgram()
 	}
 
 	internal.DebugPrint("[INFO]: program built!\n")
@@ -131,7 +148,7 @@ func (casm *Casm) translateTokensToIR(tokens *tokens) (out []IR) {
 				})
 			} else {
 				// Intruction definition
-				exist, instDef := GetInstructionByName(symbol.text)
+				exist, instDef := getInstructionByName(symbol.text)
 				if !exist {
 					panic(fmt.Sprintf("%s: unknown instruction '%s'",
 						symbol.location,
@@ -139,15 +156,15 @@ func (casm *Casm) translateTokensToIR(tokens *tokens) (out []IR) {
 				}
 
 				var operand Expression
-				if instDef.HasOperand {
+				if instDef.hasOperand {
 					operand = parseExprFromTokens(tokens)
 				}
 				out = append(out, IR{
 					Kind: IRKindInstruction,
 					AsInstruction: InstructionIR{
-						Name:       instDef.Name,
+						Name:       instDef.name,
 						Operand:    operand,
-						HasOperand: instDef.HasOperand,
+						HasOperand: instDef.hasOperand,
 					},
 					Location: symbol.location,
 				})

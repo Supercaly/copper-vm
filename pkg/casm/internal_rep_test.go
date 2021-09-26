@@ -7,7 +7,7 @@ import (
 )
 
 func TestGetBindingByName(t *testing.T) {
-	cgen := copperGenerator{
+	rep := internalRep{
 		bindings: []binding{
 			{name: "a_label",
 				value:    expression(ExpressionKindNumLitInt, int64(1)),
@@ -20,20 +20,20 @@ func TestGetBindingByName(t *testing.T) {
 		},
 	}
 
-	exist, binding := cgen.getBindingByName("a_label")
+	exist, binding := rep.getBindingByName("a_label")
 	assert.True(t, exist)
-	assert.Equal(t, cgen.bindings[0], binding)
+	assert.Equal(t, rep.bindings[0], binding)
 
-	exist, binding = cgen.getBindingByName("a_const")
+	exist, binding = rep.getBindingByName("a_const")
 	assert.True(t, exist)
-	assert.Equal(t, cgen.bindings[1], binding)
+	assert.Equal(t, rep.bindings[1], binding)
 
-	exist, binding = cgen.getBindingByName("test")
+	exist, binding = rep.getBindingByName("test")
 	assert.False(t, exist)
 }
 
 func TestGetBindingIndexByName(t *testing.T) {
-	cgen := copperGenerator{
+	rep := internalRep{
 		bindings: []binding{
 			{name: "a_label",
 				value:    expression(ExpressionKindNumLitInt, int64(1)),
@@ -46,18 +46,18 @@ func TestGetBindingIndexByName(t *testing.T) {
 		},
 	}
 
-	index := cgen.getBindingIndexByName("a_label")
+	index := rep.getBindingIndexByName("a_label")
 	assert.Equal(t, 0, index)
 
-	index = cgen.getBindingIndexByName("a_const")
+	index = rep.getBindingIndexByName("a_const")
 	assert.Equal(t, 1, index)
 
-	index = cgen.getBindingIndexByName("test")
+	index = rep.getBindingIndexByName("test")
 	assert.Equal(t, -1, index)
 }
 
 func TestBindLabel(t *testing.T) {
-	cgen := copperGenerator{
+	rep := internalRep{
 		bindings: []binding{
 			{name: "a_label",
 				value:    expression(ExpressionKindNumLitInt, int64(1)),
@@ -68,12 +68,12 @@ func TestBindLabel(t *testing.T) {
 
 	func() {
 		defer func() { recover() }()
-		cgen.bindLabel(LabelIR{"a_label"}, 1, FileLocation{})
+		rep.bindLabel(LabelIR{"a_label"}, 1, FileLocation{})
 		assert.Fail(t, "expecting an error")
 	}()
 
-	cgen.bindLabel(LabelIR{"new_label"}, 2, FileLocation{})
-	exist, b := cgen.getBindingByName("new_label")
+	rep.bindLabel(LabelIR{"new_label"}, 2, FileLocation{})
+	exist, b := rep.getBindingByName("new_label")
 	assert.True(t, exist)
 
 	label := binding{
@@ -121,7 +121,7 @@ func TestBindConst(t *testing.T) {
 				}
 			}()
 
-			cgen := copperGenerator{
+			rep := internalRep{
 				bindings: []binding{
 					{name: "a_const",
 						value:    Expression{Kind: ExpressionKindNumLitInt, AsNumLitInt: 1},
@@ -129,15 +129,15 @@ func TestBindConst(t *testing.T) {
 						isLabel:  false},
 				},
 			}
-			cgen.bindConst(test.constIR, FileLocation{})
+			rep.bindConst(test.constIR, FileLocation{})
 
 			if test.hasError {
 				assert.Fail(t, "expecting an error", test)
 			} else {
-				exist, binding := cgen.getBindingByName(test.constIR.Name)
+				exist, binding := rep.getBindingByName(test.constIR.Name)
 				assert.True(t, exist, test)
 				assert.Equal(t, test.binding, binding, test)
-				assert.Equal(t, test.memoryLength, len(cgen.memory), test)
+				assert.Equal(t, test.memoryLength, len(rep.memory), test)
 			}
 		}()
 	}
@@ -145,22 +145,22 @@ func TestBindConst(t *testing.T) {
 
 func TestBindEntry(t *testing.T) {
 	func() {
-		cgen := copperGenerator{}
+		rep := internalRep{}
 		defer func() { recover() }()
-		cgen.hasEntry = true
-		cgen.bindEntry(EntryIR{"main"}, FileLocation{})
+		rep.hasEntry = true
+		rep.bindEntry(EntryIR{"main"}, FileLocation{})
 		assert.Fail(t, "expecting an error")
 	}()
 
-	cgen := copperGenerator{}
-	cgen.bindEntry(EntryIR{"entry"}, fileLocation(10, 0))
-	assert.True(t, cgen.hasEntry)
-	assert.Equal(t, "entry", cgen.deferredEntryName)
-	assert.Equal(t, 10, cgen.entryLocation.Row)
+	rep := internalRep{}
+	rep.bindEntry(EntryIR{"entry"}, fileLocation(10, 0))
+	assert.True(t, rep.hasEntry)
+	assert.Equal(t, "entry", rep.deferredEntryName)
+	assert.Equal(t, 10, rep.entryLocation.Row)
 }
 
 func TestBindMemory(t *testing.T) {
-	cgen := copperGenerator{
+	rep := internalRep{
 		bindings: []binding{
 			{name: "mem",
 				value:    expression(ExpressionKindNumLitInt, int64(0)),
@@ -171,12 +171,12 @@ func TestBindMemory(t *testing.T) {
 
 	func() {
 		defer func() { recover() }()
-		cgen.bindMemory(MemoryIR{Name: "mem", Value: expression(ExpressionKindByteList, []byte{1})}, FileLocation{})
+		rep.bindMemory(MemoryIR{Name: "mem", Value: expression(ExpressionKindByteList, []byte{1})}, FileLocation{})
 		assert.Fail(t, "expecting an error")
 	}()
 
-	cgen.bindMemory(MemoryIR{Name: "new_mem", Value: expression(ExpressionKindByteList, []byte{2, 3})}, FileLocation{})
-	exist, b := cgen.getBindingByName("new_mem")
+	rep.bindMemory(MemoryIR{Name: "new_mem", Value: expression(ExpressionKindByteList, []byte{2, 3})}, FileLocation{})
+	exist, b := rep.getBindingByName("new_mem")
 	assert.True(t, exist)
 
 	want := binding{
@@ -203,8 +203,8 @@ var evaluateExpressionsTests = []struct {
 }
 
 func TestEvaluateExpression(t *testing.T) {
-	cgen := copperGenerator{}
-	cgen.bindings = append(cgen.bindings, binding{
+	rep := internalRep{}
+	rep.bindings = append(rep.bindings, binding{
 		name:  "a_bind",
 		value: expression(ExpressionKindNumLitInt, int64(3)),
 	})
@@ -218,7 +218,7 @@ func TestEvaluateExpression(t *testing.T) {
 				}
 			}()
 
-			result := cgen.evaluateExpression(test.expr, FileLocation{}).Word
+			result := rep.evaluateExpression(test.expr, FileLocation{}).Word
 
 			if test.hasError {
 				assert.Fail(t, "expecting an error", test)
@@ -462,7 +462,7 @@ var binaryOpTests = []struct {
 
 func TestEvaluateBinaryOp(t *testing.T) {
 	for _, test := range binaryOpTests {
-		cgen := copperGenerator{}
+		rep := internalRep{}
 		func() {
 			defer func() {
 				r := recover()
@@ -471,7 +471,7 @@ func TestEvaluateBinaryOp(t *testing.T) {
 				}
 			}()
 
-			word := cgen.evaluateBinaryOp(test.expr, FileLocation{}).Word
+			word := rep.evaluateBinaryOp(test.expr, FileLocation{}).Word
 
 			if test.hasError {
 				assert.Fail(t, "expecting an error", test)
@@ -483,7 +483,7 @@ func TestEvaluateBinaryOp(t *testing.T) {
 }
 
 func TestEvaluateBinding(t *testing.T) {
-	cgen := copperGenerator{
+	rep := internalRep{
 		bindings: []binding{
 			{name: "a_bind", value: expression(ExpressionKindNumLitInt, int64(5))},
 			{name: "cycl1", value: expression(ExpressionKindBinding, "cycl2")},
@@ -491,45 +491,45 @@ func TestEvaluateBinding(t *testing.T) {
 		},
 	}
 
-	word := cgen.evaluateBinding(cgen.bindings[0], FileLocation{}).Word
+	word := rep.evaluateBinding(rep.bindings[0], FileLocation{}).Word
 	assert.Equal(t, wordInt(5), word)
 
-	word = cgen.evaluateBinding(cgen.bindings[0], FileLocation{}).Word
+	word = rep.evaluateBinding(rep.bindings[0], FileLocation{}).Word
 	assert.Equal(t, wordInt(5), word)
 
 	func() {
 		defer func() { recover() }()
-		cgen.evaluateBinding(cgen.bindings[1], FileLocation{})
+		rep.evaluateBinding(rep.bindings[1], FileLocation{})
 		assert.Fail(t, "expecting an error")
 	}()
 
 	func() {
 		defer func() { recover() }()
-		cgen.evaluateBinding(binding{name: "bind"}, FileLocation{})
+		rep.evaluateBinding(binding{name: "bind"}, FileLocation{})
 		assert.Fail(t, "expecting an error")
 	}()
 }
 
 func TestPushStringToMemory(t *testing.T) {
-	cgen := copperGenerator{}
+	rep := internalRep{}
 
-	strAddr := cgen.pushStringToMemory("string1")
+	strAddr := rep.pushStringToMemory("string1")
 	assert.Equal(t, 0, strAddr)
-	assert.Equal(t, 8, cgen.stringLengths[0])
+	assert.Equal(t, 8, rep.stringLengths[0])
 
-	strAddr = cgen.pushStringToMemory("a different string")
+	strAddr = rep.pushStringToMemory("a different string")
 	assert.Equal(t, 8, strAddr)
-	assert.Equal(t, 19, cgen.stringLengths[8])
+	assert.Equal(t, 19, rep.stringLengths[8])
 }
 
 func TestGetStringByAddress(t *testing.T) {
-	cgen := copperGenerator{}
-	l1 := cgen.pushStringToMemory("string1")
-	s1 := cgen.getStringByAddress(l1)
+	rep := internalRep{}
+	l1 := rep.pushStringToMemory("string1")
+	s1 := rep.getStringByAddress(l1)
 	assert.NotEmpty(t, s1)
 	assert.Equal(t, "string1", s1)
-	assert.Len(t, cgen.memory, 8)
+	assert.Len(t, rep.memory, 8)
 
-	s2 := cgen.getStringByAddress(1)
+	s2 := rep.getStringByAddress(1)
 	assert.Empty(t, s2)
 }

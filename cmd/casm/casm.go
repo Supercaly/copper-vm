@@ -25,7 +25,7 @@ func usage(stream io.Writer, program string) {
 }
 
 func main() {
-	casm := c.Casm{}
+	casm := c.NewCasm()
 	args := os.Args
 	var program string
 	program, args = internal.Shift(args)

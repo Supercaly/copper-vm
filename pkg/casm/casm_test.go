@@ -8,25 +8,34 @@ import (
 )
 
 func TestSaveProgramToFile(t *testing.T) {
+	intRep := internalRep{}
 	tests := []struct {
 		casm     Casm
 		hasError bool
 	}{
 		{Casm{
-			OutputFile: "testdata/test.notcopper",
-			Target:     BuildTargetCopper,
+			OutputFile:  "testdata/test.notcopper",
+			Target:      BuildTargetCopper,
+			internalRep: &intRep,
+			copperGen:   copperGenerator{rep: &intRep},
 		}, true},
 		{Casm{
-			OutputFile: "testdata/test.copper",
-			Target:     BuildTargetCopper,
+			OutputFile:  "testdata/test.copper",
+			Target:      BuildTargetCopper,
+			internalRep: &intRep,
+			copperGen:   copperGenerator{rep: &intRep},
 		}, false},
 		{Casm{
-			OutputFile: "testdata/test.notasm",
-			Target:     BuildTargetX86_64,
+			OutputFile:  "testdata/test.notasm",
+			Target:      BuildTargetX86_64,
+			internalRep: &intRep,
+			copperGen:   copperGenerator{rep: &intRep},
 		}, true},
 		{Casm{
-			OutputFile: "testdata/test.asm",
-			Target:     BuildTargetX86_64,
+			OutputFile:  "testdata/test.asm",
+			Target:      BuildTargetX86_64,
+			internalRep: &intRep,
+			copperGen:   copperGenerator{rep: &intRep},
 		}, false},
 	}
 

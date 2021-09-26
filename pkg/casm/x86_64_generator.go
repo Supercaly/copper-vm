@@ -12,47 +12,40 @@ type x86_64Generator struct {
 	dataSection strings.Builder
 	bssSection  strings.Builder
 
-	entryName  string
-	memory     [1024]byte
-	memorySize int
+	rep *internalRep
+
+	labels map[int]string
 }
 
-func (gen *x86_64Generator) generateProgram(program []IR) {
+func (gen *x86_64Generator) generateProgram() {
+	gen.labels = make(map[int]string)
+	for _, b := range gen.rep.bindings {
+		if b.isLabel {
+			gen.labels[int(b.evaluatedWord.asInstAddr)] = b.name
+		}
+	}
+
 	writeLine(&gen.textSection, "section .text")
 	writeLine(&gen.dataSection, "section .data")
 	writeLine(&gen.bssSection, "section .bss")
 
 	writeLine(&gen.textSection, "global _start")
-	for _, inst := range program {
-		switch inst.Kind {
-		case IRKindLabel:
-			writeLine(&gen.textSection, inst.AsLabel.Name+":")
-		case IRKindInstruction:
-			gen.translateInstruction(inst.AsInstruction)
-		case IRKindEntry:
-			gen.entryName = inst.AsEntry.Name
-		case IRKindConst:
-			writeLine(&gen.dataSection, fmt.Sprintf("  %s: db %s", inst.AsConst.Name, gen.expressionToString(inst.AsConst.Value)))
-		case IRKindMemory:
-			addr := gen.memorySize
-			bytes := inst.AsMemory.Value.AsByteList
-			for i := 0; i < len(bytes); i++ {
-				gen.memory[addr+i] = bytes[i]
-			}
-			gen.memorySize += len(bytes)
-			writeLine(&gen.dataSection, fmt.Sprintf("  %s: db %d", inst.AsMemory.Name, addr))
+	for idx, inst := range gen.rep.program {
+		if label, ok := gen.labels[idx]; ok {
+			writeLine(&gen.textSection, fmt.Sprintf("%s:", label))
 		}
+		gen.translateInstruction(inst)
 	}
 
 	// set entry
 	writeLine(&gen.textSection, "_start:")
-	writeLine(&gen.textSection, fmt.Sprintf("  jmp %s", gen.entryName))
+	writeLine(&gen.textSection, fmt.Sprintf("  jmp %s", gen.rep.deferredEntryName))
 
 	// Write static memory
 	var memStr string
-	for i, b := range gen.memory {
+	for i, b := range gen.rep.memory {
 		memStr += fmt.Sprintf("0x%x", b)
-		if i != len(gen.memory)-1 {
+		if i != len(gen.rep.memory)-1 {
 			memStr += ","
 		}
 	}
@@ -65,13 +58,13 @@ func (gen *x86_64Generator) saveProgram() string {
 		gen.textSection.String()
 }
 
-func (gen *x86_64Generator) translateInstruction(inst InstructionIR) {
-	_, instDef := GetInstructionByName(inst.Name)
-	switch instDef.Kind {
+func (gen *x86_64Generator) translateInstruction(inst instruction) {
+	switch inst.kind {
 	// Basic instructions
 	case coppervm.InstPush:
 		writeLine(&gen.textSection, "  ; -- push --")
-		writeLine(&gen.textSection, fmt.Sprintf("  push %s", gen.expressionToString(inst.Operand)))
+		writeLine(&gen.textSection, fmt.Sprintf("  mov rax, %s", gen.wordToString(inst.operand)))
+		writeLine(&gen.textSection, "  push rax")
 	case coppervm.InstSwap:
 		writeLine(&gen.textSection, "  ; -- swap --")
 		writeLine(&gen.textSection, "  pop rax")
@@ -177,42 +170,42 @@ func (gen *x86_64Generator) translateInstruction(inst InstructionIR) {
 		writeLine(&gen.textSection, "  push rax")
 	case coppervm.InstJmp:
 		writeLine(&gen.textSection, "  ; -- jmp --")
-		writeLine(&gen.textSection, fmt.Sprintf("  jmp %s", gen.expressionToString(inst.Operand)))
+		writeLine(&gen.textSection, fmt.Sprintf("  jmp %s", gen.wordToString(inst.operand)))
 	case coppervm.InstJmpZero:
 		writeLine(&gen.textSection, "  ; -- jz --")
 		writeLine(&gen.textSection, "  pop rax")
 		writeLine(&gen.textSection, "  cmp rax, 0")
-		writeLine(&gen.textSection, fmt.Sprintf("  jz %s", gen.expressionToString(inst.Operand)))
+		writeLine(&gen.textSection, fmt.Sprintf("  jz %s", gen.wordToString(inst.operand)))
 	case coppervm.InstJmpNotZero:
 		writeLine(&gen.textSection, "  ; -- jnz --")
 		writeLine(&gen.textSection, "  pop rax")
 		writeLine(&gen.textSection, "  cmp rax, 0")
-		writeLine(&gen.textSection, fmt.Sprintf("  jnz %s", gen.expressionToString(inst.Operand)))
+		writeLine(&gen.textSection, fmt.Sprintf("  jnz %s", gen.wordToString(inst.operand)))
 	case coppervm.InstJmpGreater:
 		writeLine(&gen.textSection, "  ; -- jg --")
 		writeLine(&gen.textSection, "  pop rax")
 		writeLine(&gen.textSection, "  cmp rax, 0")
-		writeLine(&gen.textSection, fmt.Sprintf("  jg %s", gen.expressionToString(inst.Operand)))
+		writeLine(&gen.textSection, fmt.Sprintf("  jg %s", gen.wordToString(inst.operand)))
 	case coppervm.InstJmpGreaterEqual:
 		writeLine(&gen.textSection, "  ; -- jge --")
 		writeLine(&gen.textSection, "  pop rax")
 		writeLine(&gen.textSection, "  cmp rax, 0")
-		writeLine(&gen.textSection, fmt.Sprintf("  jge %s", gen.expressionToString(inst.Operand)))
+		writeLine(&gen.textSection, fmt.Sprintf("  jge %s", gen.wordToString(inst.operand)))
 	case coppervm.InstJmpLess:
 		writeLine(&gen.textSection, "  ; -- jl --")
 		writeLine(&gen.textSection, "  pop rax")
 		writeLine(&gen.textSection, "  cmp rax, 0")
-		writeLine(&gen.textSection, fmt.Sprintf("  jl %s", gen.expressionToString(inst.Operand)))
+		writeLine(&gen.textSection, fmt.Sprintf("  jl %s", gen.wordToString(inst.operand)))
 	case coppervm.InstJmpLessEqual:
 		writeLine(&gen.textSection, "  ; -- jle --")
 		writeLine(&gen.textSection, "  pop rax")
 		writeLine(&gen.textSection, "  cmp rax, 0")
-		writeLine(&gen.textSection, fmt.Sprintf("  jle %s", gen.expressionToString(inst.Operand)))
+		writeLine(&gen.textSection, fmt.Sprintf("  jle %s", gen.wordToString(inst.operand)))
 
 		// Functions
 	case coppervm.InstFunCall:
 		writeLine(&gen.textSection, "  ; -- call --")
-		writeLine(&gen.textSection, fmt.Sprintf("  call %s", gen.expressionToString(inst.Operand)))
+		writeLine(&gen.textSection, fmt.Sprintf("  call %s", gen.wordToString(inst.operand)))
 	case coppervm.InstFunReturn:
 		writeLine(&gen.textSection, "  ; -- ret --")
 		writeLine(&gen.textSection, "  ret")
@@ -244,7 +237,7 @@ func (gen *x86_64Generator) translateInstruction(inst InstructionIR) {
 	// Syscall
 	case coppervm.InstSyscall:
 		writeLine(&gen.textSection, "  ; -- syscall --")
-		switch inst.Operand.AsNumLitInt {
+		switch inst.operand.asInt {
 		case 0:
 			writeLine(&gen.textSection, "  pop rdx")
 			writeLine(&gen.textSection, "  pop rsi")
@@ -278,28 +271,20 @@ func (gen *x86_64Generator) translateInstruction(inst InstructionIR) {
 		writeLine(&gen.textSection, "  ; -- print --")
 		writeLine(&gen.textSection, "  ; operation not supported")
 	default:
-		panic(fmt.Sprintf("unknown instruction %s", instDef.Name))
+		panic(fmt.Sprintf("unknown instruction %s", inst.name))
 	}
 }
 
-func (gen *x86_64Generator) expressionToString(expr Expression) (ret string) {
-	switch expr.Kind {
-	case ExpressionKindNumLitInt:
-		ret = fmt.Sprint(expr.AsNumLitInt)
-	case ExpressionKindNumLitFloat:
-		ret = fmt.Sprint(expr.AsNumLitFloat)
-	case ExpressionKindStringLit:
-		addr := gen.memorySize
-		byteStr := []byte(expr.AsStringLit)
-		for i := 0; i < len(byteStr); i++ {
-			gen.memory[addr+i] = byteStr[i]
-		}
-		gen.memorySize += len(byteStr)
-		ret = fmt.Sprint(addr)
-	case ExpressionKindBinaryOp:
-	case ExpressionKindBinding:
-		ret = expr.AsBinding
-	case ExpressionKindByteList:
+func (gen *x86_64Generator) wordToString(w word) (ret string) {
+	switch w.kind {
+	case wordKindInt:
+		ret = fmt.Sprint(w.asInt)
+	case wordKindFloat:
+		ret = fmt.Sprint(w.asFloat)
+	case wordKindInstAddr:
+		ret = fmt.Sprint(w.asInstAddr)
+	case wordKindMemoryAddr:
+		ret = fmt.Sprint(w.asMemoryAddr)
 	}
 	return ret
 }

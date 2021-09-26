@@ -2,250 +2,250 @@ package casm
 
 import "github.com/Supercaly/coppervm/pkg/coppervm"
 
-var InstDefs = [coppervm.InstCount]Instruction{
+var instDefs = [coppervm.InstCount]instruction{
 	{
-		Kind:       coppervm.InstNoop,
-		HasOperand: false,
-		Name:       "noop",
+		kind:       coppervm.InstNoop,
+		hasOperand: false,
+		name:       "noop",
 	},
 	{
-		Kind:       coppervm.InstPush,
-		HasOperand: true,
-		Name:       "push",
+		kind:       coppervm.InstPush,
+		hasOperand: true,
+		name:       "push",
 	},
 	{
-		Kind:       coppervm.InstSwap,
-		HasOperand: true,
-		Name:       "swap",
+		kind:       coppervm.InstSwap,
+		hasOperand: true,
+		name:       "swap",
 	},
 	{
-		Kind:       coppervm.InstDup,
-		HasOperand: false,
-		Name:       "dup",
+		kind:       coppervm.InstDup,
+		hasOperand: false,
+		name:       "dup",
 	},
 	{
-		Kind:       coppervm.InstOver,
-		HasOperand: true,
-		Name:       "over",
+		kind:       coppervm.InstOver,
+		hasOperand: true,
+		name:       "over",
 	},
 	{
-		Kind:       coppervm.InstDrop,
-		HasOperand: false,
-		Name:       "drop",
+		kind:       coppervm.InstDrop,
+		hasOperand: false,
+		name:       "drop",
 	},
 	{
-		Kind:       coppervm.InstAddInt,
-		HasOperand: false,
-		Name:       "add",
+		kind:       coppervm.InstAddInt,
+		hasOperand: false,
+		name:       "add",
 	},
 	{
-		Kind:       coppervm.InstSubInt,
-		HasOperand: false,
-		Name:       "sub",
+		kind:       coppervm.InstSubInt,
+		hasOperand: false,
+		name:       "sub",
 	},
 	{
-		Kind:       coppervm.InstMulInt,
-		HasOperand: false,
-		Name:       "mul",
+		kind:       coppervm.InstMulInt,
+		hasOperand: false,
+		name:       "mul",
 	},
 	{
-		Kind:       coppervm.InstMulIntSigned,
-		HasOperand: false,
-		Name:       "imul",
+		kind:       coppervm.InstMulIntSigned,
+		hasOperand: false,
+		name:       "imul",
 	},
 	{
-		Kind:       coppervm.InstDivInt,
-		HasOperand: false,
-		Name:       "div",
+		kind:       coppervm.InstDivInt,
+		hasOperand: false,
+		name:       "div",
 	},
 	{
-		Kind:       coppervm.InstDivIntSigned,
-		HasOperand: false,
-		Name:       "idiv",
+		kind:       coppervm.InstDivIntSigned,
+		hasOperand: false,
+		name:       "idiv",
 	},
 	{
-		Kind:       coppervm.InstModInt,
-		HasOperand: false,
-		Name:       "mod",
+		kind:       coppervm.InstModInt,
+		hasOperand: false,
+		name:       "mod",
 	},
 	{
-		Kind:       coppervm.InstModIntSigned,
-		HasOperand: false,
-		Name:       "imod",
+		kind:       coppervm.InstModIntSigned,
+		hasOperand: false,
+		name:       "imod",
 	},
 	{
-		Kind:       coppervm.InstAddFloat,
-		HasOperand: false,
-		Name:       "fadd",
+		kind:       coppervm.InstAddFloat,
+		hasOperand: false,
+		name:       "fadd",
 	},
 	{
-		Kind:       coppervm.InstSubFloat,
-		HasOperand: false,
-		Name:       "fsub",
+		kind:       coppervm.InstSubFloat,
+		hasOperand: false,
+		name:       "fsub",
 	},
 	{
-		Kind:       coppervm.InstMulFloat,
-		HasOperand: false,
-		Name:       "fmul",
+		kind:       coppervm.InstMulFloat,
+		hasOperand: false,
+		name:       "fmul",
 	},
 	{
-		Kind:       coppervm.InstDivFloat,
-		HasOperand: false,
-		Name:       "fdiv",
+		kind:       coppervm.InstDivFloat,
+		hasOperand: false,
+		name:       "fdiv",
 	},
 	{
-		Kind:       coppervm.InstAnd,
-		HasOperand: false,
-		Name:       "and",
+		kind:       coppervm.InstAnd,
+		hasOperand: false,
+		name:       "and",
 	},
 	{
-		Kind:       coppervm.InstOr,
-		HasOperand: false,
-		Name:       "or",
+		kind:       coppervm.InstOr,
+		hasOperand: false,
+		name:       "or",
 	},
 	{
-		Kind:       coppervm.InstXor,
-		HasOperand: false,
-		Name:       "xor",
+		kind:       coppervm.InstXor,
+		hasOperand: false,
+		name:       "xor",
 	},
 	{
-		Kind:       coppervm.InstShiftLeft,
-		HasOperand: false,
-		Name:       "shl",
+		kind:       coppervm.InstShiftLeft,
+		hasOperand: false,
+		name:       "shl",
 	},
 	{
-		Kind:       coppervm.InstShiftRight,
-		HasOperand: false,
-		Name:       "shr",
+		kind:       coppervm.InstShiftRight,
+		hasOperand: false,
+		name:       "shr",
 	},
 	{
-		Kind:       coppervm.InstNot,
-		HasOperand: false,
-		Name:       "not",
+		kind:       coppervm.InstNot,
+		hasOperand: false,
+		name:       "not",
 	},
 	{
-		Kind:       coppervm.InstCmp,
-		HasOperand: false,
-		Name:       "cmp",
+		kind:       coppervm.InstCmp,
+		hasOperand: false,
+		name:       "cmp",
 	},
 	{
-		Kind:       coppervm.InstCmpSigned,
-		HasOperand: false,
-		Name:       "icmp",
+		kind:       coppervm.InstCmpSigned,
+		hasOperand: false,
+		name:       "icmp",
 	},
 	{
-		Kind:       coppervm.InstCmpFloat,
-		HasOperand: false,
-		Name:       "fcmp",
+		kind:       coppervm.InstCmpFloat,
+		hasOperand: false,
+		name:       "fcmp",
 	},
 	{
-		Kind:       coppervm.InstJmp,
-		HasOperand: true,
-		Name:       "jmp",
+		kind:       coppervm.InstJmp,
+		hasOperand: true,
+		name:       "jmp",
 	},
 	{
-		Kind:       coppervm.InstJmpZero,
-		HasOperand: true,
-		Name:       "jz",
+		kind:       coppervm.InstJmpZero,
+		hasOperand: true,
+		name:       "jz",
 	},
 	{
-		Kind:       coppervm.InstJmpNotZero,
-		HasOperand: true,
-		Name:       "jnz",
+		kind:       coppervm.InstJmpNotZero,
+		hasOperand: true,
+		name:       "jnz",
 	},
 	{
-		Kind:       coppervm.InstJmpGreater,
-		HasOperand: true,
-		Name:       "jg",
+		kind:       coppervm.InstJmpGreater,
+		hasOperand: true,
+		name:       "jg",
 	},
 	{
-		Kind:       coppervm.InstJmpLess,
-		HasOperand: true,
-		Name:       "jl",
+		kind:       coppervm.InstJmpLess,
+		hasOperand: true,
+		name:       "jl",
 	},
 	{
-		Kind:       coppervm.InstJmpGreaterEqual,
-		HasOperand: true,
-		Name:       "jge",
+		kind:       coppervm.InstJmpGreaterEqual,
+		hasOperand: true,
+		name:       "jge",
 	},
 	{
-		Kind:       coppervm.InstJmpLessEqual,
-		HasOperand: true,
-		Name:       "jle",
+		kind:       coppervm.InstJmpLessEqual,
+		hasOperand: true,
+		name:       "jle",
 	},
 
 	{
-		Kind:       coppervm.InstFunCall,
-		HasOperand: true,
-		Name:       "call",
+		kind:       coppervm.InstFunCall,
+		hasOperand: true,
+		name:       "call",
 	},
 	{
-		Kind:       coppervm.InstFunReturn,
-		HasOperand: false,
-		Name:       "ret",
+		kind:       coppervm.InstFunReturn,
+		hasOperand: false,
+		name:       "ret",
 	},
 	{
-		Kind:       coppervm.InstMemRead,
-		HasOperand: false,
-		Name:       "read",
+		kind:       coppervm.InstMemRead,
+		hasOperand: false,
+		name:       "read",
 	},
 	{
-		Kind:       coppervm.InstMemReadInt,
-		HasOperand: false,
-		Name:       "iread",
+		kind:       coppervm.InstMemReadInt,
+		hasOperand: false,
+		name:       "iread",
 	},
 	{
-		Kind:       coppervm.InstMemReadFloat,
-		HasOperand: false,
-		Name:       "fread",
+		kind:       coppervm.InstMemReadFloat,
+		hasOperand: false,
+		name:       "fread",
 	},
 	{
-		Kind:       coppervm.InstMemWrite,
-		HasOperand: false,
-		Name:       "write",
+		kind:       coppervm.InstMemWrite,
+		hasOperand: false,
+		name:       "write",
 	}, {
-		Kind:       coppervm.InstMemWriteInt,
-		HasOperand: false,
-		Name:       "iwrite",
+		kind:       coppervm.InstMemWriteInt,
+		hasOperand: false,
+		name:       "iwrite",
 	},
 	{
-		Kind:       coppervm.InstMemWriteFloat,
-		HasOperand: false,
-		Name:       "fwrite",
+		kind:       coppervm.InstMemWriteFloat,
+		hasOperand: false,
+		name:       "fwrite",
 	},
 	{
-		Kind:       coppervm.InstSyscall,
-		HasOperand: true,
-		Name:       "syscall",
+		kind:       coppervm.InstSyscall,
+		hasOperand: true,
+		name:       "syscall",
 	},
 	{
-		Kind:       coppervm.InstPrint,
-		HasOperand: false,
-		Name:       "print",
+		kind:       coppervm.InstPrint,
+		hasOperand: false,
+		name:       "print",
 	},
 	{
-		Kind:       coppervm.InstHalt,
-		HasOperand: false,
-		Name:       "halt",
+		kind:       coppervm.InstHalt,
+		hasOperand: false,
+		name:       "halt",
 	},
 }
 
-type Instruction struct {
-	Kind       coppervm.InstKind
-	HasOperand bool
-	Name       string
-	Operand    word
+type instruction struct {
+	kind       coppervm.InstKind
+	hasOperand bool
+	name       string
+	operand    word
 }
 
 // Return an instruction definition by it's string
 // representation.
 // This function return true if the instruction exist,
 // false otherwise.
-func GetInstructionByName(name string) (bool, Instruction) {
-	for _, inst := range InstDefs {
-		if inst.Name == name {
+func getInstructionByName(name string) (bool, instruction) {
+	for _, inst := range instDefs {
+		if inst.name == name {
 			return true, inst
 		}
 	}
-	return false, Instruction{}
+	return false, instruction{}
 }
