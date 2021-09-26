@@ -2,15 +2,13 @@ package casm
 
 import (
 	"fmt"
-
-	"github.com/Supercaly/coppervm/pkg/coppervm"
 )
 
 type binding struct {
 	Status        bindingStatus
 	Name          string
 	Value         Expression
-	EvaluatedWord coppervm.Word
+	EvaluatedWord word
 	EvaluatedKind ExpressionKind
 	Location      FileLocation
 	IsLabel       bool

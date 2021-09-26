@@ -31,10 +31,26 @@ func TestLoadProgramFromMeta(t *testing.T) {
 	func() {
 		vm := Coppervm{}
 		meta := FileMeta(2, []InstDef{
-			InstDefs[InstAddInt],
-			InstDefs[InstNoop],
-			InstDefs[InstPush],
-			InstDefs[InstHalt],
+			InstDef{
+				Kind:       InstAddInt,
+				HasOperand: false,
+				Name:       "add",
+			},
+			InstDef{
+				Kind:       InstNoop,
+				HasOperand: false,
+				Name:       "noop",
+			},
+			InstDef{
+				Kind:       InstPush,
+				HasOperand: true,
+				Name:       "push",
+			},
+			InstDef{
+				Kind:       InstHalt,
+				HasOperand: false,
+				Name:       "halt",
+			},
 		}, []byte{1, 2, 3}, DebugSymbols{})
 		vm.loadProgramFromMeta(meta)
 

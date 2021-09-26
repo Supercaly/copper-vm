@@ -13,7 +13,7 @@ type copperGenerator struct {
 	DeferredOperands    []deferredOperand
 	deferredExpressions map[int]Expression
 
-	Program []coppervm.InstDef
+	Program []Instruction
 
 	HasEntry          bool
 	Entry             int
@@ -34,13 +34,22 @@ func (cg *copperGenerator) saveProgram(addDebugSymbols bool) string {
 			if b.IsLabel {
 				dbSymbols = append(dbSymbols, coppervm.DebugSymbol{
 					Name:    b.Name,
-					Address: coppervm.InstAddr(b.EvaluatedWord.AsU64),
+					Address: coppervm.InstAddr(b.EvaluatedWord.asInstAddr),
 				})
 			}
 		}
 	}
 
-	meta := coppervm.FileMeta(cg.Entry, cg.Program, cg.Memory, dbSymbols)
+	var prog []coppervm.InstDef
+	for _, i := range cg.Program {
+		prog = append(prog, coppervm.InstDef{
+			Kind:       i.Kind,
+			HasOperand: i.HasOperand,
+			Name:       i.Name,
+			Operand:    i.Operand.toCoppervmWord(),
+		})
+	}
+	meta := coppervm.FileMeta(cg.Entry, prog, cg.Memory, dbSymbols)
 	metaJson, err := json.Marshal(meta)
 	if err != nil {
 		panic(fmt.Errorf("error writing program to file %s", err))
@@ -66,7 +75,7 @@ func (cgen *copperGenerator) firstPass(irs []IR) {
 			cgen.bindLabel(ir.AsLabel, len(cgen.Program), ir.Location)
 		case IRKindInstruction:
 			inst := ir.AsInstruction
-			_, instDef := coppervm.GetInstDefByName(inst.Name)
+			_, instDef := GetInstructionByName(inst.Name)
 
 			if instDef.HasOperand {
 				if isExpressionBinding(inst.Operand) {
@@ -172,7 +181,7 @@ func (cgen *copperGenerator) secondPass() {
 				cgen.EntryLocation))
 		}
 		entry := cgen.evaluateBinding(binding, cgen.EntryLocation).Word
-		cgen.Entry = int(entry.AsI64)
+		cgen.Entry = int(entry.asInt)
 	}
 
 	// Check if at least one halt instruction exists
@@ -223,7 +232,7 @@ func (cgen *copperGenerator) bindLabel(label LabelIR, address int, location File
 	cgen.Bindings = append(cgen.Bindings, binding{
 		Status:        bindingEvaluated,
 		Name:          label.Name,
-		EvaluatedWord: coppervm.WordU64(uint64(address)),
+		EvaluatedWord: wordInstAddr(int64(address)),
 		EvaluatedKind: ExpressionKindNumLitInt,
 		Location:      location,
 		IsLabel:       true,
@@ -251,7 +260,7 @@ func (cgen *copperGenerator) bindConst(constIR ConstIR, location FileLocation) {
 	// If it's a const string push it in memory and bind his base address
 	if constIR.Value.Kind == ExpressionKindStringLit {
 		baseAddr := cgen.pushStringToMemory(constIR.Value.AsStringLit)
-		newBinding.EvaluatedWord = coppervm.WordU64(uint64(baseAddr))
+		newBinding.EvaluatedWord = wordMemoryAddr(int64(baseAddr))
 		newBinding.Status = bindingEvaluated
 		newBinding.EvaluatedKind = ExpressionKindStringLit
 	}
@@ -292,7 +301,7 @@ func (cgen *copperGenerator) bindMemory(memory MemoryIR, location FileLocation) 
 	cgen.Bindings = append(cgen.Bindings, binding{
 		Status:        bindingEvaluated,
 		Name:          memory.Name,
-		EvaluatedWord: coppervm.WordU64(uint64(memAddr)),
+		EvaluatedWord: wordMemoryAddr(int64(memAddr)),
 		EvaluatedKind: ExpressionKindNumLitInt,
 		Location:      location,
 		IsLabel:       false,
@@ -301,7 +310,7 @@ func (cgen *copperGenerator) bindMemory(memory MemoryIR, location FileLocation) 
 
 // Represent the result of an expression evaluation.
 type evalResult struct {
-	Word coppervm.Word
+	Word word
 	Type ExpressionKind
 }
 
@@ -341,18 +350,18 @@ func (cgen *copperGenerator) evaluateExpression(expr Expression, location FileLo
 		ret = cgen.evaluateBinding(binding, location)
 	case ExpressionKindNumLitInt:
 		ret = evalResult{
-			coppervm.WordI64(expr.AsNumLitInt),
+			wordInt(expr.AsNumLitInt),
 			ExpressionKindNumLitInt,
 		}
 	case ExpressionKindNumLitFloat:
 		ret = evalResult{
-			coppervm.WordF64(expr.AsNumLitFloat),
+			wordFloat(expr.AsNumLitFloat),
 			ExpressionKindNumLitFloat,
 		}
 	case ExpressionKindStringLit:
 		strBase := cgen.pushStringToMemory(expr.AsStringLit)
 		ret = evalResult{
-			coppervm.WordU64(uint64(strBase)),
+			wordMemoryAddr(int64(strBase)),
 			ExpressionKindStringLit,
 		}
 	case ExpressionKindBinaryOp:
@@ -386,13 +395,6 @@ var binaryOpEvaluationMap = [6][6]ExpressionKind{
 	{-1, -1, -1, -1, -1, -1},
 }
 
-// Map an ExpressionKind to a TypeRepresentation.
-var exprKindToTypeRepMap = map[ExpressionKind]coppervm.TypeRepresentation{
-	ExpressionKindNumLitInt:   coppervm.TypeI64,
-	ExpressionKindNumLitFloat: coppervm.TypeF64,
-	ExpressionKindStringLit:   coppervm.TypeU64,
-}
-
 // Evaluate a binary op expression to extract an eval result.
 func (cgen *copperGenerator) evaluateBinaryOp(binop Expression, location FileLocation) (result evalResult) {
 	lhs_result := cgen.evaluateExpression(*binop.AsBinaryOp.Lhs, location)
@@ -416,29 +418,25 @@ func (cgen *copperGenerator) evaluateBinaryOp(binop Expression, location FileLoc
 			panic(fmt.Sprintf("%s: unsupported operations ['-', '*', '/', '%%'] between string literals",
 				location))
 		}
-		leftStr := cgen.getStringByAddress(int(lhs_result.Word.AsU64))
-		rightStr := cgen.getStringByAddress(int(rhs_result.Word.AsU64))
+		leftStr := cgen.getStringByAddress(int(lhs_result.Word.asMemoryAddr))
+		rightStr := cgen.getStringByAddress(int(rhs_result.Word.asMemoryAddr))
 		result = evalResult{
-			coppervm.WordU64(uint64(cgen.pushStringToMemory(leftStr + rightStr))),
+			wordMemoryAddr(int64(cgen.pushStringToMemory(leftStr + rightStr))),
 			ExpressionKindStringLit,
 		}
 	} else {
 		// The only ops at this point are int-float float-int.
 		// int-int and float-float are removed because in Expression we precompute
 		// the operations with same type
-		resultTypeRep := exprKindToTypeRepMap[resultType]
 		switch binop.AsBinaryOp.Kind {
 		case BinaryOpKindPlus:
-			result = evalResult{coppervm.AddWord(lhs_result.Word, rhs_result.Word, resultTypeRep), resultType}
+			result = evalResult{addWord(lhs_result.Word, rhs_result.Word), resultType}
 		case BinaryOpKindMinus:
-			result = evalResult{coppervm.SubWord(lhs_result.Word, rhs_result.Word, resultTypeRep), resultType}
+			result = evalResult{subWord(lhs_result.Word, rhs_result.Word), resultType}
 		case BinaryOpKindTimes:
-			result = evalResult{coppervm.MulWord(lhs_result.Word, rhs_result.Word, resultTypeRep), resultType}
+			result = evalResult{mulWord(lhs_result.Word, rhs_result.Word), resultType}
 		case BinaryOpKindDivide:
-			if rhs_result.Word.AsI64 == 0 || rhs_result.Word.AsF64 == 0.0 {
-				panic(fmt.Sprintf("%s: divide by zero", location))
-			}
-			result = evalResult{coppervm.DivWord(lhs_result.Word, rhs_result.Word, resultTypeRep), resultType}
+			result = evalResult{divWord(lhs_result.Word, rhs_result.Word), resultType}
 		case BinaryOpKindModulo:
 			// Since the only pos are int-float and float-int allways panic
 			panic(fmt.Sprintf("%s: unsupported '%%' operation between floating point literals", location))

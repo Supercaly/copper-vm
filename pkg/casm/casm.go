@@ -94,6 +94,7 @@ func (casm *Casm) SaveProgramToFile() (err error) {
 }
 
 // Convert tokens to intermediate representation.
+// TODO: Rename translateIR method to translateTokensToIR
 func (casm *Casm) translateIR(tokens *tokens) (out []IR) {
 	for !tokens.Empty() {
 		switch tokens.First().Kind {
@@ -110,7 +111,7 @@ func (casm *Casm) translateIR(tokens *tokens) (out []IR) {
 				})
 			} else {
 				// Intruction definition
-				exist, instDef := coppervm.GetInstDefByName(symbol.Text)
+				exist, instDef := GetInstructionByName(symbol.Text)
 				if !exist {
 					panic(fmt.Sprintf("%s: unknown instruction '%s'",
 						symbol.Location,

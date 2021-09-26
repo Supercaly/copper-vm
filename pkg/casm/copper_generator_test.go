@@ -3,7 +3,6 @@ package casm
 import (
 	"testing"
 
-	"github.com/Supercaly/coppervm/pkg/coppervm"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -79,7 +78,7 @@ func TestBindLabel(t *testing.T) {
 
 	label := binding{
 		Name:          "new_label",
-		EvaluatedWord: coppervm.WordU64(2),
+		EvaluatedWord: wordInstAddr(2),
 		Location:      FileLocation{},
 		IsLabel:       true,
 		Status:        bindingEvaluated,
@@ -105,7 +104,7 @@ func TestBindConst(t *testing.T) {
 			Status:        bindingEvaluated,
 			Name:          "str_const",
 			Value:         expression(ExpressionKindStringLit, `"test_str"`),
-			EvaluatedWord: coppervm.WordU64(0),
+			EvaluatedWord: wordMemoryAddr(0),
 			EvaluatedKind: ExpressionKindStringLit,
 			Location:      FileLocation{},
 			IsLabel:       false},
@@ -183,7 +182,7 @@ func TestBindMemory(t *testing.T) {
 	want := binding{
 		Status:        bindingEvaluated,
 		Name:          "new_mem",
-		EvaluatedWord: coppervm.WordU64(0),
+		EvaluatedWord: wordMemoryAddr(0),
 		Location:      FileLocation{},
 		IsLabel:       false,
 	}
@@ -192,14 +191,14 @@ func TestBindMemory(t *testing.T) {
 
 var evaluateExpressionsTests = []struct {
 	expr     Expression
-	res      coppervm.Word
+	res      word
 	hasError bool
 }{
-	{expr: expression(ExpressionKindNumLitInt, int64(10)), res: coppervm.WordU64(10)},
-	{expr: expression(ExpressionKindNumLitFloat, 2.3), res: coppervm.WordF64(2.3)},
-	{expr: expression(ExpressionKindStringLit, "str"), res: coppervm.WordI64(0)},
-	{expr: expression(ExpressionKindBinding, "a_bind"), res: coppervm.WordI64(3)},
-	{expr: expression(ExpressionKindBinding, "different_bind"), res: coppervm.WordI64(3), hasError: true},
+	{expr: expression(ExpressionKindNumLitInt, int64(10)), res: wordInt(10)},
+	{expr: expression(ExpressionKindNumLitFloat, 2.3), res: wordFloat(2.3)},
+	{expr: expression(ExpressionKindStringLit, "str"), res: wordMemoryAddr(0)},
+	{expr: expression(ExpressionKindBinding, "a_bind"), res: wordInt(3)},
+	{expr: expression(ExpressionKindBinding, "different_bind"), res: wordInstAddr(3), hasError: true},
 	{expr: expression(ExpressionKindByteList, []byte{1, 2, 3}), hasError: true},
 }
 
@@ -232,7 +231,7 @@ func TestEvaluateExpression(t *testing.T) {
 
 var binaryOpTests = []struct {
 	expr     Expression
-	res      coppervm.Word
+	res      word
 	hasError bool
 }{
 	// invalid binary op between types and float
@@ -428,27 +427,27 @@ var binaryOpTests = []struct {
 		Kind: BinaryOpKindPlus,
 		Lhs:  expressionP(ExpressionKindStringLit, "str1"),
 		Rhs:  expressionP(ExpressionKindStringLit, "str2"),
-	}), res: coppervm.WordI64(10)},
+	}), res: wordMemoryAddr(10)},
 	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
 		Kind: BinaryOpKindPlus,
 		Lhs:  expressionP(ExpressionKindNumLitInt, int64(2)),
 		Rhs:  expressionP(ExpressionKindNumLitFloat, 5.2),
-	}), res: coppervm.WordF64(7.2)},
+	}), res: wordFloat(7.2)},
 	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
 		Kind: BinaryOpKindMinus,
 		Lhs:  expressionP(ExpressionKindNumLitInt, int64(2)),
 		Rhs:  expressionP(ExpressionKindNumLitFloat, 5.2),
-	}), res: coppervm.WordF64(-3.2)},
+	}), res: wordFloat(-3.2)},
 	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
 		Kind: BinaryOpKindTimes,
 		Lhs:  expressionP(ExpressionKindNumLitInt, int64(2)),
 		Rhs:  expressionP(ExpressionKindNumLitFloat, 5.3),
-	}), res: coppervm.WordF64(10.6)},
+	}), res: wordFloat(10.6)},
 	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
 		Kind: BinaryOpKindDivide,
 		Lhs:  expressionP(ExpressionKindNumLitFloat, 5.0),
 		Rhs:  expressionP(ExpressionKindNumLitInt, int64(2)),
-	}), res: coppervm.WordF64(2.5)},
+	}), res: wordFloat(2.5)},
 	{expr: expression(ExpressionKindBinaryOp, BinaryOp{
 		Kind: BinaryOpKindDivide,
 		Lhs:  expressionP(ExpressionKindNumLitFloat, 5.0),
@@ -493,10 +492,10 @@ func TestEvaluateBinding(t *testing.T) {
 	}
 
 	word := cgen.evaluateBinding(cgen.Bindings[0], FileLocation{}).Word
-	assert.Equal(t, coppervm.WordU64(5), word)
+	assert.Equal(t, wordInt(5), word)
 
 	word = cgen.evaluateBinding(cgen.Bindings[0], FileLocation{}).Word
-	assert.Equal(t, coppervm.WordU64(5), word)
+	assert.Equal(t, wordInt(5), word)
 
 	func() {
 		defer func() { recover() }()

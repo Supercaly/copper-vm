@@ -66,7 +66,7 @@ func (gen *x86_64Generator) saveProgram() string {
 }
 
 func (gen *x86_64Generator) translateInstruction(inst InstructionIR) {
-	_, instDef := coppervm.GetInstDefByName(inst.Name)
+	_, instDef := GetInstructionByName(inst.Name)
 	switch instDef.Kind {
 	// Basic instructions
 	case coppervm.InstPush:
