@@ -23,7 +23,7 @@ func TestSaveProgramToFile(t *testing.T) {
 		{Casm{
 			OutputFile: "testdata/test.notasm",
 			Target:     BuildTargetX86_64,
-		}, false},
+		}, true},
 		{Casm{
 			OutputFile: "testdata/test.asm",
 			Target:     BuildTargetX86_64,

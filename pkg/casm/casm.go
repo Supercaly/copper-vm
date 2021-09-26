@@ -30,11 +30,10 @@ type Casm struct {
 	AddDebugSymbols bool
 }
 
-// Translate a copper assembly file to copper vm's binary.
+// Translate a casm file to target binary.
 // Given a file path this function will read it and generate
 // the correct program in-memory.
-// Use TranslateSource is you already have a source string.
-// Use SaveProgramToFile to save the program to binary file.
+// Use SaveProgramToFile to save that program to file.
 func (casm *Casm) TranslateSourceFile(filePath string) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -44,7 +43,7 @@ func (casm *Casm) TranslateSourceFile(filePath string) (err error) {
 
 	source := readSourceFile(filePath)
 
-	internal.DebugPrint("[INFO]: Building program '%s'\n", filePath)
+	internal.DebugPrint("[INFO]: building program form file '%s'...\n", filePath)
 
 	// Tokenize the source
 	tokens := tokenize(source, filePath)
@@ -52,19 +51,38 @@ func (casm *Casm) TranslateSourceFile(filePath string) (err error) {
 	// Create intermediate representation
 	irs := casm.translateTokensToIR(&tokens)
 
-	// Generate the program depending on the build target
-	switch casm.Target {
-	case BuildTargetCopper:
-		casm.copperGen.generateProgram(irs)
-	case BuildTargetX86_64:
-		casm.x86_64Gen.generateProgram(irs)
-	}
+	// Translate intermediate representation
+	casm.TranslateIntermediateRep(irs)
 
-	internal.DebugPrint("[INFO]: Built program '%s'\n", filePath)
 	return err
 }
 
-// Save a copper vm program to binary file.
+// Translate an Intermediate Representation to an in-memory program.
+// Use SaveProgramToFile to save that program to file.
+func (casm *Casm) TranslateIntermediateRep(ir []IR) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("%s", r)
+		}
+	}()
+
+	internal.DebugPrint("[INFO]: building program...\n")
+
+	// Generate the program depending on the build target
+	switch casm.Target {
+	case BuildTargetCopper:
+		casm.copperGen.generateProgram(ir)
+	case BuildTargetX86_64:
+		casm.x86_64Gen.generateProgram(ir)
+	}
+
+	internal.DebugPrint("[INFO]: program built!\n")
+	return err
+}
+
+// Save an in-memory program to a file.
+// Use TranslateSourceFile or TranslateIntermediateRep to
+// generate that in-memory program.
 func (casm *Casm) SaveProgramToFile() (err error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -82,6 +100,9 @@ func (casm *Casm) SaveProgramToFile() (err error) {
 		}
 	case BuildTargetX86_64:
 		programSource = casm.x86_64Gen.saveProgram()
+		if filepath.Ext(casm.OutputFile) != ".asm" {
+			panic(fmt.Errorf("file '%s' is not a valid %s file", casm.OutputFile, ".asm"))
+		}
 	}
 
 	// save program to file
