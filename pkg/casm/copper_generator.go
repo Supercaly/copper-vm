@@ -9,20 +9,20 @@ import (
 )
 
 type copperGenerator struct {
-	Bindings            []binding
-	DeferredOperands    []deferredOperand
+	bindings            []binding
+	deferredOperands    []deferredOperand
 	deferredExpressions map[int]Expression
 
-	Program []Instruction
+	program []Instruction
 
-	HasEntry          bool
-	Entry             int
-	EntryLocation     FileLocation
-	DeferredEntryName string
+	hasEntry          bool
+	entry             int
+	entryLocation     FileLocation
+	deferredEntryName string
 
-	Memory []byte
+	memory []byte
 
-	StringLengths map[int]int
+	stringLengths map[int]int
 }
 
 // Generate a string file for the program.
@@ -30,18 +30,18 @@ func (cg *copperGenerator) saveProgram(addDebugSymbols bool) string {
 	var dbSymbols coppervm.DebugSymbols
 	// Append debug symbols
 	if addDebugSymbols {
-		for _, b := range cg.Bindings {
-			if b.IsLabel {
+		for _, b := range cg.bindings {
+			if b.isLabel {
 				dbSymbols = append(dbSymbols, coppervm.DebugSymbol{
-					Name:    b.Name,
-					Address: coppervm.InstAddr(b.EvaluatedWord.asInstAddr),
+					Name:    b.name,
+					Address: coppervm.InstAddr(b.evaluatedWord.asInstAddr),
 				})
 			}
 		}
 	}
 
 	var prog []coppervm.InstDef
-	for _, i := range cg.Program {
+	for _, i := range cg.program {
 		prog = append(prog, coppervm.InstDef{
 			Kind:       i.Kind,
 			HasOperand: i.HasOperand,
@@ -49,7 +49,7 @@ func (cg *copperGenerator) saveProgram(addDebugSymbols bool) string {
 			Operand:    i.Operand.toCoppervmWord(),
 		})
 	}
-	meta := coppervm.FileMeta(cg.Entry, prog, cg.Memory, dbSymbols)
+	meta := coppervm.FileMeta(cg.entry, prog, cg.memory, dbSymbols)
 	metaJson, err := json.Marshal(meta)
 	if err != nil {
 		panic(fmt.Errorf("error writing program to file %s", err))
@@ -72,23 +72,23 @@ func (cgen *copperGenerator) firstPass(irs []IR) {
 	for _, ir := range irs {
 		switch ir.Kind {
 		case IRKindLabel:
-			cgen.bindLabel(ir.AsLabel, len(cgen.Program), ir.Location)
+			cgen.bindLabel(ir.AsLabel, len(cgen.program), ir.Location)
 		case IRKindInstruction:
 			inst := ir.AsInstruction
 			_, instDef := GetInstructionByName(inst.Name)
 
 			if instDef.HasOperand {
 				if isExpressionBinding(inst.Operand) {
-					cgen.pushDeferredOperandFromExpression(inst.Operand, len(cgen.Program), ir.Location)
+					cgen.pushDeferredOperandFromExpression(inst.Operand, len(cgen.program), ir.Location)
 					if cgen.deferredExpressions == nil {
 						cgen.deferredExpressions = make(map[int]Expression)
 					}
-					cgen.deferredExpressions[len(cgen.Program)] = inst.Operand
+					cgen.deferredExpressions[len(cgen.program)] = inst.Operand
 				} else {
 					instDef.Operand = cgen.evaluateExpression(inst.Operand, ir.Location).Word
 				}
 			}
-			cgen.Program = append(cgen.Program, instDef)
+			cgen.program = append(cgen.program, instDef)
 		case IRKindEntry:
 			cgen.bindEntry(ir.AsEntry, ir.Location)
 		case IRKindConst:
@@ -111,7 +111,7 @@ func (cgen *copperGenerator) pushDeferredOperandFromExpression(expr Expression, 
 		cgen.pushDeferredOperandFromExpression(*expr.AsBinaryOp.Lhs, address, location)
 		cgen.pushDeferredOperandFromExpression(*expr.AsBinaryOp.Rhs, address, location)
 	case ExpressionKindBinding:
-		cgen.DeferredOperands = append(cgen.DeferredOperands, deferredOperand{
+		cgen.deferredOperands = append(cgen.deferredOperands, deferredOperand{
 			Name:     expr.AsBinding,
 			Address:  address,
 			Location: location,
@@ -143,7 +143,7 @@ func isExpressionBinding(expr Expression) (ret bool) {
 
 // Do the second pass in the parsing process.
 func (cgen *copperGenerator) secondPass() {
-	for _, deferredOp := range cgen.DeferredOperands {
+	for _, deferredOp := range cgen.deferredOperands {
 		exist, binding := cgen.getBindingByName(deferredOp.Name)
 		if !exist {
 			panic(fmt.Sprintf("%s: unknown binding '%s'",
@@ -156,37 +156,37 @@ func (cgen *copperGenerator) secondPass() {
 		if expr, ok = cgen.deferredExpressions[deferredOp.Address]; !ok {
 			panic(fmt.Sprintf("%s: cannot find deferred expression at address '%d'", deferredOp.Location, deferredOp.Address))
 		}
-		cgen.Program[deferredOp.Address].Operand = cgen.evaluateExpression(expr, deferredOp.Location).Word
+		cgen.program[deferredOp.Address].Operand = cgen.evaluateExpression(expr, deferredOp.Location).Word
 	}
 
 	// Print all the bindings
 	if internal.DebugPrintEnabled() {
 		internal.DebugPrint("[INFO]: bindings:\n")
-		for _, b := range cgen.Bindings {
+		for _, b := range cgen.bindings {
 			internal.DebugPrint("  %s\n", b)
 		}
 	}
 
 	// Resolve entry point
-	if cgen.HasEntry && cgen.DeferredEntryName != "" {
-		exist, binding := cgen.getBindingByName(cgen.DeferredEntryName)
+	if cgen.hasEntry && cgen.deferredEntryName != "" {
+		exist, binding := cgen.getBindingByName(cgen.deferredEntryName)
 		if !exist {
 			panic(fmt.Sprintf("%s: unknown binding '%s'",
-				cgen.EntryLocation,
-				cgen.DeferredEntryName))
+				cgen.entryLocation,
+				cgen.deferredEntryName))
 		}
 
-		if binding.Value.Kind != ExpressionKindNumLitInt {
+		if binding.value.Kind != ExpressionKindNumLitInt {
 			panic(fmt.Sprintf("%s: only label names can be set as entry point",
-				cgen.EntryLocation))
+				cgen.entryLocation))
 		}
-		entry := cgen.evaluateBinding(binding, cgen.EntryLocation).Word
-		cgen.Entry = int(entry.asInt)
+		entry := cgen.evaluateBinding(binding, cgen.entryLocation).Word
+		cgen.entry = int(entry.asInt)
 	}
 
 	// Check if at least one halt instruction exists
 	hasHalt := false
-	for _, inst := range cgen.Program {
+	for _, inst := range cgen.program {
 		if inst.Kind == coppervm.InstHalt {
 			hasHalt = true
 		}
@@ -200,8 +200,8 @@ func (cgen *copperGenerator) secondPass() {
 // If the binding exist the first return parameter will be true,
 // otherwise it'll be null.
 func (cgen *copperGenerator) getBindingByName(name string) (bool, binding) {
-	for _, b := range cgen.Bindings {
-		if b.Name == name {
+	for _, b := range cgen.bindings {
+		if b.name == name {
 			return true, b
 		}
 	}
@@ -211,8 +211,8 @@ func (cgen *copperGenerator) getBindingByName(name string) (bool, binding) {
 // Returns the index of a binding by it's name.
 // If the binding doesn't exist -1 is returned.
 func (cgen *copperGenerator) getBindingIndexByName(name string) int {
-	for idx, b := range cgen.Bindings {
-		if b.Name == name {
+	for idx, b := range cgen.bindings {
+		if b.name == name {
 			return idx
 		}
 	}
@@ -226,16 +226,16 @@ func (cgen *copperGenerator) bindLabel(label LabelIR, address int, location File
 		panic(fmt.Sprintf("%s: label name '%s' is already bound at location '%s'",
 			location,
 			label.Name,
-			b.Location))
+			b.location))
 	}
 
-	cgen.Bindings = append(cgen.Bindings, binding{
-		Status:        bindingEvaluated,
-		Name:          label.Name,
-		EvaluatedWord: wordInstAddr(int64(address)),
-		EvaluatedKind: ExpressionKindNumLitInt,
-		Location:      location,
-		IsLabel:       true,
+	cgen.bindings = append(cgen.bindings, binding{
+		status:        bindingEvaluated,
+		name:          label.Name,
+		evaluatedWord: wordInstAddr(int64(address)),
+		evaluatedKind: ExpressionKindNumLitInt,
+		location:      location,
+		isLabel:       true,
 	})
 }
 
@@ -246,39 +246,39 @@ func (cgen *copperGenerator) bindConst(constIR ConstIR, location FileLocation) {
 		panic(fmt.Sprintf("%s: constant name '%s' is already bound at location '%s'",
 			location,
 			constIR.Name,
-			b.Location))
+			b.location))
 	}
 
 	newBinding := binding{
-		Status:   bindingUnevaluated,
-		Name:     constIR.Name,
-		Value:    constIR.Value,
-		Location: location,
-		IsLabel:  false,
+		status:   bindingUnevaluated,
+		name:     constIR.Name,
+		value:    constIR.Value,
+		location: location,
+		isLabel:  false,
 	}
 
 	// If it's a const string push it in memory and bind his base address
 	if constIR.Value.Kind == ExpressionKindStringLit {
 		baseAddr := cgen.pushStringToMemory(constIR.Value.AsStringLit)
-		newBinding.EvaluatedWord = wordMemoryAddr(int64(baseAddr))
-		newBinding.Status = bindingEvaluated
-		newBinding.EvaluatedKind = ExpressionKindStringLit
+		newBinding.evaluatedWord = wordMemoryAddr(int64(baseAddr))
+		newBinding.status = bindingEvaluated
+		newBinding.evaluatedKind = ExpressionKindStringLit
 	}
 
-	cgen.Bindings = append(cgen.Bindings, newBinding)
+	cgen.bindings = append(cgen.bindings, newBinding)
 }
 
 // Binds an entry point.
 func (cgen *copperGenerator) bindEntry(entry EntryIR, location FileLocation) {
-	if cgen.HasEntry {
+	if cgen.hasEntry {
 		panic(fmt.Sprintf("%s: entry point is already set to '%s'",
 			location,
-			cgen.EntryLocation))
+			cgen.entryLocation))
 	}
 
-	cgen.DeferredEntryName = entry.Name
-	cgen.HasEntry = true
-	cgen.EntryLocation = location
+	cgen.deferredEntryName = entry.Name
+	cgen.hasEntry = true
+	cgen.entryLocation = location
 }
 
 // Binds a memory definition.
@@ -288,23 +288,23 @@ func (cgen *copperGenerator) bindMemory(memory MemoryIR, location FileLocation) 
 		panic(fmt.Sprintf("%s: memory name '%s' is already bound at location '%s'",
 			location,
 			memory.Name,
-			b.Location))
+			b.location))
 	}
 
 	if memory.Value.Kind != ExpressionKindByteList {
 		panic(fmt.Sprintf("%s: expected '%s' but got '%s'",
 			location, ExpressionKindByteList, memory.Value.Kind))
 	}
-	memAddr := len(cgen.Memory)
-	cgen.Memory = append(cgen.Memory, memory.Value.AsByteList...)
+	memAddr := len(cgen.memory)
+	cgen.memory = append(cgen.memory, memory.Value.AsByteList...)
 
-	cgen.Bindings = append(cgen.Bindings, binding{
-		Status:        bindingEvaluated,
-		Name:          memory.Name,
-		EvaluatedWord: wordMemoryAddr(int64(memAddr)),
-		EvaluatedKind: ExpressionKindNumLitInt,
-		Location:      location,
-		IsLabel:       false,
+	cgen.bindings = append(cgen.bindings, binding{
+		status:        bindingEvaluated,
+		name:          memory.Name,
+		evaluatedWord: wordMemoryAddr(int64(memAddr)),
+		evaluatedKind: ExpressionKindNumLitInt,
+		location:      location,
+		isLabel:       false,
 	})
 }
 
@@ -316,23 +316,23 @@ type evalResult struct {
 
 // Evaluate a binding to extract am eval result.
 func (cgen *copperGenerator) evaluateBinding(binding binding, location FileLocation) (ret evalResult) {
-	switch binding.Status {
+	switch binding.status {
 	case bindingUnevaluated:
-		idx := cgen.getBindingIndexByName(binding.Name)
+		idx := cgen.getBindingIndexByName(binding.name)
 		if idx == -1 {
-			panic(fmt.Sprintf("%s: cannot find index binding %s", location, binding.Name))
+			panic(fmt.Sprintf("%s: cannot find index binding %s", location, binding.name))
 		}
-		cgen.Bindings[idx].Status = bindingEvaluating
-		ret = cgen.evaluateExpression(binding.Value, location)
-		cgen.Bindings[idx].Status = bindingEvaluated
-		cgen.Bindings[idx].EvaluatedWord = ret.Word
-		cgen.Bindings[idx].EvaluatedKind = ret.Type
+		cgen.bindings[idx].status = bindingEvaluating
+		ret = cgen.evaluateExpression(binding.value, location)
+		cgen.bindings[idx].status = bindingEvaluated
+		cgen.bindings[idx].evaluatedWord = ret.Word
+		cgen.bindings[idx].evaluatedKind = ret.Type
 	case bindingEvaluating:
 		panic(fmt.Sprintf("%s: cycling binding definition detected", location))
 	case bindingEvaluated:
 		ret = evalResult{
-			binding.EvaluatedWord,
-			binding.EvaluatedKind,
+			binding.evaluatedWord,
+			binding.evaluatedKind,
 		}
 	}
 	internal.DebugPrint("[INFO]: evaluated binding with result %s\n", ret)
@@ -447,15 +447,15 @@ func (cgen *copperGenerator) evaluateBinaryOp(binop Expression, location FileLoc
 
 // Push a string to memory and return the base address.
 func (cgen *copperGenerator) pushStringToMemory(str string) int {
-	strBase := len(cgen.Memory)
+	strBase := len(cgen.memory)
 	byteStr := []byte(str)
 	byteStr = append(byteStr, 0)
-	cgen.Memory = append(cgen.Memory, byteStr...)
+	cgen.memory = append(cgen.memory, byteStr...)
 
-	if cgen.StringLengths == nil {
-		cgen.StringLengths = make(map[int]int)
+	if cgen.stringLengths == nil {
+		cgen.stringLengths = make(map[int]int)
 	}
-	cgen.StringLengths[strBase] = len(byteStr)
+	cgen.stringLengths[strBase] = len(byteStr)
 	return strBase
 }
 
@@ -463,10 +463,10 @@ func (cgen *copperGenerator) pushStringToMemory(str string) int {
 // null termination.
 // If the string doesn't exist an empty string is returned.
 func (cgen *copperGenerator) getStringByAddress(addr int) string {
-	strLen := cgen.StringLengths[addr]
+	strLen := cgen.stringLengths[addr]
 	if strLen == 0 {
 		return ""
 	}
-	strBytes := cgen.Memory[addr : addr+strLen-1]
+	strBytes := cgen.memory[addr : addr+strLen-1]
 	return string(strBytes[:])
 }

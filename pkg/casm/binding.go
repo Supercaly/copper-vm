@@ -5,23 +5,23 @@ import (
 )
 
 type binding struct {
-	Status        bindingStatus
-	Name          string
-	Value         Expression
-	EvaluatedWord word
-	EvaluatedKind ExpressionKind
-	Location      FileLocation
-	IsLabel       bool
+	status        bindingStatus
+	name          string
+	value         Expression
+	evaluatedWord word
+	evaluatedKind ExpressionKind
+	location      FileLocation
+	isLabel       bool
 }
 
 func (b binding) String() string {
 	return fmt.Sprintf("%s %s (%s) %s %s %t",
-		b.Name,
-		b.Value,
-		b.EvaluatedWord,
-		b.Status,
-		b.Location,
-		b.IsLabel)
+		b.name,
+		b.value,
+		b.evaluatedWord,
+		b.status,
+		b.location,
+		b.isLabel)
 }
 
 type bindingStatus int

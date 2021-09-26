@@ -8,25 +8,25 @@ import (
 
 func TestGetBindingByName(t *testing.T) {
 	cgen := copperGenerator{
-		Bindings: []binding{
-			{Name: "a_label",
-				Value:    expression(ExpressionKindNumLitInt, int64(1)),
-				Location: FileLocation{},
-				IsLabel:  true},
-			{Name: "a_const",
-				Value:    expression(ExpressionKindNumLitFloat, 2.3),
-				Location: FileLocation{},
-				IsLabel:  false},
+		bindings: []binding{
+			{name: "a_label",
+				value:    expression(ExpressionKindNumLitInt, int64(1)),
+				location: FileLocation{},
+				isLabel:  true},
+			{name: "a_const",
+				value:    expression(ExpressionKindNumLitFloat, 2.3),
+				location: FileLocation{},
+				isLabel:  false},
 		},
 	}
 
 	exist, binding := cgen.getBindingByName("a_label")
 	assert.True(t, exist)
-	assert.Equal(t, cgen.Bindings[0], binding)
+	assert.Equal(t, cgen.bindings[0], binding)
 
 	exist, binding = cgen.getBindingByName("a_const")
 	assert.True(t, exist)
-	assert.Equal(t, cgen.Bindings[1], binding)
+	assert.Equal(t, cgen.bindings[1], binding)
 
 	exist, binding = cgen.getBindingByName("test")
 	assert.False(t, exist)
@@ -34,15 +34,15 @@ func TestGetBindingByName(t *testing.T) {
 
 func TestGetBindingIndexByName(t *testing.T) {
 	cgen := copperGenerator{
-		Bindings: []binding{
-			{Name: "a_label",
-				Value:    expression(ExpressionKindNumLitInt, int64(1)),
-				Location: FileLocation{},
-				IsLabel:  true},
-			{Name: "a_const",
-				Value:    expression(ExpressionKindNumLitFloat, 2.3),
-				Location: FileLocation{},
-				IsLabel:  false},
+		bindings: []binding{
+			{name: "a_label",
+				value:    expression(ExpressionKindNumLitInt, int64(1)),
+				location: FileLocation{},
+				isLabel:  true},
+			{name: "a_const",
+				value:    expression(ExpressionKindNumLitFloat, 2.3),
+				location: FileLocation{},
+				isLabel:  false},
 		},
 	}
 
@@ -58,11 +58,11 @@ func TestGetBindingIndexByName(t *testing.T) {
 
 func TestBindLabel(t *testing.T) {
 	cgen := copperGenerator{
-		Bindings: []binding{
-			{Name: "a_label",
-				Value:    expression(ExpressionKindNumLitInt, int64(1)),
-				Location: FileLocation{},
-				IsLabel:  true},
+		bindings: []binding{
+			{name: "a_label",
+				value:    expression(ExpressionKindNumLitInt, int64(1)),
+				location: FileLocation{},
+				isLabel:  true},
 		},
 	}
 
@@ -77,11 +77,11 @@ func TestBindLabel(t *testing.T) {
 	assert.True(t, exist)
 
 	label := binding{
-		Name:          "new_label",
-		EvaluatedWord: wordInstAddr(2),
-		Location:      FileLocation{},
-		IsLabel:       true,
-		Status:        bindingEvaluated,
+		name:          "new_label",
+		evaluatedWord: wordInstAddr(2),
+		location:      FileLocation{},
+		isLabel:       true,
+		status:        bindingEvaluated,
 	}
 	assert.Equal(t, label, b)
 }
@@ -95,19 +95,19 @@ func TestBindConst(t *testing.T) {
 	}{
 		{constIR: ConstIR{Name: "a_const", Value: expression(ExpressionKindNumLitInt, int64(1))}, hasError: true},
 		{constIR: ConstIR{Name: "new_const", Value: expression(ExpressionKindNumLitInt, int64(2))}, hasError: false, binding: binding{
-			Name:     "new_const",
-			Value:    expression(ExpressionKindNumLitInt, int64(2)),
-			Location: FileLocation{},
-			IsLabel:  false},
+			name:     "new_const",
+			value:    expression(ExpressionKindNumLitInt, int64(2)),
+			location: FileLocation{},
+			isLabel:  false},
 		},
 		{constIR: ConstIR{Name: "str_const", Value: expression(ExpressionKindStringLit, `"test_str"`)}, hasError: false, binding: binding{
-			Status:        bindingEvaluated,
-			Name:          "str_const",
-			Value:         expression(ExpressionKindStringLit, `"test_str"`),
-			EvaluatedWord: wordMemoryAddr(0),
-			EvaluatedKind: ExpressionKindStringLit,
-			Location:      FileLocation{},
-			IsLabel:       false},
+			status:        bindingEvaluated,
+			name:          "str_const",
+			value:         expression(ExpressionKindStringLit, `"test_str"`),
+			evaluatedWord: wordMemoryAddr(0),
+			evaluatedKind: ExpressionKindStringLit,
+			location:      FileLocation{},
+			isLabel:       false},
 			memoryLength: 11,
 		},
 	}
@@ -122,11 +122,11 @@ func TestBindConst(t *testing.T) {
 			}()
 
 			cgen := copperGenerator{
-				Bindings: []binding{
-					{Name: "a_const",
-						Value:    Expression{Kind: ExpressionKindNumLitInt, AsNumLitInt: 1},
-						Location: FileLocation{},
-						IsLabel:  false},
+				bindings: []binding{
+					{name: "a_const",
+						value:    Expression{Kind: ExpressionKindNumLitInt, AsNumLitInt: 1},
+						location: FileLocation{},
+						isLabel:  false},
 				},
 			}
 			cgen.bindConst(test.constIR, FileLocation{})
@@ -137,7 +137,7 @@ func TestBindConst(t *testing.T) {
 				exist, binding := cgen.getBindingByName(test.constIR.Name)
 				assert.True(t, exist, test)
 				assert.Equal(t, test.binding, binding, test)
-				assert.Equal(t, test.memoryLength, len(cgen.Memory), test)
+				assert.Equal(t, test.memoryLength, len(cgen.memory), test)
 			}
 		}()
 	}
@@ -147,25 +147,25 @@ func TestBindEntry(t *testing.T) {
 	func() {
 		cgen := copperGenerator{}
 		defer func() { recover() }()
-		cgen.HasEntry = true
+		cgen.hasEntry = true
 		cgen.bindEntry(EntryIR{"main"}, FileLocation{})
 		assert.Fail(t, "expecting an error")
 	}()
 
 	cgen := copperGenerator{}
 	cgen.bindEntry(EntryIR{"entry"}, fileLocation(10, 0))
-	assert.True(t, cgen.HasEntry)
-	assert.Equal(t, "entry", cgen.DeferredEntryName)
-	assert.Equal(t, 10, cgen.EntryLocation.Row)
+	assert.True(t, cgen.hasEntry)
+	assert.Equal(t, "entry", cgen.deferredEntryName)
+	assert.Equal(t, 10, cgen.entryLocation.Row)
 }
 
 func TestBindMemory(t *testing.T) {
 	cgen := copperGenerator{
-		Bindings: []binding{
-			{Name: "mem",
-				Value:    expression(ExpressionKindNumLitInt, int64(0)),
-				Location: FileLocation{},
-				IsLabel:  false},
+		bindings: []binding{
+			{name: "mem",
+				value:    expression(ExpressionKindNumLitInt, int64(0)),
+				location: FileLocation{},
+				isLabel:  false},
 		},
 	}
 
@@ -180,11 +180,11 @@ func TestBindMemory(t *testing.T) {
 	assert.True(t, exist)
 
 	want := binding{
-		Status:        bindingEvaluated,
-		Name:          "new_mem",
-		EvaluatedWord: wordMemoryAddr(0),
-		Location:      FileLocation{},
-		IsLabel:       false,
+		status:        bindingEvaluated,
+		name:          "new_mem",
+		evaluatedWord: wordMemoryAddr(0),
+		location:      FileLocation{},
+		isLabel:       false,
 	}
 	assert.Equal(t, want, b)
 }
@@ -204,9 +204,9 @@ var evaluateExpressionsTests = []struct {
 
 func TestEvaluateExpression(t *testing.T) {
 	cgen := copperGenerator{}
-	cgen.Bindings = append(cgen.Bindings, binding{
-		Name:  "a_bind",
-		Value: expression(ExpressionKindNumLitInt, int64(3)),
+	cgen.bindings = append(cgen.bindings, binding{
+		name:  "a_bind",
+		value: expression(ExpressionKindNumLitInt, int64(3)),
 	})
 
 	for _, test := range evaluateExpressionsTests {
@@ -484,28 +484,28 @@ func TestEvaluateBinaryOp(t *testing.T) {
 
 func TestEvaluateBinding(t *testing.T) {
 	cgen := copperGenerator{
-		Bindings: []binding{
-			{Name: "a_bind", Value: expression(ExpressionKindNumLitInt, int64(5))},
-			{Name: "cycl1", Value: expression(ExpressionKindBinding, "cycl2")},
-			{Name: "cycl2", Value: expression(ExpressionKindBinding, "cycl1")},
+		bindings: []binding{
+			{name: "a_bind", value: expression(ExpressionKindNumLitInt, int64(5))},
+			{name: "cycl1", value: expression(ExpressionKindBinding, "cycl2")},
+			{name: "cycl2", value: expression(ExpressionKindBinding, "cycl1")},
 		},
 	}
 
-	word := cgen.evaluateBinding(cgen.Bindings[0], FileLocation{}).Word
+	word := cgen.evaluateBinding(cgen.bindings[0], FileLocation{}).Word
 	assert.Equal(t, wordInt(5), word)
 
-	word = cgen.evaluateBinding(cgen.Bindings[0], FileLocation{}).Word
+	word = cgen.evaluateBinding(cgen.bindings[0], FileLocation{}).Word
 	assert.Equal(t, wordInt(5), word)
 
 	func() {
 		defer func() { recover() }()
-		cgen.evaluateBinding(cgen.Bindings[1], FileLocation{})
+		cgen.evaluateBinding(cgen.bindings[1], FileLocation{})
 		assert.Fail(t, "expecting an error")
 	}()
 
 	func() {
 		defer func() { recover() }()
-		cgen.evaluateBinding(binding{Name: "bind"}, FileLocation{})
+		cgen.evaluateBinding(binding{name: "bind"}, FileLocation{})
 		assert.Fail(t, "expecting an error")
 	}()
 }
@@ -515,11 +515,11 @@ func TestPushStringToMemory(t *testing.T) {
 
 	strAddr := cgen.pushStringToMemory("string1")
 	assert.Equal(t, 0, strAddr)
-	assert.Equal(t, 8, cgen.StringLengths[0])
+	assert.Equal(t, 8, cgen.stringLengths[0])
 
 	strAddr = cgen.pushStringToMemory("a different string")
 	assert.Equal(t, 8, strAddr)
-	assert.Equal(t, 19, cgen.StringLengths[8])
+	assert.Equal(t, 19, cgen.stringLengths[8])
 }
 
 func TestGetStringByAddress(t *testing.T) {
@@ -528,7 +528,7 @@ func TestGetStringByAddress(t *testing.T) {
 	s1 := cgen.getStringByAddress(l1)
 	assert.NotEmpty(t, s1)
 	assert.Equal(t, "string1", s1)
-	assert.Len(t, cgen.Memory, 8)
+	assert.Len(t, cgen.memory, 8)
 
 	s2 := cgen.getStringByAddress(1)
 	assert.Empty(t, s2)

@@ -96,25 +96,25 @@ func (casm *Casm) SaveProgramToFile() (err error) {
 // Convert tokens to intermediate representation.
 func (casm *Casm) translateTokensToIR(tokens *tokens) (out []IR) {
 	for !tokens.Empty() {
-		switch tokens.First().Kind {
+		switch tokens.First().kind {
 		case tokenKindSymbol:
 			symbol := tokens.Pop()
 
-			if !tokens.Empty() && tokens.First().Kind == tokenKindColon {
+			if !tokens.Empty() && tokens.First().kind == tokenKindColon {
 				// Label definition
 				tokens.Pop()
 				out = append(out, IR{
 					Kind:     IRKindLabel,
-					AsLabel:  LabelIR{symbol.Text},
-					Location: symbol.Location,
+					AsLabel:  LabelIR{symbol.text},
+					Location: symbol.location,
 				})
 			} else {
 				// Intruction definition
-				exist, instDef := GetInstructionByName(symbol.Text)
+				exist, instDef := GetInstructionByName(symbol.text)
 				if !exist {
 					panic(fmt.Sprintf("%s: unknown instruction '%s'",
-						symbol.Location,
-						symbol.Text))
+						symbol.location,
+						symbol.text))
 				}
 
 				var operand Expression
@@ -128,7 +128,7 @@ func (casm *Casm) translateTokensToIR(tokens *tokens) (out []IR) {
 						Operand:    operand,
 						HasOperand: instDef.HasOperand,
 					},
-					Location: symbol.Location,
+					Location: symbol.location,
 				})
 			}
 			if len(*tokens) != 0 {
@@ -139,7 +139,7 @@ func (casm *Casm) translateTokensToIR(tokens *tokens) (out []IR) {
 			directive := tokens.Pop()
 			tokens.expectTokenKind(tokenKindSymbol)
 
-			directiveName := tokens.Pop().Text
+			directiveName := tokens.Pop().text
 			switch directiveName {
 			case "entry":
 				tokens.expectTokenKindMsg(tokenKindSymbol, "no name given to entry directive")
@@ -147,9 +147,9 @@ func (casm *Casm) translateTokensToIR(tokens *tokens) (out []IR) {
 				out = append(out, IR{
 					Kind: IRKindEntry,
 					AsEntry: EntryIR{
-						Name: name.Text,
+						Name: name.text,
 					},
-					Location: directive.Location,
+					Location: directive.location,
 				})
 			case "const":
 				tokens.expectTokenKindMsg(tokenKindSymbol, "no name given to const directive")
@@ -159,10 +159,10 @@ func (casm *Casm) translateTokensToIR(tokens *tokens) (out []IR) {
 				out = append(out, IR{
 					Kind: IRKindConst,
 					AsConst: ConstIR{
-						Name:  name.Text,
+						Name:  name.text,
 						Value: expr,
 					},
-					Location: directive.Location,
+					Location: directive.location,
 				})
 			case "memory":
 				tokens.expectTokenKindMsg(tokenKindSymbol, "no name given to memory directive")
@@ -172,28 +172,28 @@ func (casm *Casm) translateTokensToIR(tokens *tokens) (out []IR) {
 				out = append(out, IR{
 					Kind: IRKindMemory,
 					AsMemory: MemoryIR{
-						Name:  name.Text,
+						Name:  name.text,
 						Value: expr,
 					},
-					Location: directive.Location,
+					Location: directive.location,
 				})
 			case "include":
 				tokens.expectTokenKindMsg(tokenKindStringLit, "no path given to include directive")
 				includePath := tokens.Pop()
-				out = append(out, casm.translateInclude(includePath.Text, includePath.Location)...)
+				out = append(out, casm.translateInclude(includePath.text, includePath.location)...)
 			default:
-				panic(fmt.Sprintf("%s: unknown directive '%s'", directive.Location, directiveName))
+				panic(fmt.Sprintf("%s: unknown directive '%s'", directive.location, directiveName))
 			}
 			if len(*tokens) != 0 {
 				tokens.expectTokenKind(tokenKindNewLine)
 				tokens.Pop()
 			}
 		case tokenKindColon:
-			panic(fmt.Sprintf("%s: empty labels are not supported", tokens.First().Location))
+			panic(fmt.Sprintf("%s: empty labels are not supported", tokens.First().location))
 		case tokenKindNewLine:
 			tokens.Pop()
 		default:
-			panic(fmt.Sprintf("%s: unsupported line start '%s'", tokens.First().Location, tokens.First().Kind))
+			panic(fmt.Sprintf("%s: unsupported line start '%s'", tokens.First().location, tokens.First().kind))
 		}
 	}
 
