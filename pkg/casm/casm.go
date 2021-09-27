@@ -89,7 +89,7 @@ func (casm *Casm) TranslateIntermediateRep(ir []IR) (err error) {
 	switch casm.Target {
 	case BuildTargetCopper:
 		casm.copperGen.generateProgram()
-	case BuildTargetX86_64:
+	case BuildTargetX86_64Linux:
 		casm.x86_64Gen.generateProgram()
 	}
 
@@ -115,7 +115,7 @@ func (casm *Casm) SaveProgramToFile() (err error) {
 		if filepath.Ext(casm.OutputFile) != coppervm.CoppervmFileExtention {
 			panic(fmt.Errorf("file '%s' is not a valid %s file", casm.OutputFile, coppervm.CoppervmFileExtention))
 		}
-	case BuildTargetX86_64:
+	case BuildTargetX86_64Linux:
 		programSource = casm.x86_64Gen.saveProgram()
 		if filepath.Ext(casm.OutputFile) != ".asm" {
 			panic(fmt.Errorf("file '%s' is not a valid %s file", casm.OutputFile, ".asm"))

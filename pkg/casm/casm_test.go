@@ -27,13 +27,13 @@ func TestSaveProgramToFile(t *testing.T) {
 		}, false},
 		{Casm{
 			OutputFile:  "testdata/test.notasm",
-			Target:      BuildTargetX86_64,
+			Target:      BuildTargetX86_64Linux,
 			internalRep: &intRep,
 			copperGen:   copperGenerator{rep: &intRep},
 		}, true},
 		{Casm{
 			OutputFile:  "testdata/test.asm",
-			Target:      BuildTargetX86_64,
+			Target:      BuildTargetX86_64Linux,
 			internalRep: &intRep,
 			copperGen:   copperGenerator{rep: &intRep},
 		}, false},

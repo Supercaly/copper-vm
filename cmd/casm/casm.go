@@ -16,12 +16,12 @@ import (
 func usage(stream io.Writer, program string) {
 	fmt.Fprintf(stream, "Usage: %s [OPTIONS] <input.copper>\n", program)
 	fmt.Fprintf(stream, "[OPTIONS]: \n")
-	fmt.Fprintf(stream, "    -t [copper|x86-64]   Select the build target (default copper).\n")
-	fmt.Fprintf(stream, "    -I <include/path>    Add include path.\n")
-	fmt.Fprintf(stream, "    -o <out.vm>          Specify the output path.\n")
-	fmt.Fprintf(stream, "    -d                   Add debug symbols to use with copperdb.\n")
-	fmt.Fprintf(stream, "    -v                   Print verbose output.\n")
-	fmt.Fprintf(stream, "    -h                   Print this help message.\n")
+	fmt.Fprintf(stream, "    -t [copper|x86-64linux]	Select the build target (default copper).\n")
+	fmt.Fprintf(stream, "    -I <include/path>    		Add include path.\n")
+	fmt.Fprintf(stream, "    -o <out.vm>          		Specify the output path.\n")
+	fmt.Fprintf(stream, "    -d                   		Add debug symbols to use with copperdb.\n")
+	fmt.Fprintf(stream, "    -v                   		Print verbose output.\n")
+	fmt.Fprintf(stream, "    -h                   		Print this help message.\n")
 }
 
 func main() {
@@ -47,8 +47,8 @@ func main() {
 			switch target {
 			case "copper":
 				casm.Target = c.BuildTargetCopper
-			case "x86-64":
-				casm.Target = c.BuildTargetX86_64
+			case "x86-64linux":
+				casm.Target = c.BuildTargetX86_64Linux
 			}
 		} else if flag == "-o" {
 			if len(args) == 0 {
