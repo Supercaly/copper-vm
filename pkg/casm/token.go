@@ -31,9 +31,9 @@ const (
 )
 
 type token struct {
-	Kind     tokenKind
-	Text     string
-	Location FileLocation
+	kind     tokenKind
+	text     string
+	location FileLocation
 }
 
 type tokens []token
@@ -67,8 +67,8 @@ func (t *tokens) expectTokenKind(kind tokenKind) {
 	if t.Empty() {
 		panic(fmt.Sprintf("expecting token '%s' but list is empty", kind))
 	}
-	if t.First().Kind != kind {
-		panic(fmt.Sprintf("%s: expecting token '%s' but got '%s'", t.First().Location, kind, t.First().Kind))
+	if t.First().kind != kind {
+		panic(fmt.Sprintf("%s: expecting token '%s' but got '%s'", t.First().location, kind, t.First().kind))
 	}
 }
 
@@ -78,8 +78,8 @@ func (t *tokens) expectTokenKindMsg(kind tokenKind, msg string) {
 	if t.Empty() {
 		panic(fmt.Sprintf("expecting token '%s' but list is empty", kind))
 	}
-	if t.First().Kind != kind {
-		panic(fmt.Sprintf("%s: %s", t.First().Location, msg))
+	if t.First().kind != kind {
+		panic(fmt.Sprintf("%s: %s", t.First().location, msg))
 	}
 }
 
@@ -101,52 +101,52 @@ func tokenize(source string, filePath string) (out tokens) {
 			location.Col += len(comment)
 		case '\n':
 			source = source[1:]
-			out = append(out, token{Kind: tokenKindNewLine, Location: location})
+			out = append(out, token{kind: tokenKindNewLine, location: location})
 			location.Row++
 			location.Col = 0
 		case '+':
 			source = source[1:]
-			out = append(out, token{Kind: tokenKindPlus, Location: location})
+			out = append(out, token{kind: tokenKindPlus, location: location})
 			location.Col++
 		case '-':
 			source = source[1:]
-			out = append(out, token{Kind: tokenKindMinus, Location: location})
+			out = append(out, token{kind: tokenKindMinus, location: location})
 			location.Col++
 		case '*':
 			source = source[1:]
-			out = append(out, token{Kind: tokenKindAsterisk, Location: location})
+			out = append(out, token{kind: tokenKindAsterisk, location: location})
 			location.Col++
 		case '/':
 			source = source[1:]
-			out = append(out, token{Kind: tokenKindSlash, Location: location})
+			out = append(out, token{kind: tokenKindSlash, location: location})
 			location.Col++
 		case '%':
 			source = source[1:]
-			out = append(out, token{Kind: tokenKindPercent, Location: location})
+			out = append(out, token{kind: tokenKindPercent, location: location})
 			location.Col++
 		case ',':
 			source = source[1:]
-			out = append(out, token{Kind: tokenKindComma, Location: location})
+			out = append(out, token{kind: tokenKindComma, location: location})
 			location.Col++
 		case ':':
 			source = source[1:]
-			out = append(out, token{Kind: tokenKindColon, Location: location})
+			out = append(out, token{kind: tokenKindColon, location: location})
 			location.Col++
 		case '(':
 			source = source[1:]
-			out = append(out, token{Kind: tokenKindOpenParen, Location: location})
+			out = append(out, token{kind: tokenKindOpenParen, location: location})
 			location.Col++
 		case ')':
 			source = source[1:]
-			out = append(out, token{Kind: tokenKindCloseParen, Location: location})
+			out = append(out, token{kind: tokenKindCloseParen, location: location})
 			location.Col++
 		case '[':
 			source = source[1:]
-			out = append(out, token{Kind: tokenKindOpenBracket, Location: location})
+			out = append(out, token{kind: tokenKindOpenBracket, location: location})
 			location.Col++
 		case ']':
 			source = source[1:]
-			out = append(out, token{Kind: tokenKindCloseBracket, Location: location})
+			out = append(out, token{kind: tokenKindCloseBracket, location: location})
 			location.Col++
 		case '"':
 			source = source[1:]
@@ -158,9 +158,9 @@ func tokenize(source string, filePath string) (out tokens) {
 					panic(fmt.Sprintf("%s: error tokenizing literal string '%s'", location, str))
 				}
 				out = append(out, token{
-					Kind:     tokenKindStringLit,
-					Text:     unquotedStr,
-					Location: location,
+					kind:     tokenKindStringLit,
+					text:     unquotedStr,
+					location: location,
 				})
 				// TODO: Location in not incremented correctly if there's a new line in the string
 				location.Col += len(unquotedStr) + 2
@@ -173,9 +173,9 @@ func tokenize(source string, filePath string) (out tokens) {
 				char, rest := internal.SplitByDelim(source, '\'')
 				source = rest[1:]
 				out = append(out, token{
-					Kind:     tokenKindCharLit,
-					Text:     char,
-					Location: location,
+					kind:     tokenKindCharLit,
+					text:     char,
+					location: location,
 				})
 				// TODO: Location in not incremented correctly if there's a new line in the char
 				location.Col += len(char) + 2
@@ -188,9 +188,9 @@ func tokenize(source string, filePath string) (out tokens) {
 				number, rest := internal.SplitWhile(source, isNumber)
 				source = rest
 				out = append(out, token{
-					Kind:     tokenKindNumLit,
-					Text:     number,
-					Location: location,
+					kind:     tokenKindNumLit,
+					text:     number,
+					location: location,
 				})
 				location.Col += len(number)
 			} else if isAlpha(rune(source[0])) {
@@ -198,9 +198,9 @@ func tokenize(source string, filePath string) (out tokens) {
 				symbol, rest := internal.SplitWhile(source, isAlpha)
 				source = rest
 				out = append(out, token{
-					Kind:     tokenKindSymbol,
-					Text:     symbol,
-					Location: location,
+					kind:     tokenKindSymbol,
+					text:     symbol,
+					location: location,
 				})
 				location.Col += len(symbol)
 			} else {
@@ -213,7 +213,7 @@ func tokenize(source string, filePath string) (out tokens) {
 	var newOut []token
 	var lastToken token
 	for _, t := range out {
-		if t.Kind != tokenKindNewLine || lastToken.Kind != tokenKindNewLine {
+		if t.kind != tokenKindNewLine || lastToken.kind != tokenKindNewLine {
 			newOut = append(newOut, t)
 		}
 		lastToken = t

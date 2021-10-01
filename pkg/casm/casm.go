@@ -21,6 +21,8 @@ type Casm struct {
 
 	Target BuildTarget
 
+	internalRep *internalRep
+
 	copperGen copperGenerator
 	x86_64Gen x86_64Generator
 
@@ -30,11 +32,21 @@ type Casm struct {
 	AddDebugSymbols bool
 }
 
-// Translate a copper assembly file to copper vm's binary.
+// Return a new instance of Casm.
+func NewCasm() Casm {
+	intRep := internalRep{}
+	casm := Casm{
+		internalRep: &intRep,
+	}
+	casm.copperGen.rep = &intRep
+	casm.x86_64Gen.rep = &intRep
+	return casm
+}
+
+// Translate a casm file to target binary.
 // Given a file path this function will read it and generate
 // the correct program in-memory.
-// Use TranslateSource is you already have a source string.
-// Use SaveProgramToFile to save the program to binary file.
+// Use SaveProgramToFile to save that program to file.
 func (casm *Casm) TranslateSourceFile(filePath string) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -44,27 +56,50 @@ func (casm *Casm) TranslateSourceFile(filePath string) (err error) {
 
 	source := readSourceFile(filePath)
 
-	internal.DebugPrint("[INFO]: Building program '%s'\n", filePath)
+	internal.DebugPrint("[INFO]: building program form file '%s'...\n", filePath)
 
 	// Tokenize the source
 	tokens := tokenize(source, filePath)
 
 	// Create intermediate representation
-	irs := casm.translateIR(&tokens)
+	irs := casm.translateTokensToIR(&tokens)
 
-	// Generate the program depending on the build target
-	switch casm.Target {
-	case BuildTargetCopper:
-		casm.copperGen.generateProgram(irs)
-	case BuildTargetX86_64:
-		casm.x86_64Gen.generateProgram(irs)
-	}
+	// Translate intermediate representation
+	casm.TranslateIntermediateRep(irs)
 
-	internal.DebugPrint("[INFO]: Built program '%s'\n", filePath)
 	return err
 }
 
-// Save a copper vm program to binary file.
+// Translate an Intermediate Representation to an in-memory program.
+// Use SaveProgramToFile to save that program to file.
+func (casm *Casm) TranslateIntermediateRep(ir []IR) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("%s", r)
+		}
+	}()
+
+	internal.DebugPrint("[INFO]: building program...\n")
+
+	// Generate an internal program from IR
+	casm.internalRep.firstPass(ir)
+	casm.internalRep.secondPass()
+
+	// Generate the output program depending on the build target
+	switch casm.Target {
+	case BuildTargetCopper:
+		casm.copperGen.generateProgram()
+	case BuildTargetX86_64Linux:
+		casm.x86_64Gen.generateProgram()
+	}
+
+	internal.DebugPrint("[INFO]: program built!\n")
+	return err
+}
+
+// Save an in-memory program to a file.
+// Use TranslateSourceFile or TranslateIntermediateRep to
+// generate that in-memory program.
 func (casm *Casm) SaveProgramToFile() (err error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -80,8 +115,11 @@ func (casm *Casm) SaveProgramToFile() (err error) {
 		if filepath.Ext(casm.OutputFile) != coppervm.CoppervmFileExtention {
 			panic(fmt.Errorf("file '%s' is not a valid %s file", casm.OutputFile, coppervm.CoppervmFileExtention))
 		}
-	case BuildTargetX86_64:
+	case BuildTargetX86_64Linux:
 		programSource = casm.x86_64Gen.saveProgram()
+		if filepath.Ext(casm.OutputFile) != ".asm" {
+			panic(fmt.Errorf("file '%s' is not a valid %s file", casm.OutputFile, ".asm"))
+		}
 	}
 
 	// save program to file
@@ -94,41 +132,41 @@ func (casm *Casm) SaveProgramToFile() (err error) {
 }
 
 // Convert tokens to intermediate representation.
-func (casm *Casm) translateIR(tokens *tokens) (out []IR) {
+func (casm *Casm) translateTokensToIR(tokens *tokens) (out []IR) {
 	for !tokens.Empty() {
-		switch tokens.First().Kind {
+		switch tokens.First().kind {
 		case tokenKindSymbol:
 			symbol := tokens.Pop()
 
-			if !tokens.Empty() && tokens.First().Kind == tokenKindColon {
+			if !tokens.Empty() && tokens.First().kind == tokenKindColon {
 				// Label definition
 				tokens.Pop()
 				out = append(out, IR{
 					Kind:     IRKindLabel,
-					AsLabel:  LabelIR{symbol.Text},
-					Location: symbol.Location,
+					AsLabel:  LabelIR{symbol.text},
+					Location: symbol.location,
 				})
 			} else {
 				// Intruction definition
-				exist, instDef := coppervm.GetInstDefByName(symbol.Text)
+				exist, instDef := getInstructionByName(symbol.text)
 				if !exist {
 					panic(fmt.Sprintf("%s: unknown instruction '%s'",
-						symbol.Location,
-						symbol.Text))
+						symbol.location,
+						symbol.text))
 				}
 
 				var operand Expression
-				if instDef.HasOperand {
+				if instDef.hasOperand {
 					operand = parseExprFromTokens(tokens)
 				}
 				out = append(out, IR{
 					Kind: IRKindInstruction,
 					AsInstruction: InstructionIR{
-						Name:       instDef.Name,
+						Name:       instDef.name,
 						Operand:    operand,
-						HasOperand: instDef.HasOperand,
+						HasOperand: instDef.hasOperand,
 					},
-					Location: symbol.Location,
+					Location: symbol.location,
 				})
 			}
 			if len(*tokens) != 0 {
@@ -139,7 +177,7 @@ func (casm *Casm) translateIR(tokens *tokens) (out []IR) {
 			directive := tokens.Pop()
 			tokens.expectTokenKind(tokenKindSymbol)
 
-			directiveName := tokens.Pop().Text
+			directiveName := tokens.Pop().text
 			switch directiveName {
 			case "entry":
 				tokens.expectTokenKindMsg(tokenKindSymbol, "no name given to entry directive")
@@ -147,9 +185,9 @@ func (casm *Casm) translateIR(tokens *tokens) (out []IR) {
 				out = append(out, IR{
 					Kind: IRKindEntry,
 					AsEntry: EntryIR{
-						Name: name.Text,
+						Name: name.text,
 					},
-					Location: directive.Location,
+					Location: directive.location,
 				})
 			case "const":
 				tokens.expectTokenKindMsg(tokenKindSymbol, "no name given to const directive")
@@ -159,10 +197,10 @@ func (casm *Casm) translateIR(tokens *tokens) (out []IR) {
 				out = append(out, IR{
 					Kind: IRKindConst,
 					AsConst: ConstIR{
-						Name:  name.Text,
+						Name:  name.text,
 						Value: expr,
 					},
-					Location: directive.Location,
+					Location: directive.location,
 				})
 			case "memory":
 				tokens.expectTokenKindMsg(tokenKindSymbol, "no name given to memory directive")
@@ -172,28 +210,28 @@ func (casm *Casm) translateIR(tokens *tokens) (out []IR) {
 				out = append(out, IR{
 					Kind: IRKindMemory,
 					AsMemory: MemoryIR{
-						Name:  name.Text,
+						Name:  name.text,
 						Value: expr,
 					},
-					Location: directive.Location,
+					Location: directive.location,
 				})
 			case "include":
 				tokens.expectTokenKindMsg(tokenKindStringLit, "no path given to include directive")
 				includePath := tokens.Pop()
-				out = append(out, casm.translateInclude(includePath.Text, includePath.Location)...)
+				out = append(out, casm.translateInclude(includePath.text, includePath.location)...)
 			default:
-				panic(fmt.Sprintf("%s: unknown directive '%s'", directive.Location, directiveName))
+				panic(fmt.Sprintf("%s: unknown directive '%s'", directive.location, directiveName))
 			}
 			if len(*tokens) != 0 {
 				tokens.expectTokenKind(tokenKindNewLine)
 				tokens.Pop()
 			}
 		case tokenKindColon:
-			panic(fmt.Sprintf("%s: empty labels are not supported", tokens.First().Location))
+			panic(fmt.Sprintf("%s: empty labels are not supported", tokens.First().location))
 		case tokenKindNewLine:
 			tokens.Pop()
 		default:
-			panic(fmt.Sprintf("%s: unsupported line start '%s'", tokens.First().Location, tokens.First().Kind))
+			panic(fmt.Sprintf("%s: unsupported line start '%s'", tokens.First().location, tokens.First().kind))
 		}
 	}
 
@@ -215,7 +253,7 @@ func (casm *Casm) translateInclude(path string, location FileLocation) (out []IR
 	casm.includeLevel++
 	includeSource := readSourceFile(resolvedPath)
 	tokens := tokenize(includeSource, resolvedPath)
-	out = casm.translateIR(&tokens)
+	out = casm.translateTokensToIR(&tokens)
 	casm.includeLevel--
 
 	return out

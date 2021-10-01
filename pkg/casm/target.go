@@ -4,5 +4,5 @@ type BuildTarget int
 
 const (
 	BuildTargetCopper BuildTarget = iota
-	BuildTargetX86_64
+	BuildTargetX86_64Linux
 )
