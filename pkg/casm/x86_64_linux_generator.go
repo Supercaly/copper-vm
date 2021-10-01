@@ -15,6 +15,8 @@ type x86_64Generator struct {
 	rep *internalRep
 
 	labels map[int]string
+
+	hasPrintFn bool
 }
 
 func (gen *x86_64Generator) generateProgram() {
@@ -61,6 +63,61 @@ func (gen *x86_64Generator) generateProgram() {
 		memStr = "0x0"
 	}
 	writeLine(&gen.dataSection, fmt.Sprintf("  mem: db %s", memStr))
+
+	// Append debug print instruction
+	if gen.hasPrintFn {
+		writeLine(&gen.dataSection, "  print_memory: db 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,10,0")
+		writeLine(&gen.dataSection, "  print_memory_size: equ $-print_memory")
+
+		writeLine(&gen.textSection, "")
+		writeLine(&gen.textSection, "debug_print:")
+		writeLine(&gen.textSection, "  xor rsi, rsi")
+		writeLine(&gen.textSection, "  xor rdi, rdi")
+		writeLine(&gen.textSection, "  call clean_print_memory")
+		writeLine(&gen.textSection, "  cmp rax, 0")
+		writeLine(&gen.textSection, "  jge print_positive")
+		writeLine(&gen.textSection, "  xor rdx, rdx")
+		writeLine(&gen.textSection, "  mov rbx, -1")
+		writeLine(&gen.textSection, "  imul rbx")
+		writeLine(&gen.textSection, "  mov [print_memory], byte '-'")
+		writeLine(&gen.textSection, "print_positive:")
+		writeLine(&gen.textSection, "  mov rsi, 18")
+		writeLine(&gen.textSection, "  mov rdi, rax")
+		writeLine(&gen.textSection, "  call print_int_rec")
+		writeLine(&gen.textSection, "  mov rax, 1")
+		writeLine(&gen.textSection, "  mov rdi, 1")
+		writeLine(&gen.textSection, "  mov rsi, print_memory")
+		writeLine(&gen.textSection, "  mov rdx, print_memory_size")
+		writeLine(&gen.textSection, "  syscall")
+		writeLine(&gen.textSection, "  ret ")
+		writeLine(&gen.textSection, "print_int_rec:")
+		writeLine(&gen.textSection, "  cmp rdi, 9")
+		writeLine(&gen.textSection, "  jg print_int_rec_else")
+		writeLine(&gen.textSection, "  mov rax, rdi")
+		writeLine(&gen.textSection, "  add rax, 48")
+		writeLine(&gen.textSection, "  mov [print_memory+rsi], al")
+		writeLine(&gen.textSection, "  ret")
+		writeLine(&gen.textSection, "print_int_rec_else:")
+		writeLine(&gen.textSection, "  xor rdx, rdx")
+		writeLine(&gen.textSection, "  mov rax, rdi")
+		writeLine(&gen.textSection, "  mov rbx, 10")
+		writeLine(&gen.textSection, "  idiv rbx")
+		writeLine(&gen.textSection, "  add rdx, 48")
+		writeLine(&gen.textSection, "  mov [print_memory+rsi], dl")
+		writeLine(&gen.textSection, "  sub rsi, 1")
+		writeLine(&gen.textSection, "  mov rdi, rax")
+		writeLine(&gen.textSection, "  call print_int_rec")
+		writeLine(&gen.textSection, "  ret")
+		writeLine(&gen.textSection, "clean_print_memory:")
+		writeLine(&gen.textSection, "  mov rdi, 0")
+		writeLine(&gen.textSection, "  mov rbx, 1")
+		writeLine(&gen.textSection, "clean_print_memory_loop:")
+		writeLine(&gen.textSection, "  mov [print_memory+rdi], byte 0")
+		writeLine(&gen.textSection, "  add rdi, rbx")
+		writeLine(&gen.textSection, "  cmp rdi, 18")
+		writeLine(&gen.textSection, "  jle clean_print_memory_loop")
+		writeLine(&gen.textSection, "  ret")
+	}
 }
 
 func (gen *x86_64Generator) saveProgram() string {
@@ -102,71 +159,44 @@ func (gen *x86_64Generator) translateInstruction(inst instruction) {
 
 	// Integer arithmetics
 	case coppervm.InstAddInt:
-		binaryOpToNative(&gen.textSection, "add", "add")
+		binpToNative(&gen.textSection, "add", "add")
 	case coppervm.InstSubInt:
-		binaryOpToNative(&gen.textSection, "sub", "sub")
+		binpToNative(&gen.textSection, "sub", "sub")
 	case coppervm.InstMulInt:
-		writeLine(&gen.textSection, "  ; -- mul --")
-		writeLine(&gen.textSection, "  pop rbx")
-		writeLine(&gen.textSection, "  pop rax")
-		writeLine(&gen.textSection, "  mul rbx")
-		writeLine(&gen.textSection, "  push rax")
+		mulDivBinpToNative(&gen.textSection, "mul", "mul", "rax")
 	case coppervm.InstMulIntSigned:
-		writeLine(&gen.textSection, "  ; -- imul --")
-		writeLine(&gen.textSection, "  pop rbx")
-		writeLine(&gen.textSection, "  pop rax")
-		writeLine(&gen.textSection, "  imul rbx")
-		writeLine(&gen.textSection, "  push rax")
+		mulDivBinpToNative(&gen.textSection, "imul", "imul", "rax")
 	case coppervm.InstDivInt:
-		writeLine(&gen.textSection, "  ; -- div --")
-		writeLine(&gen.textSection, "  xor rdx, rdx")
-		writeLine(&gen.textSection, "  pop rcx")
-		writeLine(&gen.textSection, "  pop rax")
-		writeLine(&gen.textSection, "  div rcx")
-		writeLine(&gen.textSection, "  push rax")
+		mulDivBinpToNative(&gen.textSection, "div", "div", "rax")
 	case coppervm.InstDivIntSigned:
-		writeLine(&gen.textSection, "  ; -- idiv --")
-		writeLine(&gen.textSection, "  xor rdx, rdx")
-		writeLine(&gen.textSection, "  pop rcx")
-		writeLine(&gen.textSection, "  pop rax")
-		writeLine(&gen.textSection, "  idiv rcx")
-		writeLine(&gen.textSection, "  push rax")
+		mulDivBinpToNative(&gen.textSection, "idiv", "idiv", "rax")
 	case coppervm.InstModInt:
-		writeLine(&gen.textSection, "  ; -- mod --")
-		writeLine(&gen.textSection, "  xor rdx, rdx")
-		writeLine(&gen.textSection, "  pop rcx")
-		writeLine(&gen.textSection, "  pop rax")
-		writeLine(&gen.textSection, "  div rcx")
-		writeLine(&gen.textSection, "  push rdx")
+		mulDivBinpToNative(&gen.textSection, "mod", "div", "rdx")
 	case coppervm.InstModIntSigned:
-		writeLine(&gen.textSection, "  ; -- imod --")
-		writeLine(&gen.textSection, "  xor rdx, rdx")
-		writeLine(&gen.textSection, "  pop rcx")
-		writeLine(&gen.textSection, "  pop rax")
-		writeLine(&gen.textSection, "  idiv rcx")
-		writeLine(&gen.textSection, "  push rdx")
+		mulDivBinpToNative(&gen.textSection, "imod", "idiv", "rdx")
 
 	// Floating point arithmetics
 	case coppervm.InstAddFloat:
-		//binaryOpToNative(&gen.textSection, "fadd", "fadd")
+		floatBinopToNative(&gen.textSection, "fadd", "addsd")
 	case coppervm.InstSubFloat:
-		//binaryOpToNative(&gen.textSection, "fsub", "fsub")
+		floatBinopToNative(&gen.textSection, "fsub", "subsd")
 	case coppervm.InstMulFloat:
-		//binaryOpToNative(&gen.textSection, "fmul", "fmul")
+		floatBinopToNative(&gen.textSection, "fmul", "mulsd")
 	case coppervm.InstDivFloat:
+		floatBinopToNative(&gen.textSection, "fdiv", "divsd")
 
 	// Boolean operations
 	case coppervm.InstAnd:
-		binaryOpToNative(&gen.textSection, "and", "and")
+		binpToNative(&gen.textSection, "and", "and")
 	case coppervm.InstOr:
-		binaryOpToNative(&gen.textSection, "or", "or")
+		binpToNative(&gen.textSection, "or", "or")
 	case coppervm.InstXor:
-		binaryOpToNative(&gen.textSection, "xor", "xor")
+		binpToNative(&gen.textSection, "xor", "xor")
 	case coppervm.InstNot:
 		writeLine(&gen.textSection, "  ; -- not --")
-		writeLine(&gen.textSection, "  ; pop rax")
-		writeLine(&gen.textSection, "  ; not rax")
-		writeLine(&gen.textSection, "  ; push rax")
+		writeLine(&gen.textSection, "  pop rax")
+		writeLine(&gen.textSection, "  not rax")
+		writeLine(&gen.textSection, "  push rax")
 	case coppervm.InstShiftLeft:
 		writeLine(&gen.textSection, "  ; -- shl --")
 		writeLine(&gen.textSection, "  pop rcx")
@@ -186,18 +216,22 @@ func (gen *x86_64Generator) translateInstruction(inst instruction) {
 		writeLine(&gen.textSection, "  pop rax")
 		writeLine(&gen.textSection, "  pop rbx")
 		writeLine(&gen.textSection, "  sub rbx, rax")
-		writeLine(&gen.textSection, "  push rax")
+		writeLine(&gen.textSection, "  push rbx")
 	case coppervm.InstCmpSigned:
 		writeLine(&gen.textSection, "  ; -- icmp --")
 		writeLine(&gen.textSection, "  pop rax")
 		writeLine(&gen.textSection, "  pop rbx")
 		writeLine(&gen.textSection, "  sub rbx, rax")
-		writeLine(&gen.textSection, "  push rax")
+		writeLine(&gen.textSection, "  push rbx")
 	case coppervm.InstCmpFloat:
 		writeLine(&gen.textSection, "  ; -- fcmp --")
-		writeLine(&gen.textSection, "  pop rax")
 		writeLine(&gen.textSection, "  pop rbx")
-		//writeLine(&gen.textSection, "  fsub rbx, rax")
+		writeLine(&gen.textSection, "  pop rax")
+		writeLine(&gen.textSection, "  movq xmm0, rax")
+		writeLine(&gen.textSection, "  movq xmm1, rbx")
+		writeLine(&gen.textSection, "  subsd xmm0, xmm1")
+		writeLine(&gen.textSection, "  cvtsd2si rax, xmm0")
+		writeLine(&gen.textSection, "  push rax")
 		writeLine(&gen.textSection, "  push rax")
 	case coppervm.InstJmp:
 		writeLine(&gen.textSection, "  ; -- jmp --")
@@ -368,8 +402,10 @@ func (gen *x86_64Generator) translateInstruction(inst instruction) {
 		writeLine(&gen.textSection, "  syscall")
 		writeLine(&gen.textSection, "  push rax")
 	case coppervm.InstPrint:
+		gen.hasPrintFn = true
 		writeLine(&gen.textSection, "  ; -- print --")
-		writeLine(&gen.textSection, "  ; operation not supported")
+		writeLine(&gen.textSection, "  pop rax")
+		writeLine(&gen.textSection, "  call debug_print")
 	case coppervm.InstNoop:
 		writeLine(&gen.textSection, "  ; -- noop --")
 		writeLine(&gen.textSection, "  nop")
@@ -378,6 +414,7 @@ func (gen *x86_64Generator) translateInstruction(inst instruction) {
 	}
 }
 
+// Convert a word to an immediate string.
 func (gen *x86_64Generator) wordToString(w word) (ret string) {
 	switch w.kind {
 	case wordKindInt:
@@ -392,6 +429,7 @@ func (gen *x86_64Generator) wordToString(w word) (ret string) {
 	return ret
 }
 
+// Convert a word to a label name.
 func (gen *x86_64Generator) wordToLabel(w word) (label string) {
 	label, exist := gen.labels[int(w.asInstAddr)]
 	if !exist {
@@ -400,7 +438,8 @@ func (gen *x86_64Generator) wordToLabel(w word) (label string) {
 	return label
 }
 
-func binaryOpToNative(builder *strings.Builder, instName string, asmName string) {
+// Creates a binary operation with given instruction name and assembly name.
+func binpToNative(builder *strings.Builder, instName string, asmName string) {
 	writeLine(builder, fmt.Sprintf("  ; -- %s --", instName))
 	writeLine(builder, "  pop rbx")
 	writeLine(builder, "  pop rax")
@@ -408,6 +447,29 @@ func binaryOpToNative(builder *strings.Builder, instName string, asmName string)
 	writeLine(builder, "  push rax")
 }
 
+// Creates a binary operation with given instruction name and assembly name and destination reg.
+func mulDivBinpToNative(builder *strings.Builder, instName string, asmName string, dstReg string) {
+	writeLine(builder, fmt.Sprintf("  ; -- %s --", instName))
+	writeLine(builder, "  xor rdx, rdx")
+	writeLine(builder, "  pop rbx")
+	writeLine(builder, "  pop rax")
+	writeLine(builder, fmt.Sprintf("  %s rbx", asmName))
+	writeLine(builder, fmt.Sprintf("  push %s", dstReg))
+}
+
+// Creates a binary operation with given instruction name and assembly name.
+func floatBinopToNative(builder *strings.Builder, instName string, asmName string) {
+	writeLine(builder, fmt.Sprintf("  ; -- %s --", instName))
+	writeLine(builder, "  pop rbx")
+	writeLine(builder, "  movq xmm1, rbx")
+	writeLine(builder, "  pop rax")
+	writeLine(builder, "  movq xmm0, rax")
+	writeLine(builder, fmt.Sprintf("  %s xmm0, xmm1", asmName))
+	writeLine(builder, "  movq rax, xmm0")
+	writeLine(builder, "  push rax")
+}
+
+// Appends a line to given strings.Builder.
 func writeLine(builder *strings.Builder, line string) {
 	builder.WriteString(line)
 	builder.WriteRune('\n')
