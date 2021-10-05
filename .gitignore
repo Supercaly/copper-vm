@@ -1,3 +1,9 @@
+# Exclude vscode config files
 .vscode/
+
+# Exclude macos files
+.DS_Store
+
+# Exclude build folders
 bin/
 build/
