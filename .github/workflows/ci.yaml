@@ -8,15 +8,18 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
       
-      - name: Build programs
-        run: ./scripts/build_programs.sh
+      - name: Build programs binaries
+        run: python ./scripts/build.py
 
-      - name: Build examples
-        run: ./scripts/build_examples.sh
+      - name: Compile examples
+        run: python ./scripts/test.py com ./examples/
 
       - name: Unit Tests
         run: go test ./...
 
       - name: Test Examples
-        run: ./scripts/run_examples.sh
+        run: python ./scripts/test.py run ./examples/
