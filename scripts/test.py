@@ -20,6 +20,8 @@ def compile_folder(folder):
     print()
     print("All tests compiled!")
     print(f"Passed: {len(files)-failed}, Failed: {failed}")
+    if failed != 0:
+        exit(1)
 
 def compile_file(file_path):
     assert os.path.exists(file_path)
@@ -47,6 +49,8 @@ def run_tests_for_dir(folder):
     print()
     print("All tests executed!")
     print(f"Passed: {len(files)-failed}, Failed: {failed}")
+    if failed != 0:
+        exit(1)
 
 def run_tests_for_file(file_path):
     result_file_path = os.path.splitext(file_path)[0] + result_file_ext
@@ -66,7 +70,7 @@ def run_tests_for_file(file_path):
     if actual_result.returncode != 0 or expected_result != actual_result.stdout:
         print(f"ERROR: test '{file_path}' returned a different result from expected")
         print(f"     status code: {actual_result.returncode}")
-        print(f"     expected: {expected_result}")
+        print(f"     expected: {expected_result.decode('UTF-8')}")
         print(f"     actual: {actual_result.stdout.decode('UTF-8')}")
         return False
     return True
@@ -122,7 +126,10 @@ if __name__ == "__main__":
         if os.path.isdir(path):
             compile_folder(path)
         else:
-            compile_file(path)
+            ok = compile_file(path)
+            print(f"Test {path} compiled with {'success' if ok else 'failure'}!")
+            if not ok:
+                exit(1)
     elif command == "run":
         expect_arg(argv, program)
         path, *argv = argv
@@ -130,7 +137,9 @@ if __name__ == "__main__":
             run_tests_for_dir("./examples")
         else:
             ok = run_tests_for_file(path)
-            print(f"Test executed with {'success' if ok else 'failure'}!")
+            print(f"Test {path} executed with {'success' if ok else 'failure'}!")
+            if not ok:
+                exit(1)
     elif command == "record":
         expect_arg(argv, program)
         path, *argv = argv
