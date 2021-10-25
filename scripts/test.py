@@ -134,7 +134,7 @@ if __name__ == "__main__":
         expect_arg(argv, program)
         path, *argv = argv
         if os.path.isdir(path):
-            run_tests_for_dir("./examples")
+            run_tests_for_dir(path)
         else:
             ok = run_tests_for_file(path)
             print(f"Test {path} executed with {'success' if ok else 'failure'}!")
