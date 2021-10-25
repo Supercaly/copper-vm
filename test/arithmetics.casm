@@ -3,145 +3,109 @@ integer:
     push 1
     push 2
     add
-    dup
     print
-    drop
 
     ; add signed integers
     push -1
     push 2
     add
-    dup
     print
-    drop
 
     ; subtract integers
     push 2
     push 1
     sub
-    dup
     print
-    drop
 
     ; subtract signed integers
     push -2
     push 1
     sub
-    dup
     print
-    drop
 
     ; multiply integers
     push 2
     push 1
     mul
-    dup
     print
-    drop
 
     ; multiply signed integers
     push -2
     push 1
     imul
-    dup
     print
-    drop
 
     ; divide integers
     push 3
     push 2
     div
-    dup
     print
-    drop
 
     ; divide signed integers
     push -2
     push 5
     idiv
-    dup
     print
-    drop
 
     ; modulo integers
     push 6
     push 2
     mod
-    dup
     print
-    drop
 
     ; modulo signed integers
     push -8
     push 5
     imod
-    dup
     print
-    drop
 
 floating_point:
     ; add float
     push 1.0
     push 2.0
     fadd
-    dup
     print
-    drop
 
     ; add signed float
     push -1.0
     push 2.0
     fadd
-    dup
     print
-    drop
 
     ; subtract float
     push 2.0
     push 1.0
     fsub
-    dup
     print
-    drop
 
     ; subtract signed float
     push -2.0
     push 1.0
     fsub
-    dup
     print
-    drop
 
     ; multiply float
     push 2.0
     push 1.0
     fmul
-    dup
     print
-    drop
 
     ; multiply signed float
     push -2.0
     push 1.0
     fmul
-    dup
     print
-    drop
 
     ; divide float
     push 3.0
     push 2.0
     fdiv
-    dup
     print
-    drop
 
     ; divide signed float
     push -2.0
     push 5.0
     fdiv
-    dup
     print
-    drop
    
 halt
