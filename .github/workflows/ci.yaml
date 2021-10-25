@@ -16,10 +16,13 @@ jobs:
         run: python ./scripts/build.py
 
       - name: Compile examples
-        run: python ./scripts/test.py com ./examples/
+        run: python ./scripts/test.py com ./test/ && python ./scripts/test.py com ./examples/
 
       - name: Unit Tests
         run: go test ./...
 
-      - name: Test Examples
+      - name: Run tests
+        run : python ./scripts/test.py run ./test/
+
+      - name: Run examples
         run: python ./scripts/test.py run ./examples/
